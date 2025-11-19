@@ -1,0 +1,29 @@
+FROM node:20-alpine
+
+# Install netcat for health checks
+RUN apk add --no-cache netcat-openbsd
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Copy and make startup script executable
+COPY start.sh .
+RUN chmod +x start.sh
+
+# Expose port
+EXPOSE 3001
+
+# Start development server with our custom script
+CMD ["./start.sh"]

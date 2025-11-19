@@ -1,0 +1,254 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type BusinessInsight {
+  actionable: Boolean!
+  description: String!
+  impact: Impact!
+  title: String!
+  type: InsightType!
+}
+
+type CategorySales {
+  category: String!
+  revenue: Float!
+  total: Int!
+}
+
+"""Method of communication for sending reminders"""
+enum CommunicationMethod {
+  ALL
+  EMAIL
+  PHONE
+  SMS
+}
+
+input CreateCustomerInput {
+  address: String
+  city: String
+  communicationPreference: String
+  email: String
+  firstName: String!
+  lastName: String!
+  notes: String
+  phone: String
+  state: String
+  tirePreferenceBrand: String
+  zipCode: String
+}
+
+type Customer {
+  address: String
+  city: String
+  communicationPreference: String
+  createdAt: Date!
+  email: String
+  firstName: String!
+  id: ID!
+  isActive: Boolean!
+  lastName: String!
+  notes: String
+  phone: String
+  state: String
+  tirePreferenceBrand: String
+  updatedAt: Date!
+  zipCode: String
+}
+
+"""Date custom scalar type"""
+scalar Date
+
+type EmployeeSales {
+  employeeId: String!
+  revenue: Float!
+  total: Int!
+}
+
+type EnhancedAnalytics {
+  basicAnalytics: SalesAnalytics!
+  insights: [BusinessInsight!]!
+  kpis: [PerformanceMetric!]!
+  trends: [SalesTrend!]!
+}
+
+input GenerateRemindersInput {
+  customerId: String
+  daysAhead: Float
+  serviceTypes: [String!]
+  targetDate: String
+  vehicleId: String
+}
+
+type GenerateRemindersResponse {
+  generated: Float!
+  message: String!
+  serviceTypes: [String!]
+  targetDate: String
+}
+
+enum Impact {
+  HIGH
+  LOW
+  MEDIUM
+}
+
+enum InsightType {
+  ACHIEVEMENT
+  CONCERN
+  OPPORTUNITY
+}
+
+type MonthlySales {
+  month: String!
+  revenue: Float!
+  total: Int!
+}
+
+type Mutation {
+  activateCustomer(id: ID!): Customer!
+  createCustomer(input: CreateCustomerInput!): Customer!
+  deactivateCustomer(id: ID!): Customer!
+  deleteCustomer(id: ID!): Boolean!
+  deleteServiceReminder(id: ID!): Boolean!
+  generateServiceReminders(input: GenerateRemindersInput!): GenerateRemindersResponse!
+  sendServiceReminder(id: ID!, input: SendReminderInput!): ServiceReminder!
+  updateCustomer(id: ID!, input: UpdateCustomerInput!): Customer!
+  updateReminderStatus(id: ID!, input: UpdateReminderStatusInput!): ServiceReminder!
+}
+
+input PaginationInput {
+  limit: Int = 20
+  page: Int = 1
+}
+
+type PerformanceMetric {
+  name: String!
+  target: Float
+  trend: Trend!
+  unit: String!
+  value: Float!
+}
+
+type Query {
+  businessInsights(endDate: Date, startDate: Date): [BusinessInsight!]!
+  customer(id: ID!): Customer!
+  customerReminders(customerId: ID!, status: ReminderStatus): [ServiceReminder!]!
+  customers(pagination: PaginationInput): [Customer!]!
+  enhancedAnalytics(endDate: Date, startDate: Date): EnhancedAnalytics!
+  monthToDateAnalytics: SalesAnalytics!
+  performanceMetrics(endDate: Date, startDate: Date): [PerformanceMetric!]!
+  recentSales(limit: Float = 10): [SalesData!]!
+  salesAnalytics(endDate: Date, startDate: Date): SalesAnalytics!
+  salesByCustomer(customerId: String!): [SalesData!]!
+  salesByDateRange(endDate: Date!, startDate: Date!): [SalesData!]!
+  salesByEmployee(employeeId: String!): [SalesData!]!
+  searchCustomers(searchTerm: String!): [Customer!]!
+  serviceReminder(id: ID!): ServiceReminder!
+  serviceReminders(filters: ServiceReminderFiltersInput, pagination: PaginationInput): [ServiceReminder!]!
+  todaysAnalytics: SalesAnalytics!
+  todaysSales: [SalesData!]!
+  vehicleReminders(status: ReminderStatus, vehicleId: ID!): [ServiceReminder!]!
+  yearToDateAnalytics: SalesAnalytics!
+}
+
+"""Status of a service reminder"""
+enum ReminderStatus {
+  CONVERTED
+  DISMISSED
+  PENDING
+  SENT
+}
+
+type SalesAnalytics {
+  averageOrderValue: Float!
+  recentSales: [SalesData!]!
+  salesByCategory: [CategorySales!]!
+  salesByEmployee: [EmployeeSales!]!
+  salesByMonth: [MonthlySales!]!
+  totalRevenue: Float!
+  totalSales: Int!
+}
+
+type SalesData {
+  category: String!
+  createdAt: Date!
+  customerId: String
+  description: String
+  discountAmount: Float!
+  employeeId: String
+  id: ID!
+  invoiceNumber: String
+  itemsSold: Int!
+  laborCost: Float
+  laborHours: Float
+  netAmount: Float!
+  partsCost: Float
+  paymentMethod: String!
+  salesDate: Date!
+  taxAmount: Float!
+  totalAmount: Float!
+  updatedAt: Date!
+}
+
+type SalesTrend {
+  change: Float!
+  changePercent: Float!
+  period: String!
+  value: Float!
+}
+
+input SendReminderInput {
+  communicationMethod: CommunicationMethod!
+}
+
+type ServiceReminder {
+  communicationMethod: CommunicationMethod!
+  createdAt: Date!
+  customerId: String!
+  id: ID!
+  lastServiceDate: Date!
+  mileage: Float
+  reminderDate: Date!
+  serviceType: String!
+  status: ReminderStatus!
+  updatedAt: Date!
+  vehicleId: String!
+}
+
+input ServiceReminderFiltersInput {
+  communicationMethod: CommunicationMethod
+  customerId: String
+  dateFrom: String
+  dateTo: String
+  reminderDate: String
+  serviceType: String
+  status: ReminderStatus
+  vehicleId: String
+}
+
+enum Trend {
+  DOWN
+  STABLE
+  UP
+}
+
+input UpdateCustomerInput {
+  address: String
+  city: String
+  communicationPreference: String
+  email: String
+  firstName: String
+  isActive: Boolean
+  lastName: String
+  notes: String
+  phone: String
+  state: String
+  tirePreferenceBrand: String
+  zipCode: String
+}
+
+input UpdateReminderStatusInput {
+  notes: String
+  status: ReminderStatus!
+}

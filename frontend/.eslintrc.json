@@ -1,0 +1,16 @@
+{
+  "extends": ["next/core-web-vitals"],
+  "root": true,
+  "env": {
+    "browser": true,
+    "es2022": true,
+    "node": true
+  },
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "react/prop-types": "off",
+    "react-hooks/exhaustive-deps": "warn",
+    "react/no-unescaped-entities": "warn"
+  },
+  "ignorePatterns": ["node_modules/", ".next/", "out/", "dist/"]
+}

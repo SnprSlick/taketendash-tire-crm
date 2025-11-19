@@ -1,0 +1,311 @@
+import { Resolver, Query, Args, Context } from '@nestjs/graphql';
+import { UseGuards, Logger, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { PerformanceTrackingService } from '../services/performance-tracking.service';
+import { PerformanceLoggingService } from '../services/performance-logging.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { EmployeeRole } from '@prisma/client';
+import {
+  EmployeePerformanceType,
+  EmployeePerformanceAnalyticsType,
+  PerformanceTrendType,
+  TeamPerformanceComparisonType,
+  PerformanceSummaryType,
+  EmployeePerformanceFiltersInput,
+  PerformanceTrendFiltersInput,
+  TeamComparisonFiltersInput
+} from '../graphql/types/employee-performance.type';
+
+@Resolver(() => EmployeePerformanceType)
+@UseGuards(JwtAuthGuard, RolesGuard)
+export class EmployeePerformanceResolver {
+  private readonly logger = new Logger(EmployeePerformanceResolver.name);
+
+  constructor(
+    private readonly performanceTrackingService: PerformanceTrackingService,
+    private readonly performanceLogging: PerformanceLoggingService
+  ) {}
+
+  @Query(() => EmployeePerformanceAnalyticsType, { name: 'employeePerformanceAnalytics' })
+  @Roles(EmployeeRole.MANAGER, EmployeeRole.SERVICE_ADVISOR)
+  async getEmployeePerformanceAnalytics(
+    @Args('filters', { nullable: true }) filters: EmployeePerformanceFiltersInput,
+    @Context() context: any
+  ): Promise<any> {
+    this.logger.log('GraphQL: Fetching employee performance analytics');
+
+    try {
+      // Extract user info from context
+      const user = context.req.user;
+      const userRole = user?.role;
+      const userId = user?.sub;
+
+      // Parse and validate filters
+      const employeeId = filters?.employeeId;
+      const startDate = filters?.startDate ? new Date(filters.startDate) : undefined;
+      const endDate = filters?.endDate ? new Date(filters.endDate) : undefined;
+      const page = filters?.page || 1;
+      const limit = filters?.limit || 10;
+
+      // Validate dates
+      if (startDate && isNaN(startDate.getTime())) {
+        throw new BadRequestException('Invalid start date format');
+      }
+
+      if (endDate && isNaN(endDate.getTime())) {
+        throw new BadRequestException('Invalid end date format');
+      }
+
+      if (startDate && endDate && startDate > endDate) {
+        throw new BadRequestException('Start date must be before end date');
+      }
+
+      // Handle role-based access control
+      let finalEmployeeId = employeeId;
+      if (userRole === EmployeeRole.SERVICE_ADVISOR) {
+        if (employeeId && employeeId !== userId) {
+          throw new ForbiddenException('Service advisors can only view their own performance');
+        }
+        finalEmployeeId = userId;
+      }
+
+      // Default to last 30 days if no date range provided
+      const finalStartDate = startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const finalEndDate = endDate || new Date();
+
+      // Log user access
+      await this.performanceLogging.logUserAccess(
+        userId,
+        userRole,
+        'Performance Analytics Query',
+        finalEmployeeId,
+        context.req.ip,
+        context.req.headers['user-agent']
+      );
+
+      const analytics = await this.performanceTrackingService.getEmployeePerformanceAnalytics(
+        finalEmployeeId,
+        finalStartDate,
+        finalEndDate,
+        page,
+        limit
+      );
+
+      this.logger.log(`GraphQL: Retrieved performance analytics for ${analytics.performanceData.length} employees`);
+
+      return analytics;
+
+    } catch (error) {
+      this.logger.error(`GraphQL: Failed to fetch performance analytics: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  @Query(() => EmployeePerformanceType, { name: 'employeePerformance' })
+  @Roles(EmployeeRole.MANAGER, EmployeeRole.SERVICE_ADVISOR)
+  async getEmployeePerformance(
+    @Args('employeeId') employeeId: string,
+    @Args('startDate', { nullable: true }) startDate?: string,
+    @Args('endDate', { nullable: true }) endDate?: string,
+    @Context() context?: any
+  ): Promise<any> {
+    this.logger.log(`GraphQL: Fetching performance for employee ${employeeId}`);
+
+    try {
+      // Role-based access control
+      const user = context.req.user;
+      const userRole = user?.role;
+      const userId = user?.sub;
+
+      if (userRole === EmployeeRole.SERVICE_ADVISOR && employeeId !== userId) {
+        throw new ForbiddenException('Service advisors can only view their own performance');
+      }
+
+      // Parse dates
+      const startDateObj = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const endDateObj = endDate ? new Date(endDate) : new Date();
+
+      if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
+        throw new BadRequestException('Invalid date format');
+      }
+
+      const performance = await this.performanceTrackingService.calculateEmployeePerformance(
+        employeeId,
+        startDateObj,
+        endDateObj
+      );
+
+      this.logger.log(`GraphQL: Retrieved performance for employee ${employeeId}`);
+
+      return performance;
+
+    } catch (error) {
+      this.logger.error(`GraphQL: Failed to fetch employee performance: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  @Query(() => PerformanceTrendType, { name: 'employeePerformanceTrends' })
+  @Roles(EmployeeRole.MANAGER, EmployeeRole.SERVICE_ADVISOR)
+  async getEmployeePerformanceTrends(
+    @Args('filters') filters: PerformanceTrendFiltersInput,
+    @Context() context: any
+  ): Promise<any> {
+    this.logger.log(`GraphQL: Fetching performance trends for employee ${filters.employeeId}`);
+
+    try {
+      // Role-based access control
+      const user = context.req.user;
+      const userRole = user?.role;
+      const userId = user?.sub;
+
+      if (userRole === EmployeeRole.SERVICE_ADVISOR && filters.employeeId !== userId) {
+        throw new ForbiddenException('Service advisors can only view their own performance trends');
+      }
+
+      // Validate granularity
+      const granularity = filters.granularity || 'weekly';
+      if (!['daily', 'weekly', 'monthly'].includes(granularity)) {
+        throw new BadRequestException('Granularity must be daily, weekly, or monthly');
+      }
+
+      // Parse dates
+      const startDate = filters.startDate ? new Date(filters.startDate) : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+      const endDate = filters.endDate ? new Date(filters.endDate) : new Date();
+
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        throw new BadRequestException('Invalid date format');
+      }
+
+      const trends = await this.performanceTrackingService.getEmployeePerformanceTrends(
+        filters.employeeId,
+        startDate,
+        endDate,
+        granularity as 'daily' | 'weekly' | 'monthly'
+      );
+
+      this.logger.log(`GraphQL: Retrieved ${trends.trends.length} trend data points for employee ${filters.employeeId}`);
+
+      return trends;
+
+    } catch (error) {
+      this.logger.error(`GraphQL: Failed to fetch performance trends: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  @Query(() => TeamPerformanceComparisonType, { name: 'teamPerformanceComparison' })
+  @Roles(EmployeeRole.MANAGER)
+  async getTeamPerformanceComparison(
+    @Args('filters', { nullable: true }) filters: TeamComparisonFiltersInput
+  ): Promise<any> {
+    this.logger.log('GraphQL: Fetching team performance comparison');
+
+    try {
+      // Parse employee IDs
+      const employeeIds = filters?.employeeIds || [];
+
+      // Validate metric
+      const metric = filters?.metric || 'revenuePerLaborHour';
+      const validMetrics = ['revenuePerLaborHour', 'totalRevenue', 'totalServices', 'averageServiceValue'];
+      if (!validMetrics.includes(metric)) {
+        throw new BadRequestException(`Metric must be one of: ${validMetrics.join(', ')}`);
+      }
+
+      // Parse dates
+      const startDate = filters?.startDate ? new Date(filters.startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const endDate = filters?.endDate ? new Date(filters.endDate) : new Date();
+
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        throw new BadRequestException('Invalid date format');
+      }
+
+      const comparison = await this.performanceTrackingService.compareEmployeePerformance(
+        employeeIds,
+        startDate,
+        endDate,
+        metric
+      );
+
+      this.logger.log(`GraphQL: Retrieved team comparison for ${comparison.employees.length} employees`);
+
+      return comparison;
+
+    } catch (error) {
+      this.logger.error(`GraphQL: Failed to fetch team performance comparison: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  @Query(() => PerformanceSummaryType, { name: 'performanceSummary' })
+  @Roles(EmployeeRole.MANAGER, EmployeeRole.SERVICE_ADVISOR)
+  async getPerformanceSummary(
+    @Args('period', { nullable: true, defaultValue: 30 }) period: number,
+    @Context() context: any
+  ): Promise<any> {
+    this.logger.log(`GraphQL: Fetching performance summary for period: ${period} days`);
+
+    try {
+      if (period < 1 || period > 365) {
+        throw new BadRequestException('Period must be between 1 and 365 days');
+      }
+
+      // Role-based access control
+      const user = context.req.user;
+      const userRole = user?.role;
+      const userId = user?.sub;
+
+      // For service advisors, only show their own summary
+      const employeeId = userRole === EmployeeRole.SERVICE_ADVISOR ? userId : undefined;
+
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - period);
+
+      const summary = await this.performanceTrackingService.getPerformanceSummary(
+        employeeId,
+        startDate,
+        endDate
+      );
+
+      this.logger.log(`GraphQL: Retrieved performance summary with ${summary.totalEmployees} employees`);
+
+      return summary;
+
+    } catch (error) {
+      this.logger.error(`GraphQL: Failed to fetch performance summary: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  @Query(() => EmployeePerformanceType, { name: 'realTimeEmployeePerformance' })
+  @Roles(EmployeeRole.MANAGER, EmployeeRole.SERVICE_ADVISOR)
+  async getRealTimeEmployeePerformance(
+    @Args('employeeId') employeeId: string,
+    @Context() context: any
+  ): Promise<any> {
+    this.logger.log(`GraphQL: Fetching real-time performance for employee ${employeeId}`);
+
+    try {
+      // Role-based access control
+      const user = context.req.user;
+      const userRole = user?.role;
+      const userId = user?.sub;
+
+      if (userRole === EmployeeRole.SERVICE_ADVISOR && employeeId !== userId) {
+        throw new ForbiddenException('Service advisors can only view their own performance');
+      }
+
+      const performance = await this.performanceTrackingService.getRealTimePerformance(employeeId);
+
+      this.logger.log(`GraphQL: Retrieved real-time performance for employee ${employeeId}`);
+
+      return performance;
+
+    } catch (error) {
+      this.logger.error(`GraphQL: Failed to fetch real-time performance: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+}
