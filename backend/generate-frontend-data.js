@@ -43,10 +43,40 @@ async function generateFrontendData() {
       // CRITICAL FIX: Check for line items FIRST, before checking invoice termination
       // This handles the case where the last line item and "Totals for Invoice #" are on the same row
 
-      // Check if this row has line item data in columns 27+ (even if it also has invoice termination)
-      if (firstColumn.includes('Invoice Detail Report') && row.length > 30) {
-        const potentialProductCode = (row[27] || '').trim();
-        const potentialQty = (row[30] || '').trim();
+      // Check if this row has "Totals for Invoice #" AND a line item in columns 0-10
+      let hasLineItemAndTotal = false;
+      for (let j = 0; j < row.length; j++) {
+        const cell = (row[j] || '').trim();
+        if (cell.includes('Totals for Invoice')) {
+          // Check if there's a line item in the standard columns (0-10)
+          const potentialProductCode = (row[0] || '').trim();
+          const potentialQty = (row[3] || '').trim();
+          
+          if (potentialProductCode.length > 0 &&
+              potentialQty.length > 0 &&
+              !potentialProductCode.includes('Invoice #') &&
+              !potentialProductCode.includes('Customer Name') &&
+              !potentialProductCode.includes('Total') &&
+              !potentialProductCode.includes('Report') &&
+              !potentialProductCode.includes('Totals for') &&
+              !potentialProductCode.includes('Site#') &&
+              !potentialProductCode.includes('Page ')) {
+            
+            // Process the line item FIRST
+            if (currentInvoice) {
+              const lineItem = extractCompleteLineItem(row, i + 1);
+              currentInvoice.lineItems.push(lineItem);
+              hasLineItemAndTotal = true;
+            }
+          }
+          break;
+        }
+      }
+
+      // Check if this row has line item data in columns 26+ (even if it also has invoice termination)
+      if (firstColumn.includes('Invoice Detail Report') && row.length > 29) {
+        const potentialProductCode = (row[26] || '').trim();
+        const potentialQty = (row[29] || '').trim();
 
         if (potentialProductCode.length > 0 &&
             potentialQty.length > 0 &&
@@ -283,17 +313,17 @@ function extractCompleteLineItem(row, lineNumber) {
 function extractLineItemFromReportRow(row, lineNumber) {
   return {
     line: lineNumber,
-    productCode: (row[27] || '').trim(),
-    description: (row[28] || '').trim(),
-    adjustment: (row[29] || '').trim() || null,
-    quantity: parseFloat(row[30]) || 0,
-    partsCost: parseFloat(row[31]) || 0,
-    laborCost: parseFloat(row[32]) || 0,
-    fet: parseFloat(row[33]) || 0,
-    lineTotal: parseFloat(row[34]) || 0,
-    cost: parseFloat(row[35]) || 0,
-    grossProfitMargin: parseFloat(row[36]) || 0,
-    grossProfit: parseFloat(row[37]) || 0
+    productCode: (row[26] || '').trim(),
+    description: (row[27] || '').trim(),
+    adjustment: (row[28] || '').trim() || null,
+    quantity: parseFloat(row[29]) || 0,
+    partsCost: parseFloat(row[30]) || 0,
+    laborCost: parseFloat(row[31]) || 0,
+    fet: parseFloat(row[32]) || 0,
+    lineTotal: parseFloat(row[33]) || 0,
+    cost: parseFloat(row[34]) || 0,
+    grossProfitMargin: parseFloat(row[35]) || 0,
+    grossProfit: parseFloat(row[36]) || 0
   };
 }
 

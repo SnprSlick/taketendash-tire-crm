@@ -239,10 +239,40 @@ export class TireMasterCsvParser {
       // CRITICAL FIX: Check for line items FIRST, before checking invoice termination
       // This handles the case where the last line item and "Totals for Invoice #" are on the same row
 
-      // Check if this row has line item data in columns 27+ (even if it also has invoice termination)
-      if (firstColumn.includes('Invoice Detail Report') && fields.length > 30) {
-        const potentialProductCode = (fields[27] || '').trim();
-        const potentialQty = (fields[30] || '').trim();
+      // Check if this row has "Totals for Invoice #" AND a line item in columns 0-10
+      for (let j = 0; j < fields.length; j++) {
+        const cell = (fields[j] || '').trim();
+        if (cell.includes('Totals for Invoice')) {
+          // Check if there's a line item in the standard columns (0-10)
+          const potentialProductCode = (fields[0] || '').trim();
+          const potentialQty = (fields[3] || '').trim();
+          
+          if (potentialProductCode.length > 0 &&
+              potentialQty.length > 0 &&
+              !potentialProductCode.includes('Invoice #') &&
+              !potentialProductCode.includes('Customer Name') &&
+              !potentialProductCode.includes('Total') &&
+              !potentialProductCode.includes('Report') &&
+              !potentialProductCode.includes('Totals for') &&
+              !potentialProductCode.includes('Site#') &&
+              !potentialProductCode.includes('Page ')) {
+            
+            // Process the line item FIRST
+            if (state.currentInvoice) {
+              const lineItemData = TireMasterColumnMapper.extractLineItem(fields);
+              state.currentInvoice.lineItems.push(lineItemData);
+              state.currentInvoice.rawLineItemLines.push(line);
+              state.currentInvoice.lineItemRowNumbers.push(lineNumber);
+            }
+          }
+          break;
+        }
+      }
+
+      // Check if this row has line item data in columns 26+ (even if it also has invoice termination)
+      if (firstColumn.includes('Invoice Detail Report') && fields.length > 29) {
+        const potentialProductCode = (fields[26] || '').trim();
+        const potentialQty = (fields[29] || '').trim();
 
         if (potentialProductCode.length > 0 &&
             potentialQty.length > 0 &&

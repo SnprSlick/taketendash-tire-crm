@@ -204,22 +204,22 @@ export class TireMasterColumnMapper {
   }
 
   /**
-   * Extract line item information from "Invoice Detail Report" row (columns 27-37)
-   * CRITICAL FIX: Line items can appear in columns 27-37 even in rows marked "Invoice Detail Report"
+   * Extract line item information from "Invoice Detail Report" row (columns 26-36)
+   * CRITICAL FIX: Line items can appear in columns 26-36 even in rows marked "Invoice Detail Report"
    */
   public static extractLineItemFromReport(row: string[]): TireMasterLineItem {
     try {
-      const productCode = (row[27] || '').trim();                  // Column 27: Product Code
-      const description = (row[28] || '').trim();                  // Column 28: Size & Desc.
-      const adjustment = (row[29] || '').trim();                   // Column 29: Adjustment
-      const quantity = parseFloat(row[30]) || 0;                   // Column 30: QTY
-      const partsCost = parseFloat(row[31]) || 0;                  // Column 31: Parts
-      const laborCost = parseFloat(row[32]) || 0;                  // Column 32: Labor
-      const fet = parseFloat(row[33]) || 0;                        // Column 33: FET (Federal Excise Tax)
-      const lineTotal = parseFloat(row[34]) || 0;                  // Column 34: Total
-      const cost = parseFloat(row[35]) || 0;                       // Column 35: Cost
-      const grossProfitMargin = parseFloat(row[36]) || 0;          // Column 36: GPM% (Gross Profit Margin %)
-      const grossProfit = parseFloat(row[37]) || 0;                // Column 37: GP$ (Gross Profit $)
+      const productCode = (row[26] || '').trim();                  // Column 26: Product Code
+      const description = (row[27] || '').trim();                  // Column 27: Size & Desc.
+      const adjustment = (row[28] || '').trim();                   // Column 28: Adjustment
+      const quantity = parseFloat(row[29]) || 0;                   // Column 29: QTY
+      const partsCost = parseFloat(row[30]) || 0;                  // Column 30: Parts
+      const laborCost = parseFloat(row[31]) || 0;                  // Column 31: Labor
+      const fet = parseFloat(row[32]) || 0;                        // Column 32: FET (Federal Excise Tax)
+      const lineTotal = parseFloat(row[33]) || 0;                  // Column 33: Total
+      const cost = parseFloat(row[34]) || 0;                       // Column 34: Cost
+      const grossProfitMargin = parseFloat(row[35]) || 0;          // Column 35: GPM% (Gross Profit Margin %)
+      const grossProfit = parseFloat(row[36]) || 0;                // Column 36: GP$ (Gross Profit $)
 
       return {
         productCode,
