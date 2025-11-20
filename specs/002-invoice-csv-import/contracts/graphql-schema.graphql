@@ -1,0 +1,483 @@
+# GraphQL Schema Extension for Invoice CSV Import
+# This schema extends the existing TakeTenDash GraphQL API
+
+# =============================================================================
+# SCALARS AND ENUMS
+# =============================================================================
+
+"""Custom scalar for handling decimal numbers with precision"""
+scalar Decimal
+
+"""Custom scalar for date handling"""
+scalar Date
+
+"""Invoice status enumeration"""
+enum InvoiceStatus {
+  ACTIVE
+  VOIDED
+  RETURNED
+}
+
+"""Product category enumeration"""
+enum ProductCategory {
+  TIRES
+  SERVICES
+  PARTS
+  FEES
+  OTHER
+}
+
+"""Import status enumeration"""
+enum ImportStatus {
+  STARTED
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+"""Error type enumeration"""
+enum ErrorType {
+  VALIDATION
+  DUPLICATE
+  MISSING_DATA
+  FORMAT
+  BUSINESS_RULE
+}
+
+"""Data source type enumeration"""
+enum DataSourceType {
+  TIRE_MASTER_SYNC
+  INVOICE_IMPORT
+}
+
+# =============================================================================
+# CORE TYPES
+# =============================================================================
+
+"""Customer entity with normalized contact information"""
+type Customer {
+  id: ID!
+  name: String!
+  email: String
+  phone: String
+  address: String
+  customerCode: String
+  createdAt: Date!
+  updatedAt: Date!
+
+  # Relationships
+  invoices: [Invoice!]!
+  totalPurchases: Decimal
+  averageInvoiceValue: Decimal
+}
+
+"""Invoice entity representing complete transactions"""
+type Invoice {
+  id: ID!
+  invoiceNumber: String!
+  invoiceDate: Date!
+  salesperson: String!
+  subtotal: Decimal!
+  taxAmount: Decimal!
+  totalAmount: Decimal!
+  laborCost: Decimal
+  partsCost: Decimal
+  environmentalFee: Decimal
+  status: InvoiceStatus!
+  createdAt: Date!
+  updatedAt: Date!
+
+  # Relationships
+  customer: Customer!
+  lineItems: [InvoiceLineItem!]!
+  importBatch: ImportBatch!
+
+  # Computed fields
+  grossProfit: Decimal
+  grossProfitMargin: Decimal
+}
+
+"""Individual line items within invoices"""
+type InvoiceLineItem {
+  id: ID!
+  productCode: String!
+  description: String!
+  quantity: Decimal!
+  unitPrice: Decimal!
+  lineTotal: Decimal!
+  costPrice: Decimal!
+  grossProfitMargin: Decimal!
+  grossProfit: Decimal!
+  category: ProductCategory!
+  createdAt: Date!
+
+  # Relationships
+  invoice: Invoice!
+}
+
+"""Import batch tracking for audit and monitoring"""
+type ImportBatch {
+  id: ID!
+  fileName: String!
+  originalPath: String!
+  processedPath: String
+  startedAt: Date!
+  completedAt: Date
+  totalRecords: Int!
+  successfulRecords: Int!
+  failedRecords: Int!
+  status: ImportStatus!
+  userId: String
+  errorSummary: String
+
+  # Relationships
+  invoices: [Invoice!]!
+  errors: [ImportError!]!
+
+  # Computed fields
+  successRate: Float!
+  processingDuration: Int # in seconds
+}
+
+"""Detailed error information for failed imports"""
+type ImportError {
+  id: ID!
+  rowNumber: Int!
+  errorType: ErrorType!
+  errorMessage: String!
+  originalData: String!
+  fieldName: String
+  createdAt: Date!
+
+  # Relationships
+  importBatch: ImportBatch!
+}
+
+# =============================================================================
+# ANALYTICS AND DASHBOARD TYPES
+# =============================================================================
+
+"""Enhanced sales metrics including invoice data"""
+type EnhancedSalesMetrics {
+  totalRevenue: Decimal!
+  grossProfit: Decimal!
+  grossProfitMargin: Decimal!
+  invoiceCount: Int!
+  averageInvoiceValue: Decimal!
+
+  # Breakdown analytics
+  categoryBreakdown: [CategoryMetrics!]!
+  salespersonPerformance: [SalespersonMetrics!]!
+  timeSeriesData: [TimeSeriesPoint!]!
+
+  # Comparison metrics
+  periodComparison: PeriodComparison
+  dataSourceBreakdown: DataSourceBreakdown!
+}
+
+"""Category-specific metrics"""
+type CategoryMetrics {
+  category: String!
+  revenue: Decimal!
+  profit: Decimal!
+  profitMargin: Decimal!
+  itemsSold: Int!
+  invoiceCount: Int!
+  averageItemValue: Decimal!
+}
+
+"""Salesperson performance metrics"""
+type SalespersonMetrics {
+  salesperson: String!
+  revenue: Decimal!
+  profit: Decimal!
+  invoiceCount: Int!
+  averageInvoiceValue: Decimal!
+  averageProfitMargin: Decimal!
+  topCategory: String
+}
+
+"""Time series data point for trend analysis"""
+type TimeSeriesPoint {
+  date: Date!
+  revenue: Decimal!
+  profit: Decimal!
+  invoiceCount: Int!
+}
+
+"""Period-over-period comparison metrics"""
+type PeriodComparison {
+  currentPeriod: EnhancedSalesMetrics!
+  previousPeriod: EnhancedSalesMetrics!
+  revenueGrowthPercent: Decimal!
+  profitGrowthPercent: Decimal!
+  invoiceGrowthPercent: Decimal!
+}
+
+"""Breakdown by data source (TireMaster vs Invoice Import)"""
+type DataSourceBreakdown {
+  tireMasterSync: SourceMetrics!
+  invoiceImport: SourceMetrics!
+  totalCombined: SourceMetrics!
+}
+
+"""Metrics for a specific data source"""
+type SourceMetrics {
+  revenue: Decimal!
+  profit: Decimal!
+  transactionCount: Int!
+  averageValue: Decimal!
+  lastSyncDate: Date
+}
+
+# =============================================================================
+# INPUT TYPES
+# =============================================================================
+
+"""Date range filter input"""
+input DateRangeInput {
+  startDate: Date!
+  endDate: Date!
+}
+
+"""Sales filter input for analytics queries"""
+input SalesFilterInput {
+  dateRange: DateRangeInput
+  salespeople: [String!]
+  categories: [ProductCategory!]
+  customerIds: [ID!]
+  minAmount: Decimal
+  maxAmount: Decimal
+  dataSource: DataSourceType
+  invoiceStatuses: [InvoiceStatus!]
+}
+
+"""Invoice filter input"""
+input InvoiceFilterInput {
+  dateRange: DateRangeInput
+  customerIds: [ID!]
+  salespeople: [String!]
+  statuses: [InvoiceStatus!]
+  minAmount: Decimal
+  maxAmount: Decimal
+  searchText: String
+}
+
+"""Customer filter input"""
+input CustomerFilterInput {
+  searchText: String
+  hasInvoices: Boolean
+  createdAfter: Date
+  minTotalPurchases: Decimal
+}
+
+"""Import batch filter input"""
+input ImportBatchFilterInput {
+  dateRange: DateRangeInput
+  statuses: [ImportStatus!]
+  userIds: [String!]
+  hasErrors: Boolean
+}
+
+"""Manual import trigger input"""
+input ManualImportInput {
+  filePath: String!
+  userId: String
+  overrideExisting: Boolean = false
+}
+
+"""Pagination input"""
+input PaginationInput {
+  page: Int = 1
+  limit: Int = 20
+}
+
+# =============================================================================
+# RESPONSE TYPES
+# =============================================================================
+
+"""Paginated response wrapper"""
+type PaginatedResponse {
+  page: Int!
+  limit: Int!
+  total: Int!
+  totalPages: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+}
+
+"""Paginated invoices response"""
+type PaginatedInvoices {
+  data: [Invoice!]!
+  pagination: PaginatedResponse!
+}
+
+"""Paginated customers response"""
+type PaginatedCustomers {
+  data: [Customer!]!
+  pagination: PaginatedResponse!
+}
+
+"""Paginated import batches response"""
+type PaginatedImportBatches {
+  data: [ImportBatch!]!
+  pagination: PaginatedResponse!
+}
+
+"""Import operation result"""
+type ImportResult {
+  success: Boolean!
+  batchId: ID
+  message: String!
+  processedRecords: Int
+  failedRecords: Int
+  errors: [String!]
+}
+
+"""Import progress for real-time updates"""
+type ImportProgress {
+  batchId: ID!
+  processed: Int!
+  total: Int!
+  percentage: Float!
+  currentStep: String!
+  estimatedTimeRemaining: Int # in seconds
+}
+
+# =============================================================================
+# QUERIES
+# =============================================================================
+
+extend type Query {
+  # Enhanced Analytics
+  """Get enhanced sales metrics with invoice data integration"""
+  enhancedSalesMetrics(filters: SalesFilterInput): EnhancedSalesMetrics!
+
+  """Compare sales metrics between two periods"""
+  salesComparison(
+    currentPeriod: DateRangeInput!
+    previousPeriod: DateRangeInput!
+    filters: SalesFilterInput
+  ): PeriodComparison!
+
+  # Invoice Management
+  """Get paginated list of invoices with filters"""
+  invoices(
+    filters: InvoiceFilterInput
+    pagination: PaginationInput
+  ): PaginatedInvoices!
+
+  """Get specific invoice by ID"""
+  invoice(id: ID!): Invoice
+
+  """Get invoice by invoice number"""
+  invoiceByNumber(invoiceNumber: String!): Invoice
+
+  # Customer Management
+  """Get paginated list of customers with filters"""
+  customers(
+    filters: CustomerFilterInput
+    pagination: PaginationInput
+  ): PaginatedCustomers!
+
+  """Get specific customer by ID"""
+  customer(id: ID!): Customer
+
+  """Search customers by name or contact info"""
+  searchCustomers(query: String!, limit: Int = 10): [Customer!]!
+
+  # Import Management
+  """Get paginated list of import batches"""
+  importBatches(
+    filters: ImportBatchFilterInput
+    pagination: PaginationInput
+  ): PaginatedImportBatches!
+
+  """Get specific import batch with details"""
+  importBatch(id: ID!): ImportBatch
+
+  """Get import batch errors for troubleshooting"""
+  importErrors(batchId: ID!, limit: Int = 100): [ImportError!]!
+
+  """Get current import progress"""
+  importProgress(batchId: ID!): ImportProgress
+
+  # System Health
+  """Get import system status and recent activity"""
+  importSystemStatus: ImportSystemStatus!
+}
+
+"""Import system status information"""
+type ImportSystemStatus {
+  isHealthy: Boolean!
+  lastSuccessfulImport: Date
+  pendingFiles: Int!
+  totalImportsToday: Int!
+  averageProcessingTime: Int! # in seconds
+  errorRate: Float! # percentage
+  diskUsage: DiskUsageInfo!
+}
+
+"""Disk usage information for data folder monitoring"""
+type DiskUsageInfo {
+  totalSpace: String!
+  usedSpace: String!
+  availableSpace: String!
+  usagePercent: Float!
+}
+
+# =============================================================================
+# MUTATIONS
+# =============================================================================
+
+extend type Mutation {
+  # Import Operations
+  """Trigger manual CSV import"""
+  triggerManualImport(input: ManualImportInput!): ImportResult!
+
+  """Cancel running import operation"""
+  cancelImport(batchId: ID!): Boolean!
+
+  """Retry failed import batch"""
+  retryImport(batchId: ID!): ImportResult!
+
+  """Delete import batch and associated data"""
+  deleteImportBatch(batchId: ID!): Boolean!
+
+  # Data Management
+  """Update invoice status (void, restore)"""
+  updateInvoiceStatus(id: ID!, status: InvoiceStatus!): Invoice!
+
+  """Merge duplicate customers"""
+  mergeCustomers(sourceId: ID!, targetId: ID!): Customer!
+
+  """Update customer information"""
+  updateCustomer(id: ID!, input: CustomerUpdateInput!): Customer!
+}
+
+"""Customer update input"""
+input CustomerUpdateInput {
+  name: String
+  email: String
+  phone: String
+  address: String
+  customerCode: String
+}
+
+# =============================================================================
+# SUBSCRIPTIONS
+# =============================================================================
+
+extend type Subscription {
+  """Subscribe to import progress updates"""
+  importProgressUpdates(batchId: ID!): ImportProgress!
+
+  """Subscribe to import completion notifications"""
+  importCompleted: ImportResult!
+
+  """Subscribe to sales data updates (for dashboard refresh)"""
+  salesDataUpdated: EnhancedSalesMetrics!
+
+  """Subscribe to system health status changes"""
+  systemStatusUpdated: ImportSystemStatus!
+}

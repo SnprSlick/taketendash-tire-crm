@@ -1,0 +1,1141 @@
+openapi: 3.0.3
+info:
+  title: TakeTenDash Invoice CSV Import API
+  description: REST API endpoints for CSV import operations and invoice management
+  version: 1.0.0
+  contact:
+    name: TakeTenDash Development Team
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3001/api/v1
+    description: Development server
+  - url: https://api.taketendash.com/v1
+    description: Production server
+
+# =============================================================================
+# SECURITY SCHEMES
+# =============================================================================
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  # =============================================================================
+  # COMMON SCHEMAS
+  # =============================================================================
+  schemas:
+    # Base Types
+    UUID:
+      type: string
+      format: uuid
+      example: "123e4567-e89b-12d3-a456-426614174000"
+
+    Date:
+      type: string
+      format: date
+      example: "2025-01-15"
+
+    DateTime:
+      type: string
+      format: date-time
+      example: "2025-01-15T14:30:00Z"
+
+    Decimal:
+      type: string
+      pattern: '^-?\d+(\.\d+)?$'
+      example: "1234.56"
+
+    # Enums
+    InvoiceStatus:
+      type: string
+      enum: [ACTIVE, VOIDED, RETURNED]
+
+    ProductCategory:
+      type: string
+      enum: [TIRES, SERVICES, PARTS, FEES, OTHER]
+
+    ImportStatus:
+      type: string
+      enum: [STARTED, IN_PROGRESS, COMPLETED, FAILED]
+
+    ErrorType:
+      type: string
+      enum: [VALIDATION, DUPLICATE, MISSING_DATA, FORMAT, BUSINESS_RULE]
+
+    # Core Entities
+    Customer:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        name:
+          type: string
+          maxLength: 255
+          example: "John's Auto Repair"
+        email:
+          type: string
+          format: email
+          nullable: true
+          example: "john@autoshop.com"
+        phone:
+          type: string
+          nullable: true
+          example: "+1-555-123-4567"
+        address:
+          type: string
+          nullable: true
+          example: "123 Main St, Anytown, ST 12345"
+        customerCode:
+          type: string
+          nullable: true
+          example: "CUST-001"
+        createdAt:
+          $ref: '#/components/schemas/DateTime'
+        updatedAt:
+          $ref: '#/components/schemas/DateTime'
+        totalPurchases:
+          $ref: '#/components/schemas/Decimal'
+        averageInvoiceValue:
+          $ref: '#/components/schemas/Decimal'
+      required:
+        - id
+        - name
+        - createdAt
+        - updatedAt
+
+    Invoice:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        invoiceNumber:
+          type: string
+          maxLength: 50
+          example: "2024-12345"
+        customerId:
+          $ref: '#/components/schemas/UUID'
+        customer:
+          $ref: '#/components/schemas/Customer'
+        invoiceDate:
+          $ref: '#/components/schemas/Date'
+        salesperson:
+          type: string
+          maxLength: 255
+          example: "Jane Smith"
+        subtotal:
+          $ref: '#/components/schemas/Decimal'
+        taxAmount:
+          $ref: '#/components/schemas/Decimal'
+        totalAmount:
+          $ref: '#/components/schemas/Decimal'
+        laborCost:
+          allOf:
+            - $ref: '#/components/schemas/Decimal'
+            - nullable: true
+        partsCost:
+          allOf:
+            - $ref: '#/components/schemas/Decimal'
+            - nullable: true
+        environmentalFee:
+          allOf:
+            - $ref: '#/components/schemas/Decimal'
+            - nullable: true
+        status:
+          $ref: '#/components/schemas/InvoiceStatus'
+        lineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceLineItem'
+        createdAt:
+          $ref: '#/components/schemas/DateTime'
+        updatedAt:
+          $ref: '#/components/schemas/DateTime'
+        grossProfit:
+          $ref: '#/components/schemas/Decimal'
+        grossProfitMargin:
+          $ref: '#/components/schemas/Decimal'
+      required:
+        - id
+        - invoiceNumber
+        - customerId
+        - invoiceDate
+        - salesperson
+        - subtotal
+        - taxAmount
+        - totalAmount
+        - status
+
+    InvoiceLineItem:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        invoiceId:
+          $ref: '#/components/schemas/UUID'
+        productCode:
+          type: string
+          maxLength: 100
+          example: "TIRE-001"
+        description:
+          type: string
+          example: "Michelin Pilot Sport 225/45R17"
+        quantity:
+          $ref: '#/components/schemas/Decimal'
+        unitPrice:
+          $ref: '#/components/schemas/Decimal'
+        lineTotal:
+          $ref: '#/components/schemas/Decimal'
+        costPrice:
+          $ref: '#/components/schemas/Decimal'
+        grossProfitMargin:
+          $ref: '#/components/schemas/Decimal'
+        grossProfit:
+          $ref: '#/components/schemas/Decimal'
+        category:
+          $ref: '#/components/schemas/ProductCategory'
+        createdAt:
+          $ref: '#/components/schemas/DateTime'
+      required:
+        - id
+        - invoiceId
+        - productCode
+        - description
+        - quantity
+        - unitPrice
+        - lineTotal
+        - category
+
+    ImportBatch:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        fileName:
+          type: string
+          maxLength: 255
+          example: "invoices_2024_01.csv"
+        originalPath:
+          type: string
+          maxLength: 500
+          example: "/data/invoices_2024_01.csv"
+        processedPath:
+          type: string
+          maxLength: 500
+          nullable: true
+          example: "/data/import/invoices_2024_01.csv"
+        startedAt:
+          $ref: '#/components/schemas/DateTime'
+        completedAt:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+            - nullable: true
+        totalRecords:
+          type: integer
+          minimum: 0
+          example: 1500
+        successfulRecords:
+          type: integer
+          minimum: 0
+          example: 1485
+        failedRecords:
+          type: integer
+          minimum: 0
+          example: 15
+        status:
+          $ref: '#/components/schemas/ImportStatus'
+        userId:
+          type: string
+          nullable: true
+          example: "user-123"
+        errorSummary:
+          type: string
+          nullable: true
+          example: "15 records failed validation"
+        successRate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          example: 99.0
+        processingDuration:
+          type: integer
+          description: "Processing duration in seconds"
+          example: 120
+      required:
+        - id
+        - fileName
+        - originalPath
+        - startedAt
+        - totalRecords
+        - successfulRecords
+        - failedRecords
+        - status
+
+    ImportError:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        importBatchId:
+          $ref: '#/components/schemas/UUID'
+        rowNumber:
+          type: integer
+          minimum: 1
+          example: 156
+        errorType:
+          $ref: '#/components/schemas/ErrorType'
+        errorMessage:
+          type: string
+          example: "Invalid date format in invoice_date field"
+        originalData:
+          type: string
+          description: "Raw CSV row data that failed processing"
+        fieldName:
+          type: string
+          nullable: true
+          example: "invoice_date"
+        createdAt:
+          $ref: '#/components/schemas/DateTime'
+      required:
+        - id
+        - importBatchId
+        - rowNumber
+        - errorType
+        - errorMessage
+        - originalData
+
+    # Analytics Types
+    SalesMetrics:
+      type: object
+      properties:
+        totalRevenue:
+          $ref: '#/components/schemas/Decimal'
+        grossProfit:
+          $ref: '#/components/schemas/Decimal'
+        grossProfitMargin:
+          $ref: '#/components/schemas/Decimal'
+        invoiceCount:
+          type: integer
+          minimum: 0
+        averageInvoiceValue:
+          $ref: '#/components/schemas/Decimal'
+        categoryBreakdown:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryMetrics'
+        salespersonPerformance:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalespersonMetrics'
+
+    CategoryMetrics:
+      type: object
+      properties:
+        category:
+          type: string
+        revenue:
+          $ref: '#/components/schemas/Decimal'
+        profit:
+          $ref: '#/components/schemas/Decimal'
+        profitMargin:
+          $ref: '#/components/schemas/Decimal'
+        itemsSold:
+          type: integer
+        invoiceCount:
+          type: integer
+
+    SalespersonMetrics:
+      type: object
+      properties:
+        salesperson:
+          type: string
+        revenue:
+          $ref: '#/components/schemas/Decimal'
+        profit:
+          $ref: '#/components/schemas/Decimal'
+        invoiceCount:
+          type: integer
+        averageInvoiceValue:
+          $ref: '#/components/schemas/Decimal'
+        averageProfitMargin:
+          $ref: '#/components/schemas/Decimal'
+
+    # Request/Response Types
+    PaginatedResponse:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          example: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 20
+        total:
+          type: integer
+          minimum: 0
+          example: 1500
+        totalPages:
+          type: integer
+          minimum: 1
+          example: 75
+        hasNextPage:
+          type: boolean
+        hasPreviousPage:
+          type: boolean
+      required:
+        - page
+        - limit
+        - total
+        - totalPages
+        - hasNextPage
+        - hasPreviousPage
+
+    ImportResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        batchId:
+          allOf:
+            - $ref: '#/components/schemas/UUID'
+            - nullable: true
+        message:
+          type: string
+          example: "Import completed successfully"
+        processedRecords:
+          type: integer
+          nullable: true
+        failedRecords:
+          type: integer
+          nullable: true
+        errors:
+          type: array
+          items:
+            type: string
+      required:
+        - success
+        - message
+
+    ImportProgress:
+      type: object
+      properties:
+        batchId:
+          $ref: '#/components/schemas/UUID'
+        processed:
+          type: integer
+          minimum: 0
+        total:
+          type: integer
+          minimum: 0
+        percentage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+        currentStep:
+          type: string
+          example: "Processing invoices"
+        estimatedTimeRemaining:
+          type: integer
+          nullable: true
+          description: "Estimated time remaining in seconds"
+      required:
+        - batchId
+        - processed
+        - total
+        - percentage
+        - currentStep
+
+    SystemStatus:
+      type: object
+      properties:
+        isHealthy:
+          type: boolean
+        lastSuccessfulImport:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+            - nullable: true
+        pendingFiles:
+          type: integer
+          minimum: 0
+        totalImportsToday:
+          type: integer
+          minimum: 0
+        averageProcessingTime:
+          type: integer
+          description: "Average processing time in seconds"
+        errorRate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: "Error rate percentage"
+      required:
+        - isHealthy
+        - pendingFiles
+        - totalImportsToday
+        - averageProcessingTime
+        - errorRate
+
+    # Error Response
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Validation failed"
+        message:
+          type: string
+          example: "The provided data did not pass validation"
+        statusCode:
+          type: integer
+          example: 400
+        details:
+          type: array
+          items:
+            type: string
+      required:
+        - error
+        - message
+        - statusCode
+
+# =============================================================================
+# API PATHS
+# =============================================================================
+paths:
+  # Import Management
+  /import/trigger:
+    post:
+      summary: Trigger manual CSV import
+      description: Manually trigger the CSV import process for a specific file
+      operationId: triggerManualImport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filePath:
+                  type: string
+                  example: "/data/invoices_2024_01.csv"
+                userId:
+                  type: string
+                  nullable: true
+                  example: "user-123"
+                overrideExisting:
+                  type: boolean
+                  default: false
+              required:
+                - filePath
+      responses:
+        '200':
+          description: Import triggered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResult'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: File not found
+        '500':
+          description: Internal server error
+
+  /import/batches:
+    get:
+      summary: List import batches
+      description: Get paginated list of import batches with optional filtering
+      operationId: getImportBatches
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ImportStatus'
+        - name: startDate
+          in: query
+          schema:
+            $ref: '#/components/schemas/Date'
+        - name: endDate
+          in: query
+          schema:
+            $ref: '#/components/schemas/Date'
+        - name: userId
+          in: query
+          schema:
+            type: string
+        - name: hasErrors
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of import batches
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ImportBatch'
+                  pagination:
+                    $ref: '#/components/schemas/PaginatedResponse'
+
+  /import/batches/{batchId}:
+    get:
+      summary: Get import batch details
+      description: Get detailed information about a specific import batch
+      operationId: getImportBatch
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      responses:
+        '200':
+          description: Import batch details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportBatch'
+        '404':
+          description: Import batch not found
+
+    delete:
+      summary: Delete import batch
+      description: Delete an import batch and all associated data
+      operationId: deleteImportBatch
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      responses:
+        '200':
+          description: Import batch deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '404':
+          description: Import batch not found
+        '409':
+          description: Cannot delete batch in progress
+
+  /import/batches/{batchId}/errors:
+    get:
+      summary: Get import errors
+      description: Get detailed error information for a specific import batch
+      operationId: getImportErrors
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+        - name: errorType
+          in: query
+          schema:
+            $ref: '#/components/schemas/ErrorType'
+      responses:
+        '200':
+          description: List of import errors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ImportError'
+
+  /import/batches/{batchId}/progress:
+    get:
+      summary: Get import progress
+      description: Get real-time progress information for an active import
+      operationId: getImportProgress
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      responses:
+        '200':
+          description: Import progress information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportProgress'
+        '404':
+          description: Import batch not found or not active
+
+  /import/batches/{batchId}/cancel:
+    post:
+      summary: Cancel import
+      description: Cancel a running import operation
+      operationId: cancelImport
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      responses:
+        '200':
+          description: Import cancelled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          description: Cannot cancel completed import
+        '404':
+          description: Import batch not found
+
+  /import/batches/{batchId}/retry:
+    post:
+      summary: Retry failed import
+      description: Retry a failed import operation
+      operationId: retryImport
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      responses:
+        '200':
+          description: Import retry initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResult'
+        '400':
+          description: Cannot retry non-failed import
+        '404':
+          description: Import batch not found
+
+  /import/status:
+    get:
+      summary: Get import system status
+      description: Get overall system health and import statistics
+      operationId: getImportSystemStatus
+      responses:
+        '200':
+          description: System status information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemStatus'
+
+  # Invoice Management
+  /invoices:
+    get:
+      summary: List invoices
+      description: Get paginated list of invoices with filtering options
+      operationId: getInvoices
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: customerId
+          in: query
+          schema:
+            $ref: '#/components/schemas/UUID'
+        - name: salesperson
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/InvoiceStatus'
+        - name: startDate
+          in: query
+          schema:
+            $ref: '#/components/schemas/Date'
+        - name: endDate
+          in: query
+          schema:
+            $ref: '#/components/schemas/Date'
+        - name: minAmount
+          in: query
+          schema:
+            type: number
+            format: float
+        - name: maxAmount
+          in: query
+          schema:
+            type: number
+            format: float
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search in invoice number, customer name, or description
+      responses:
+        '200':
+          description: List of invoices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Invoice'
+                  pagination:
+                    $ref: '#/components/schemas/PaginatedResponse'
+
+  /invoices/{invoiceId}:
+    get:
+      summary: Get invoice details
+      description: Get detailed information about a specific invoice
+      operationId: getInvoice
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+        - name: includeLineItems
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Invoice details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+        '404':
+          description: Invoice not found
+
+    patch:
+      summary: Update invoice status
+      description: Update the status of an invoice (void, restore, etc.)
+      operationId: updateInvoiceStatus
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  $ref: '#/components/schemas/InvoiceStatus'
+              required:
+                - status
+      responses:
+        '200':
+          description: Invoice status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+        '400':
+          description: Invalid status transition
+        '404':
+          description: Invoice not found
+
+  /invoices/by-number/{invoiceNumber}:
+    get:
+      summary: Get invoice by number
+      description: Get invoice details using the invoice number
+      operationId: getInvoiceByNumber
+      parameters:
+        - name: invoiceNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Invoice details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+        '404':
+          description: Invoice not found
+
+  # Customer Management
+  /customers:
+    get:
+      summary: List customers
+      description: Get paginated list of customers
+      operationId: getCustomers
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by name, email, or phone
+        - name: hasInvoices
+          in: query
+          schema:
+            type: boolean
+          description: Filter customers with or without invoices
+      responses:
+        '200':
+          description: List of customers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Customer'
+                  pagination:
+                    $ref: '#/components/schemas/PaginatedResponse'
+
+  /customers/{customerId}:
+    get:
+      summary: Get customer details
+      description: Get detailed customer information including purchase history
+      operationId: getCustomer
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+        - name: includeInvoices
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Customer details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '404':
+          description: Customer not found
+
+    patch:
+      summary: Update customer information
+      description: Update customer contact information and details
+      operationId: updateCustomer
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                address:
+                  type: string
+                customerCode:
+                  type: string
+      responses:
+        '200':
+          description: Customer updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          description: Invalid customer data
+        '404':
+          description: Customer not found
+
+  /customers/search:
+    get:
+      summary: Search customers
+      description: Quick search for customers by name or contact information
+      operationId: searchCustomers
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+          description: Search query
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Customer'
+
+  # Analytics
+  /analytics/sales:
+    get:
+      summary: Get enhanced sales metrics
+      description: Get comprehensive sales analytics including invoice data
+      operationId: getEnhancedSalesMetrics
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            $ref: '#/components/schemas/Date'
+        - name: endDate
+          in: query
+          schema:
+            $ref: '#/components/schemas/Date'
+        - name: salesperson
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            $ref: '#/components/schemas/ProductCategory'
+        - name: customerId
+          in: query
+          schema:
+            $ref: '#/components/schemas/UUID'
+      responses:
+        '200':
+          description: Enhanced sales metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalesMetrics'
+
+# =============================================================================
+# WEBHOOKS (Optional)
+# =============================================================================
+webhooks:
+  importCompleted:
+    post:
+      summary: Import completion notification
+      description: Webhook called when CSV import process completes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                event:
+                  type: string
+                  example: "import.completed"
+                batchId:
+                  $ref: '#/components/schemas/UUID'
+                status:
+                  $ref: '#/components/schemas/ImportStatus'
+                timestamp:
+                  $ref: '#/components/schemas/DateTime'
+                data:
+                  $ref: '#/components/schemas/ImportResult'
+      responses:
+        '200':
+          description: Webhook acknowledged
+
+tags:
+  - name: Import Management
+    description: CSV import operations and monitoring
+  - name: Invoice Management
+    description: Invoice data access and management
+  - name: Customer Management
+    description: Customer information and relationships
+  - name: Analytics
+    description: Sales analytics and reporting

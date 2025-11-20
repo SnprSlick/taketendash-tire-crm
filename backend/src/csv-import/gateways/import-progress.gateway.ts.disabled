@@ -1,0 +1,366 @@
+import {
+  WebSocketGateway,
+  WebSocketServer,
+  SubscribeMessage,
+  MessageBody,
+  ConnectedSocket,
+  OnGatewayConnection,
+  OnGatewayDisconnect
+} from '@nestjs/websockets';
+import { Server, Socket } from 'socket.io';
+import { Logger, UseGuards } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
+
+/**
+ * Import Progress WebSocket Gateway
+ *
+ * Provides real-time updates for CSV import progress and status.
+ * Clients can subscribe to import events and receive live notifications.
+ */
+
+interface ImportProgressUpdate {
+  batchId: string;
+  step: string;
+  progress: {
+    currentStep: string;
+    processedRows?: number;
+    totalRows?: number;
+    foundInvoices?: number;
+    processedInvoices?: number;
+    currentInvoice?: string;
+    errors?: number;
+    percentage?: number;
+  };
+  timestamp: Date;
+}
+
+interface ClientSubscription {
+  batchId: string;
+  userId?: string;
+  subscribedAt: Date;
+}
+
+@WebSocketGateway({
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+  },
+  namespace: '/csv-import',
+})
+export class ImportProgressGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  @WebSocketServer()
+  server: Server;
+
+  private readonly logger = new Logger(ImportProgressGateway.name);
+  private clientSubscriptions = new Map<string, ClientSubscription[]>();
+
+  /**
+   * Handle client connection
+   */
+  handleConnection(client: Socket) {
+    this.logger.log(`Client connected: ${client.id}`);
+
+    client.emit('connection_established', {
+      clientId: client.id,
+      timestamp: new Date(),
+      message: 'Connected to CSV import progress updates'
+    });
+  }
+
+  /**
+   * Handle client disconnection
+   */
+  handleDisconnection(client: Socket) {
+    this.logger.log(`Client disconnected: ${client.id}`);
+
+    // Clean up subscriptions
+    for (const [batchId, subscriptions] of this.clientSubscriptions.entries()) {
+      const filtered = subscriptions.filter(sub =>
+        this.getSocketFromSubscription(sub) !== client.id
+      );
+
+      if (filtered.length === 0) {
+        this.clientSubscriptions.delete(batchId);
+      } else {
+        this.clientSubscriptions.set(batchId, filtered);
+      }
+    }
+  }
+
+  /**
+   * Subscribe to import batch progress updates
+   */
+  @SubscribeMessage('subscribe_to_batch')
+  handleSubscribeToBatch(
+    @MessageBody() data: { batchId: string; userId?: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const { batchId, userId } = data;
+
+    if (!batchId) {
+      client.emit('subscription_error', {
+        error: 'Batch ID is required for subscription'
+      });
+      return;
+    }
+
+    const subscription: ClientSubscription = {
+      batchId,
+      userId,
+      subscribedAt: new Date()
+    };
+
+    // Store subscription
+    if (!this.clientSubscriptions.has(batchId)) {
+      this.clientSubscriptions.set(batchId, []);
+    }
+
+    // Remove existing subscription for this client to this batch
+    const existingSubscriptions = this.clientSubscriptions.get(batchId)!;
+    const filteredSubs = existingSubscriptions.filter(sub =>
+      this.getSocketFromSubscription(sub) !== client.id
+    );
+
+    // Add new subscription (store client ID in subscription for tracking)
+    (subscription as any).clientId = client.id;
+    filteredSubs.push(subscription);
+    this.clientSubscriptions.set(batchId, filteredSubs);
+
+    this.logger.log(`Client ${client.id} subscribed to batch ${batchId}`);
+
+    client.emit('subscription_confirmed', {
+      batchId,
+      subscribedAt: subscription.subscribedAt,
+      message: `Subscribed to batch ${batchId} progress updates`
+    });
+  }
+
+  /**
+   * Unsubscribe from import batch progress updates
+   */
+  @SubscribeMessage('unsubscribe_from_batch')
+  handleUnsubscribeFromBatch(
+    @MessageBody() data: { batchId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const { batchId } = data;
+
+    if (this.clientSubscriptions.has(batchId)) {
+      const filtered = this.clientSubscriptions.get(batchId)!.filter(sub =>
+        this.getSocketFromSubscription(sub) !== client.id
+      );
+
+      if (filtered.length === 0) {
+        this.clientSubscriptions.delete(batchId);
+      } else {
+        this.clientSubscriptions.set(batchId, filtered);
+      }
+
+      this.logger.log(`Client ${client.id} unsubscribed from batch ${batchId}`);
+
+      client.emit('unsubscription_confirmed', {
+        batchId,
+        message: `Unsubscribed from batch ${batchId}`
+      });
+    }
+  }
+
+  /**
+   * Get current subscriptions for a client
+   */
+  @SubscribeMessage('get_subscriptions')
+  handleGetSubscriptions(@ConnectedSocket() client: Socket) {
+    const subscriptions: string[] = [];
+
+    for (const [batchId, subs] of this.clientSubscriptions.entries()) {
+      if (subs.some(sub => this.getSocketFromSubscription(sub) === client.id)) {
+        subscriptions.push(batchId);
+      }
+    }
+
+    client.emit('current_subscriptions', {
+      subscriptions,
+      count: subscriptions.length
+    });
+  }
+
+  /**
+   * Event listener for CSV import progress updates
+   */
+  @OnEvent('csv.import.progress')
+  handleImportProgress(data: ImportProgressUpdate) {
+    const { batchId } = data;
+
+    if (this.clientSubscriptions.has(batchId)) {
+      const subscriptions = this.clientSubscriptions.get(batchId)!;
+
+      this.logger.debug(
+        `Broadcasting progress update for batch ${batchId} to ${subscriptions.length} clients`
+      );
+
+      // Broadcast to all subscribed clients
+      subscriptions.forEach(subscription => {
+        const socketId = this.getSocketFromSubscription(subscription);
+        const socket = this.server.sockets.get(socketId);
+
+        if (socket) {
+          socket.emit('import_progress_update', {
+            batchId,
+            progress: data.progress,
+            step: data.step,
+            timestamp: data.timestamp || new Date()
+          });
+        }
+      });
+    }
+  }
+
+  /**
+   * Event listener for CSV import completion
+   */
+  @OnEvent('csv.import.completed')
+  handleImportCompleted(data: { batchId: string; fileName: string; result: any }) {
+    const { batchId } = data;
+
+    if (this.clientSubscriptions.has(batchId)) {
+      const subscriptions = this.clientSubscriptions.get(batchId)!;
+
+      this.logger.log(`Broadcasting completion for batch ${batchId} to ${subscriptions.length} clients`);
+
+      subscriptions.forEach(subscription => {
+        const socketId = this.getSocketFromSubscription(subscription);
+        const socket = this.server.sockets.get(socketId);
+
+        if (socket) {
+          socket.emit('import_completed', {
+            batchId,
+            fileName: data.fileName,
+            result: data.result,
+            timestamp: new Date()
+          });
+        }
+      });
+
+      // Clean up subscriptions after completion
+      this.clientSubscriptions.delete(batchId);
+    }
+  }
+
+  /**
+   * Event listener for CSV import failures
+   */
+  @OnEvent('csv.import.failed')
+  handleImportFailed(data: { batchId?: string; fileName: string; error: string }) {
+    const { batchId } = data;
+
+    if (batchId && this.clientSubscriptions.has(batchId)) {
+      const subscriptions = this.clientSubscriptions.get(batchId)!;
+
+      this.logger.log(`Broadcasting failure for batch ${batchId} to ${subscriptions.length} clients`);
+
+      subscriptions.forEach(subscription => {
+        const socketId = this.getSocketFromSubscription(subscription);
+        const socket = this.server.sockets.get(socketId);
+
+        if (socket) {
+          socket.emit('import_failed', {
+            batchId,
+            fileName: data.fileName,
+            error: data.error,
+            timestamp: new Date()
+          });
+        }
+      });
+
+      // Clean up subscriptions after failure
+      this.clientSubscriptions.delete(batchId);
+    }
+
+    // Also broadcast to all clients for general failures
+    this.server.emit('import_error', {
+      fileName: data.fileName,
+      error: data.error,
+      timestamp: new Date()
+    });
+  }
+
+  /**
+   * Event listener for file monitor scan events
+   */
+  @OnEvent('file.monitor.scan.started')
+  handleFileScanStarted(data: { scanType: string; directories: string[]; startTime: Date }) {
+    this.server.emit('file_scan_started', {
+      scanType: data.scanType,
+      directories: data.directories,
+      startTime: data.startTime,
+      timestamp: new Date()
+    });
+  }
+
+  /**
+   * Event listener for file monitor scan completion
+   */
+  @OnEvent('file.monitor.scan.completed')
+  handleFileScanCompleted(data: { scanType: string; filesFound: number; filesProcessed: number; errors: number }) {
+    this.server.emit('file_scan_completed', {
+      scanType: data.scanType,
+      filesFound: data.filesFound,
+      filesProcessed: data.filesProcessed,
+      errors: data.errors,
+      timestamp: new Date()
+    });
+  }
+
+  /**
+   * Broadcast system status updates
+   */
+  @OnEvent('import.system.status')
+  handleSystemStatus(data: { status: string; message: string; details?: any }) {
+    this.server.emit('system_status', {
+      status: data.status,
+      message: data.message,
+      details: data.details,
+      timestamp: new Date()
+    });
+  }
+
+  /**
+   * Manual progress broadcast for testing
+   */
+  broadcastTestProgress(batchId: string, progress: any) {
+    this.handleImportProgress({
+      batchId,
+      step: 'test',
+      progress,
+      timestamp: new Date()
+    });
+  }
+
+  /**
+   * Get connection statistics
+   */
+  getConnectionStats() {
+    const totalConnections = this.server.sockets.size;
+    const totalSubscriptions = Array.from(this.clientSubscriptions.values())
+      .reduce((sum, subs) => sum + subs.length, 0);
+
+    const batchSubscriptions = new Map();
+    for (const [batchId, subs] of this.clientSubscriptions.entries()) {
+      batchSubscriptions.set(batchId, subs.length);
+    }
+
+    return {
+      totalConnections,
+      totalSubscriptions,
+      activeBatches: this.clientSubscriptions.size,
+      batchSubscriptions: Object.fromEntries(batchSubscriptions)
+    };
+  }
+
+  /**
+   * Helper to get socket ID from subscription
+   */
+  private getSocketFromSubscription(subscription: ClientSubscription): string {
+    return (subscription as any).clientId;
+  }
+}

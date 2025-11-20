@@ -5,7 +5,13 @@ import { HttpExceptionFilter } from './filters/http-exception.filter';
 import { PrismaService } from './prisma/prisma.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  console.log('🔧 Starting TakeTenDash backend...');
+
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'log', 'debug'],
+  });
+
+  console.log('✅ NestJS application created');
 
   // Enable CORS
   app.enableCors({
@@ -22,6 +28,8 @@ async function bootstrap() {
     credentials: true,
   });
 
+  console.log('✅ CORS configured');
+
   // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
@@ -32,22 +40,27 @@ async function bootstrap() {
     }),
   );
 
+  console.log('✅ Global pipes configured');
+
   // Global exception filter
   app.useGlobalFilters(new HttpExceptionFilter());
+
+  console.log('✅ Global filters configured');
 
   // Set global prefix for REST API
   app.setGlobalPrefix('api/v1', { exclude: ['/graphql', '/', '/health', '/api', '/favicon.ico'] });
 
-  // Enable Prisma shutdown hooks
-  const prismaService = app.get(PrismaService);
-  await prismaService.enableShutdownHooks(app);
+  console.log('✅ Global prefix configured');
 
   const port = process.env.PORT || 3001;
+  console.log(`🔧 Starting HTTP server on port ${port}...`);
+
   await app.listen(port);
 
   console.log(`🚀 Tire CRM Backend running on port ${port}`);
-  console.log(`🔗 GraphQL Playground: http://localhost:${port}/graphql`);
-  console.log(`📖 REST API: http://localhost:${port}/api/v1`);
+  console.log(`🔗 Health Check: http://localhost:${port}/health`);
+  console.log(`📖 CSV Import API: http://localhost:${port}/api/v1/csv-import`);
+  console.log(`📊 API Info: http://localhost:${port}/api`);
 }
 
 bootstrap().catch((error) => {

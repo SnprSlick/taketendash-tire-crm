@@ -286,32 +286,174 @@ model LargeAccount {
 }
 
 model SalesData {
-  id              String          @id @default(cuid())
-  tireMasterId    String          @unique @db.VarChar(50)
-  serviceRecordId String?
-  customerId      String?
-  employeeId      String?
-  transactionDate DateTime        @db.Date
-  transactionType TransactionType @default(SALE)
-  category        String          @db.VarChar(50)
-  itemDescription String          @db.VarChar(200)
-  quantity        Int
-  unitPrice       Decimal         @db.Decimal(10, 2)
-  taxAmount       Decimal?        @db.Decimal(10, 2)
-  syncedAt        DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id               String          @id @default(cuid())
+  tireMasterId     String?         @db.VarChar(50)
+  serviceRecordId  String?
+  customerId       String?
+  employeeId       String?
+  invoiceId        String?
+  sourceType       DataSourceType  @default(TIRE_MASTER_SYNC)
+  transactionDate  DateTime        @db.Date
+  transactionType  TransactionType @default(SALE)
+  category         String          @db.VarChar(50)
+  itemDescription  String          @db.VarChar(200)
+  quantity         Decimal         @db.Decimal(10, 3)
+  unitPrice        Decimal         @db.Decimal(10, 2)
+  taxAmount        Decimal?        @db.Decimal(10, 2)
+  grossProfitMargin Decimal?       @db.Decimal(5, 2)
+  costBasis        Decimal?        @db.Decimal(10, 2)
+  syncedAt         DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
   // Relationships
   serviceRecord ServiceRecord? @relation(fields: [serviceRecordId], references: [id])
   customer      Customer?      @relation(fields: [customerId], references: [id])
   employee      Employee?      @relation(fields: [employeeId], references: [id])
+  invoice       Invoice?       @relation(fields: [invoiceId], references: [id])
 
+  @@unique([tireMasterId], name: "unique_tire_master_id")
   @@index([serviceRecordId])
   @@index([customerId])
   @@index([employeeId])
+  @@index([invoiceId])
+  @@index([sourceType])
   @@index([transactionDate, category])
   @@index([transactionType])
   @@map("sales_data")
+}
+
+// Invoice CSV Import Models
+
+model InvoiceCustomer {
+  id           String   @id @default(cuid())
+  name         String   @db.VarChar(255)
+  email        String?  @db.VarChar(255)
+  phone        String?  @db.VarChar(50)
+  address      String?  @db.Text
+  customerCode String?  @db.VarChar(100)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  invoices    Invoice[]
+
+  @@unique([name], name: "unique_invoice_customer_name")
+  @@map("invoice_customers")
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  invoiceNumber   String        @unique @map("invoice_number") @db.VarChar(50)
+  customerId      String        @map("customer_id")
+  invoiceDate     DateTime      @map("invoice_date")
+  salesperson     String        @db.VarChar(255)
+  subtotal        Decimal       @db.Decimal(10, 2)
+  taxAmount       Decimal       @map("tax_amount") @db.Decimal(10, 2)
+  totalAmount     Decimal       @map("total_amount") @db.Decimal(10, 2)
+  laborCost       Decimal?      @map("labor_cost") @db.Decimal(10, 2)
+  partsCost       Decimal?      @map("parts_cost") @db.Decimal(10, 2)
+  environmentalFee Decimal?     @map("environmental_fee") @db.Decimal(10, 2)
+  status          InvoiceStatus @default(ACTIVE)
+  importBatchId   String        @map("import_batch_id")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  // Relationships
+  customer     InvoiceCustomer   @relation(fields: [customerId], references: [id])
+  lineItems    InvoiceLineItem[]
+  importBatch  ImportBatch       @relation(fields: [importBatchId], references: [id])
+  salesData    SalesData[]
+
+  @@index([invoiceDate])
+  @@index([customerId])
+  @@index([importBatchId])
+  @@map("invoices")
+}
+
+model InvoiceLineItem {
+  id                  String          @id @default(cuid())
+  invoiceId           String          @map("invoice_id")
+  productCode         String          @map("product_code") @db.VarChar(100)
+  description         String          @db.Text
+  quantity            Decimal         @db.Decimal(10, 3)
+  unitPrice           Decimal         @map("unit_price") @db.Decimal(10, 2)
+  lineTotal           Decimal         @map("line_total") @db.Decimal(10, 2)
+  costPrice           Decimal         @map("cost_price") @db.Decimal(10, 2)
+  grossProfitMargin   Decimal         @map("gross_profit_margin") @db.Decimal(5, 2)
+  grossProfit         Decimal         @map("gross_profit") @db.Decimal(10, 2)
+  category            ProductCategory
+  createdAt           DateTime        @default(now()) @map("created_at")
+
+  // Relationships
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+  @@index([productCode])
+  @@index([category])
+  @@map("invoice_line_items")
+}
+
+model ImportBatch {
+  id                String       @id @default(cuid())
+  fileName          String       @map("file_name") @db.VarChar(255)
+  originalPath      String       @map("original_path") @db.VarChar(500)
+  processedPath     String?      @map("processed_path") @db.VarChar(500)
+  startedAt         DateTime     @default(now()) @map("started_at")
+  completedAt       DateTime?    @map("completed_at")
+  totalRecords      Int          @map("total_records")
+  successfulRecords Int          @default(0) @map("successful_records")
+  failedRecords     Int          @default(0) @map("failed_records")
+  status            ImportStatus @default(STARTED)
+  userId            String?      @map("user_id") @db.VarChar(100)
+  errorSummary      String?      @map("error_summary") @db.Text
+
+  // Relationships
+  invoices           Invoice[]
+  errors             ImportError[]
+  rollbackOperations ImportRollbackOperation[]
+
+  @@index([startedAt])
+  @@index([status])
+  @@map("import_batches")
+}
+
+model ImportError {
+  id             String    @id @default(cuid())
+  importBatchId  String    @map("import_batch_id")
+  rowNumber      Int       @map("row_number")
+  errorType      ErrorType @map("error_type")
+  errorMessage   String    @map("error_message") @db.Text
+  originalData   String    @map("original_data") @db.Text
+  fieldName      String?   @map("field_name") @db.VarChar(100)
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  // Relationships
+  importBatch ImportBatch @relation(fields: [importBatchId], references: [id])
+
+  @@index([importBatchId])
+  @@index([errorType])
+  @@map("import_errors")
+}
+
+model ImportRollbackOperation {
+  id              String   @id @default(cuid())
+  importBatchId   String   @map("import_batch_id")
+  operationType   String   @map("operation_type") @db.VarChar(50)
+  recordId        String   @map("record_id") @db.VarChar(100)
+  tableName       String   @map("table_name") @db.VarChar(100)
+  operation       String   @db.VarChar(20)
+  originalData    String?  @map("original_data") @db.Text
+  newData         String?  @map("new_data") @db.Text
+  timestamp       DateTime @default(now())
+
+  // Relationships
+  importBatch ImportBatch @relation(fields: [importBatchId], references: [id])
+
+  @@index([importBatchId])
+  @@index([operationType])
+  @@index([tableName])
+  @@index([timestamp])
+  @@map("import_rollback_operations")
 }
 
 // Tire Master Integration Models
@@ -335,6 +477,41 @@ enum SyncStatus {
   COMPLETED
   FAILED
   CANCELLED
+}
+
+enum InvoiceStatus {
+  ACTIVE
+  VOIDED
+  RETURNED
+}
+
+enum ProductCategory {
+  TIRES
+  SERVICES
+  PARTS
+  FEES
+  OTHER
+}
+
+enum ImportStatus {
+  STARTED
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  ROLLED_BACK
+}
+
+enum ErrorType {
+  VALIDATION
+  DUPLICATE
+  MISSING_DATA
+  FORMAT
+  BUSINESS_RULE
+}
+
+enum DataSourceType {
+  TIRE_MASTER_SYNC
+  INVOICE_IMPORT
 }
 
 enum MappingType {
