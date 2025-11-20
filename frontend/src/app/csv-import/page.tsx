@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/dashboard/dashboard-layout';
-import { FileUp, Download, Eye, CheckCircle, AlertCircle, Upload } from 'lucide-react';
+import { FileUp, Download, Eye, CheckCircle, AlertCircle, Upload, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface ParsedInvoice {
   invoiceNumber: string;
@@ -37,6 +37,7 @@ export default function CsvImportPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [parseResult, setParseResult] = useState<any>(null);
   const [dataStats, setDataStats] = useState<{totalInvoices: number, totalLineItems: number} | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   // Load actual parsing results from our successful CSV analysis
   useEffect(() => {
@@ -64,6 +65,24 @@ export default function CsvImportPage() {
 
     loadRealData();
   }, []);
+
+  const toggleRow = (invoiceNumber: string) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(invoiceNumber)) {
+      newExpanded.delete(invoiceNumber);
+    } else {
+      newExpanded.add(invoiceNumber);
+    }
+    setExpandedRows(newExpanded);
+  };
+
+  const toggleAllRows = () => {
+    if (expandedRows.size === csvData.length) {
+      setExpandedRows(new Set());
+    } else {
+      setExpandedRows(new Set(csvData.map(inv => inv.invoiceNumber)));
+    }
+  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -275,10 +294,18 @@ export default function CsvImportPage() {
           </div>
         )}
 
-        {/* Parsed Data Display */}
-        <div className="bg-white border border-gray-200 rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Parsed TireMaster Data</h2>
+        {/* Parsed Data Display - Compact Expandable Table */}
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+            <div className="flex items-center space-x-4">
+              <h2 className="text-xl font-semibold">Parsed Invoice Data</h2>
+              <button
+                onClick={toggleAllRows}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                {expandedRows.size === csvData.length ? 'Collapse All' : 'Expand All'}
+              </button>
+            </div>
             <button
               onClick={downloadTestReport}
               className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
@@ -289,93 +316,198 @@ export default function CsvImportPage() {
           </div>
 
           <div className="overflow-x-auto">
-            {csvData.map((invoice, idx) => (
-              <div key={idx} className="border-b border-gray-100 last:border-b-0">
-                {/* Invoice Header */}
-                <div className="px-6 py-4 bg-gray-50">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900">
-                        Invoice #{invoice.invoiceNumber}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        Customer: {invoice.customerName}
-                      </p>
-                      {invoice.invoiceDate && (
-                        <p className="text-sm text-gray-600">
-                          Date: {invoice.invoiceDate}
-                        </p>
-                      )}
-                      {invoice.vehicleInfo && (
-                        <p className="text-sm text-gray-600">
-                          Vehicle: {invoice.vehicleInfo}
-                        </p>
-                      )}
-                      {invoice.salesperson && (
-                        <p className="text-sm text-gray-600">
-                          Salesperson: {invoice.salesperson}
-                        </p>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm text-gray-500">
-                        {invoice.lineItems.length} line items
-                      </div>
-                      {invoice.taxAmount !== undefined && (
-                        <div className="text-sm text-gray-600">
-                          Tax: ${invoice.taxAmount.toFixed(2)}
-                        </div>
-                      )}
-                      {invoice.totalAmount !== undefined && (
-                        <div className="text-lg font-semibold text-gray-900">
-                          Total: ${invoice.totalAmount.toFixed(2)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="w-10 px-3 py-3"></th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Invoice #
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Customer
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Vehicle
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Items
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tax
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {csvData.map((invoice) => {
+                  const isExpanded = expandedRows.has(invoice.invoiceNumber);
+                  return (
+                    <>
+                      {/* Invoice Row */}
+                      <tr
+                        key={invoice.invoiceNumber}
+                        onClick={() => toggleRow(invoice.invoiceNumber)}
+                        className="hover:bg-gray-50 cursor-pointer transition-colors"
+                      >
+                        <td className="px-3 py-4 whitespace-nowrap">
+                          {isExpanded ? (
+                            <ChevronDown className="h-5 w-5 text-gray-400" />
+                          ) : (
+                            <ChevronRight className="h-5 w-5 text-gray-400" />
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">
+                            {invoice.invoiceNumber}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-900">{invoice.customerName}</div>
+                          {invoice.salesperson && (
+                            <div className="text-xs text-gray-500">{invoice.salesperson}</div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{invoice.invoiceDate || '-'}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-900 max-w-xs truncate">
+                            {invoice.vehicleInfo || '-'}
+                          </div>
+                          {invoice.mileage && invoice.mileage !== '0 / 0' && (
+                            <div className="text-xs text-gray-500">{invoice.mileage}</div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {invoice.lineItems.length}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                          ${(invoice.taxAmount || 0).toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
+                          ${(invoice.totalAmount || 0).toFixed(2)}
+                        </td>
+                      </tr>
 
-                {/* Line Items */}
-                <div className="px-6 py-4">
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full">
-                      <thead>
-                        <tr className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          <th className="text-left py-2">Product</th>
-                          <th className="text-left py-2">Description</th>
-                          <th className="text-center py-2">Adj.</th>
-                          <th className="text-right py-2">QTY</th>
-                          <th className="text-right py-2">Parts</th>
-                          <th className="text-right py-2">Labor</th>
-                          <th className="text-right py-2">FET</th>
-                          <th className="text-right py-2">Total</th>
-                          <th className="text-right py-2">Cost</th>
-                          <th className="text-right py-2">GPM%</th>
-                          <th className="text-right py-2">GP$</th>
+                      {/* Expanded Line Items */}
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan={8} className="px-0 py-0">
+                            <div className="bg-gray-50 border-t border-b border-gray-200">
+                              <div className="px-12 py-4">
+                                <h4 className="text-sm font-medium text-gray-900 mb-3">Line Items</h4>
+                                <div className="overflow-x-auto">
+                                  <table className="min-w-full">
+                                    <thead>
+                                      <tr className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <th className="text-left py-2 pr-4">Product Code</th>
+                                        <th className="text-left py-2 pr-4">Description</th>
+                                        <th className="text-center py-2 pr-4">Adj</th>
+                                        <th className="text-right py-2 pr-4">Qty</th>
+                                        <th className="text-right py-2 pr-4">Parts</th>
+                                        <th className="text-right py-2 pr-4">Labor</th>
+                                        <th className="text-right py-2 pr-4">FET</th>
+                                        <th className="text-right py-2 pr-4">Total</th>
+                                        <th className="text-right py-2 pr-4">Cost</th>
+                                        <th className="text-right py-2 pr-4">GPM%</th>
+                                        <th className="text-right py-2">GP$</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                      {invoice.lineItems.map((item, itemIdx) => (
+                                        <tr key={itemIdx} className="text-sm hover:bg-gray-100">
+                                          <td className="py-2 pr-4 font-mono text-xs text-gray-900">
+                                            {item.productCode}
+                                          </td>
+                                          <td className="py-2 pr-4 text-gray-700 max-w-xs truncate">
+                                            {item.description}
+                                          </td>
+                                          <td className="py-2 pr-4 text-center text-gray-600">
+                                            {item.adjustment || '-'}
+                                          </td>
+                                          <td className="py-2 pr-4 text-right text-gray-600">
+                                            {item.quantity}
+                                          </td>
+                                          <td className="py-2 pr-4 text-right text-gray-600">
+                                            ${item.partsCost.toFixed(2)}
+                                          </td>
+                                          <td className="py-2 pr-4 text-right text-gray-600">
+                                            ${item.laborCost.toFixed(2)}
+                                          </td>
+                                          <td className="py-2 pr-4 text-right text-gray-600">
+                                            ${item.fet.toFixed(2)}
+                                          </td>
+                                          <td className="py-2 pr-4 text-right font-medium text-gray-900">
+                                            ${item.lineTotal.toFixed(2)}
+                                          </td>
+                                          <td className="py-2 pr-4 text-right text-gray-600">
+                                            ${item.cost.toFixed(2)}
+                                          </td>
+                                          <td className="py-2 pr-4 text-right text-green-600">
+                                            {item.grossProfitMargin.toFixed(1)}%
+                                          </td>
+                                          <td className="py-2 text-right font-medium text-green-600">
+                                            ${item.grossProfit.toFixed(2)}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                    <tfoot className="bg-gray-100 border-t-2 border-gray-300">
+                                      <tr className="text-sm font-semibold">
+                                        <td className="py-3 pr-4 text-gray-900" colSpan={2}>
+                                          Totals
+                                        </td>
+                                        <td className="py-3 pr-4 text-center text-gray-600">
+                                          -
+                                        </td>
+                                        <td className="py-3 pr-4 text-right text-gray-900">
+                                          {invoice.lineItems.reduce((sum, item) => sum + item.quantity, 0).toFixed(1)}
+                                        </td>
+                                        <td className="py-3 pr-4 text-right text-gray-900">
+                                          ${invoice.lineItems.reduce((sum, item) => sum + item.partsCost, 0).toFixed(2)}
+                                        </td>
+                                        <td className="py-3 pr-4 text-right text-gray-900">
+                                          ${invoice.lineItems.reduce((sum, item) => sum + item.laborCost, 0).toFixed(2)}
+                                        </td>
+                                        <td className="py-3 pr-4 text-right text-gray-900">
+                                          ${invoice.lineItems.reduce((sum, item) => sum + item.fet, 0).toFixed(2)}
+                                        </td>
+                                        <td className="py-3 pr-4 text-right font-bold text-gray-900">
+                                          ${invoice.lineItems.reduce((sum, item) => sum + item.lineTotal, 0).toFixed(2)}
+                                        </td>
+                                        <td className="py-3 pr-4 text-right text-gray-900">
+                                          ${invoice.lineItems.reduce((sum, item) => sum + item.cost, 0).toFixed(2)}
+                                        </td>
+                                        <td className="py-3 pr-4 text-right text-gray-600">
+                                          {/* Average GPM% */}
+                                          {invoice.lineItems.length > 0 
+                                            ? (invoice.lineItems.reduce((sum, item) => sum + item.grossProfitMargin, 0) / invoice.lineItems.length).toFixed(1)
+                                            : '0.0'}%
+                                        </td>
+                                        <td className="py-3 text-right font-bold text-green-700">
+                                          ${invoice.lineItems.reduce((sum, item) => sum + item.grossProfit, 0).toFixed(2)}
+                                        </td>
+                                      </tr>
+                                    </tfoot>
+                                  </table>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {invoice.lineItems.map((item, itemIdx) => (
-                          <tr key={itemIdx} className="text-sm hover:bg-gray-50">
-                            <td className="py-3 font-medium text-gray-900">{item.productCode}</td>
-                            <td className="py-3 text-gray-700 max-w-xs truncate">{item.description}</td>
-                            <td className="py-3 text-center text-gray-600">{item.adjustment || '-'}</td>
-                            <td className="py-3 text-right text-gray-600">{item.quantity}</td>
-                            <td className="py-3 text-right text-gray-600">${item.partsCost.toFixed(2)}</td>
-                            <td className="py-3 text-right text-gray-600">${item.laborCost.toFixed(2)}</td>
-                            <td className="py-3 text-right text-gray-600">${item.fet.toFixed(2)}</td>
-                            <td className="py-3 text-right font-medium text-gray-900">${item.lineTotal.toFixed(2)}</td>
-                            <td className="py-3 text-right text-gray-600">${item.cost.toFixed(2)}</td>
-                            <td className="py-3 text-right text-green-600">{item.grossProfitMargin.toFixed(1)}%</td>
-                            <td className="py-3 text-right font-medium text-green-600">${item.grossProfit.toFixed(2)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            ))}
+                      )}
+                    </>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
 
