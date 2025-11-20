@@ -1,8 +1,8 @@
 import { ObjectType, Field, ID, InputType, Int, registerEnumType } from '@nestjs/graphql';
 import { AppointmentStatus } from '@prisma/client';
-import { CustomerType } from './customer.type';
-import { VehicleType } from './vehicle.type';
-import { EmployeeType } from './employee.type';
+import { Customer } from './customer.type';
+// import { VehicleType } from './vehicle.type';
+// import { EmployeeType } from './employee.type';
 
 // Register GraphQL enums
 registerEnumType(AppointmentStatus, {
@@ -57,15 +57,15 @@ export class AppointmentType {
   @Field()
   updatedAt: Date;
 
-  // Relations
-  @Field(() => CustomerType, { nullable: true })
-  customer?: CustomerType;
+  // Relations - temporarily disabled due to missing types
+  @Field(() => Customer, { nullable: true })
+  customer?: Customer;
 
-  @Field(() => VehicleType, { nullable: true })
-  vehicle?: VehicleType;
+  // @Field(() => VehicleType, { nullable: true })
+  // vehicle?: VehicleType;
 
-  @Field(() => EmployeeType, { nullable: true })
-  employee?: EmployeeType;
+  // @Field(() => EmployeeType, { nullable: true })
+  // employee?: EmployeeType;
 }
 
 @InputType()

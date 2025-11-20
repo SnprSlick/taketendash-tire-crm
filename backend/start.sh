@@ -1,13 +1,8 @@
 #!/bin/sh
 
-# Wait for database to be ready
-echo "Waiting for database to be ready..."
-while ! nc -z postgres 5432; do
-  sleep 1
-done
+echo "=== TakeTenDash Backend Startup ==="
+echo "Starting backend service..."
 
-echo "Database is ready."
-
-# Use simple server while fixing compilation issues
-echo "Starting simple API server..."
+echo "⚠️  Temporarily using simple Express server for immediate functionality..."
+echo "🔄 Starting simple Express server on port 3001..."
 node simple-server.js

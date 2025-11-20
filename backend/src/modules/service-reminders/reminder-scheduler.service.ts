@@ -37,7 +37,7 @@ export class ReminderSchedulerService {
    * Weekly comprehensive reminder generation job
    * Runs every Monday at 7:00 AM for comprehensive service analysis
    */
-  @Cron(CronExpression.EVERY_MONDAY_AT_7AM, {
+  @Cron('0 7 * * 1', { // Every Monday at 7:00 AM
     name: 'weekly-comprehensive-generation',
     timeZone: 'America/New_York',
   })

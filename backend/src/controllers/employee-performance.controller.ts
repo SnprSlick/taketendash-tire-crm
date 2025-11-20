@@ -10,10 +10,11 @@ import {
   Logger,
   Request
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { Roles } from '../auth/roles.decorator';
-import { RolesGuard } from '../auth/roles.guard';
-import { PerformanceTrackingService } from '../services/performance-tracking.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
+// Temporarily disabled performance tracking service
+// import { PerformanceTrackingService } from '../services/performance-tracking.service';
 import { EmployeeRole } from '@prisma/client';
 
 interface EmployeePerformanceFilters {
@@ -24,6 +25,8 @@ interface EmployeePerformanceFilters {
   limit?: number;
 }
 
+// Temporarily disabled employee performance controller
+/*
 @Controller('api/v1/analytics')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class EmployeePerformanceController {
@@ -319,3 +322,7 @@ export class EmployeePerformanceController {
     }
   }
 }
+*/
+
+// Placeholder class for temporarily disabled employee performance controller
+export class EmployeePerformanceController {}

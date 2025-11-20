@@ -457,7 +457,13 @@ app.get('/health', (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Simple backend server running on port ${PORT}`);
+  console.log('\n=== Simple Express Server Started ===');
+  console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 Health check: http://localhost:${PORT}/health`);
   console.log(`📊 Large Accounts API: http://localhost:${PORT}/api/v1/large-accounts`);
+  console.log(`🔄 Notifications API: http://localhost:${PORT}/api/notifications/accounts`);
+  console.log(`👤 Auth API: http://localhost:${PORT}/api/auth/user`);
+  console.log(`🏗️  Tire Master API: http://localhost:${PORT}/api/v1/tire-master`);
+  console.log('✓ Ready to serve frontend requests');
+  console.log('=====================================\n');
 });

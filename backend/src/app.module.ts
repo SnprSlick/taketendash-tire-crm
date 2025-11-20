@@ -16,6 +16,7 @@ import { TireMasterModule } from './modules/tire-master/tire-master.module';
 import { DateScalar } from './graphql/scalars/date.scalar';
 // import { LibrariesModule } from './libraries/libraries.module'; // Temporarily disabled
 import { AppController } from './app.controller';
+import { HealthResolver } from './graphql/resolvers/health.resolver';
 
 @Module({
   imports: [
@@ -36,6 +37,6 @@ import { AppController } from './app.controller';
     TireMasterModule,
   ],
   controllers: [AppController],
-  providers: [DateScalar],
+  providers: [DateScalar, HealthResolver],
 })
 export class AppModule {}

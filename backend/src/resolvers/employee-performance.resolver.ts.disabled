@@ -1,10 +1,11 @@
 import { Resolver, Query, Args, Context } from '@nestjs/graphql';
 import { UseGuards, Logger, BadRequestException, ForbiddenException } from '@nestjs/common';
-import { PerformanceTrackingService } from '../services/performance-tracking.service';
-import { PerformanceLoggingService } from '../services/performance-logging.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
-import { Roles } from '../auth/roles.decorator';
+// Performance tracking services temporarily disabled
+// import { PerformanceTrackingService } from '../services.disabled/performance-tracking.service';
+// import { PerformanceLoggingService } from '../services.disabled/performance-logging.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { EmployeeRole } from '@prisma/client';
 import {
   EmployeePerformanceType,

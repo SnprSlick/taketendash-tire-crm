@@ -1,7 +1,7 @@
 FROM node:20-alpine
 
-# Install netcat for health checks
-RUN apk add --no-cache netcat-openbsd
+# Install required packages for health checks and Prisma
+RUN apk add --no-cache netcat-openbsd openssl libc6-compat
 
 # Set working directory
 WORKDIR /app
@@ -15,6 +15,8 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Set Prisma engine type for Alpine Linux
+ENV PRISMA_QUERY_ENGINE_BINARY=/app/node_modules/prisma/libquery_engine-linux-musl-openssl-3.0.x.so.node
 # Generate Prisma client
 RUN npx prisma generate
 
