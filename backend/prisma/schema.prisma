@@ -347,12 +347,17 @@ model Invoice {
   customerId      String        @map("customer_id")
   invoiceDate     DateTime      @map("invoice_date")
   salesperson     String        @db.VarChar(255)
+  vehicleInfo     String?       @map("vehicle_info") @db.VarChar(255)
+  mileage         String?       @db.VarChar(50)
   subtotal        Decimal       @db.Decimal(10, 2)
   taxAmount       Decimal       @map("tax_amount") @db.Decimal(10, 2)
   totalAmount     Decimal       @map("total_amount") @db.Decimal(10, 2)
   laborCost       Decimal?      @map("labor_cost") @db.Decimal(10, 2)
   partsCost       Decimal?      @map("parts_cost") @db.Decimal(10, 2)
+  fetTotal        Decimal?      @map("fet_total") @db.Decimal(10, 2)
   environmentalFee Decimal?     @map("environmental_fee") @db.Decimal(10, 2)
+  totalCost       Decimal?      @map("total_cost") @db.Decimal(10, 2)
+  grossProfit     Decimal?      @map("gross_profit") @db.Decimal(10, 2)
   status          InvoiceStatus @default(ACTIVE)
   importBatchId   String        @map("import_batch_id")
   createdAt       DateTime      @default(now()) @map("created_at")
@@ -367,16 +372,21 @@ model Invoice {
   @@index([invoiceDate])
   @@index([customerId])
   @@index([importBatchId])
+  @@index([salesperson])
   @@map("invoices")
 }
 
 model InvoiceLineItem {
   id                  String          @id @default(cuid())
   invoiceId           String          @map("invoice_id")
+  lineNumber          Int?            @map("line_number")
   productCode         String          @map("product_code") @db.VarChar(100)
   description         String          @db.Text
+  adjustment          String?         @db.VarChar(50)
   quantity            Decimal         @db.Decimal(10, 3)
-  unitPrice           Decimal         @map("unit_price") @db.Decimal(10, 2)
+  partsCost           Decimal         @map("parts_cost") @db.Decimal(10, 2)
+  laborCost           Decimal         @map("labor_cost") @db.Decimal(10, 2)
+  fet                 Decimal         @db.Decimal(10, 2)
   lineTotal           Decimal         @map("line_total") @db.Decimal(10, 2)
   costPrice           Decimal         @map("cost_price") @db.Decimal(10, 2)
   grossProfitMargin   Decimal         @map("gross_profit_margin") @db.Decimal(5, 2)
@@ -385,7 +395,7 @@ model InvoiceLineItem {
   createdAt           DateTime        @default(now()) @map("created_at")
 
   // Relationships
-  invoice Invoice @relation(fields: [invoiceId], references: [id])
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId])
   @@index([productCode])

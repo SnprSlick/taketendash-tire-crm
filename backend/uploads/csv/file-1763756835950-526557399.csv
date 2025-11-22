@@ -1,0 +1,5 @@
+Invoice Detail Report,,,,,,,,,,,
+SIMPLE CUSTOMER,,,,,,Vehicle: 2020 TEST CAR,,,Mileage: 1000,
+,Invoice #   TEST-001,,Invoice Date:  11/21/2025,,Salesperson: TEST PERSON,,,Tax: $10.00,,,Total: $110.00,
+PROD001,TEST PRODUCT,NONE,1,100.00,0.00,0.00,100.00,50.00,50.0,50.00
+,,,,,,,,,,,Totals for Invoice TEST-001,,,$110.00,,,,,,

@@ -1,5 +1,6 @@
 import { Injectable, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { PrismaService } from '../../prisma/prisma.service';
 import { ImportBatchService, BatchCompletionResult } from './import-batch.service';
 import { TireMasterCsvParser, TireMasterParsingResult, TireMasterParsingOptions } from '../processors/tiremaster-csv-parser';
 import { CsvFileProcessor } from '../processors/csv-file-processor';
@@ -40,6 +41,8 @@ export interface CsvImportResult {
     estimatedRecords: number;
   };
   duplicateInvoices: string[];
+  isHistorical?: boolean;
+  originalProcessingDate?: Date;
 }
 
 export interface ImportProgress {
@@ -59,6 +62,7 @@ export class CsvImportService {
   private readonly logger = new Logger(CsvImportService.name);
 
   constructor(
+    private readonly prisma: PrismaService,
     private readonly importBatchService: ImportBatchService,
     private readonly csvFileProcessor: CsvFileProcessor,
     private readonly tireMasterCsvParser: TireMasterCsvParser,
@@ -134,6 +138,13 @@ export class CsvImportService {
         batch = await this.importBatchService.createBatch(batchInput);
       } catch (error) {
         if (error.message.includes('already been successfully processed') && !overwriteExisting) {
+          // Extract previous batch ID from error message
+          const batchIdMatch = error.message.match(/Previous batch ID: ([\w-]+)/);
+          if (batchIdMatch) {
+            const previousBatchId = batchIdMatch[1];
+            this.logger.log(`Returning existing batch data for: ${fileName} (Batch ID: ${previousBatchId})`);
+            return await this.buildHistoricalResult(previousBatchId);
+          }
           throw new BadRequestException(error.message);
         }
         throw error;
@@ -293,7 +304,7 @@ export class CsvImportService {
       // Process each invoice in the batch
       for (const invoice of batch) {
         try {
-          await this.persistInvoiceData(invoice);
+          await this.persistInvoiceData(invoice, batchId);
           successfulRecords++;
 
           this.logger.debug(`Successfully processed invoice: ${invoice.header.invoiceNumber}`);
@@ -331,26 +342,164 @@ export class CsvImportService {
 
   /**
    * Persist invoice data to database
-   * TODO: Implement actual database persistence logic based on data model
    */
-  private async persistInvoiceData(invoice: any): Promise<void> {
-    // This is a placeholder for the actual database persistence logic
-    // The implementation will depend on the final data model and entities
+  private async persistInvoiceData(invoice: any, importBatchId: string): Promise<void> {
+    const { header, lineItems, transformedData } = invoice;
 
-    const { transformedData } = invoice;
+    this.logger.debug(`Persisting invoice: ${header.invoiceNumber}`);
+    this.logger.debug(`Invoice data structure:`, {
+      header: JSON.stringify(header, null, 2),
+      lineItemsCount: lineItems?.length || 0,
+      transformedData: JSON.stringify(transformedData, null, 2)
+    });
 
-    // Simulate database operations
-    // In real implementation, this would:
-    // 1. Check if customer exists, create if not
-    // 2. Create/update invoice record
-    // 3. Create line item records
-    // 4. Update inventory if applicable
-    // 5. Handle any business logic constraints
+    try {
+      // Validate required fields and provide fallbacks
+      const customerName = header.customerName?.trim() || 'Unknown Customer';
+      const invoiceNumber = header.invoiceNumber?.trim() || `INV-${Date.now()}`;
+      const invoiceDate = header.invoiceDate ? new Date(header.invoiceDate) : new Date();
 
-    this.logger.debug(`Persisting invoice: ${invoice.header.invoiceNumber}`);
+      // Log validation results
+      this.logger.debug(`Validated fields:`, {
+        originalCustomerName: header.customerName,
+        validatedCustomerName: customerName,
+        originalInvoiceNumber: header.invoiceNumber,
+        validatedInvoiceNumber: invoiceNumber,
+        originalDate: header.invoiceDate,
+        validatedDate: invoiceDate
+      });
 
-    // Placeholder delay to simulate database operations
-    await new Promise(resolve => setTimeout(resolve, 1));
+      // Use a transaction to ensure data consistency
+      await this.prisma.$transaction(async (tx) => {
+        // 1. Check if customer exists, create if not
+        let customer = await tx.invoiceCustomer.findFirst({
+          where: { name: customerName }
+        });
+
+        if (!customer) {
+          customer = await tx.invoiceCustomer.create({
+            data: {
+              name: customerName,
+              email: null,
+              phone: null,
+              address: null,
+              customerCode: null
+            }
+          });
+          this.logger.debug(`Created new customer: ${customerName}`);
+        }
+
+        // 2. Create invoice record with proper type conversions and validation
+        const invoiceData = {
+          invoiceNumber: invoiceNumber,
+          customer: { connect: { id: customer.id } },
+          invoiceDate: invoiceDate,
+          salesperson: header.salesperson?.trim() || 'Unknown',
+          vehicleInfo: header.vehicleInfo?.trim() || null,
+          mileage: header.mileage?.trim() || null,
+          subtotal: this.parseDecimal(transformedData?.invoice?.subtotal || header.totalAmount || 0),
+          taxAmount: this.parseDecimal(transformedData?.invoice?.taxAmount || header.taxAmount || 0),
+          totalAmount: this.parseDecimal(transformedData?.invoice?.totalAmount || header.totalAmount || 0),
+          laborCost: this.parseDecimal(transformedData?.invoice?.laborCost || 0),
+          partsCost: this.parseDecimal(transformedData?.invoice?.partsCost || 0),
+          fetTotal: this.parseDecimal(transformedData?.invoice?.fetTotal || 0),
+          environmentalFee: this.parseDecimal(transformedData?.invoice?.environmentalFee || 0),
+          totalCost: this.parseDecimal(transformedData?.invoice?.totalCost || 0),
+          grossProfit: this.parseDecimal(transformedData?.invoice?.grossProfit || 0),
+          status: 'ACTIVE' as const,
+          importBatch: { connect: { id: importBatchId } }
+        };
+
+        this.logger.debug(`About to create invoice with data:`, JSON.stringify(invoiceData, null, 2));
+
+        const createdInvoice = await tx.invoice.create({
+          data: invoiceData
+        });
+
+        this.logger.debug(`Created invoice: ${createdInvoice.invoiceNumber}`);
+
+        // 3. Create line item records with proper validation
+        for (let i = 0; i < lineItems.length; i++) {
+          const lineItem = lineItems[i];
+          const transformedLineItem = transformedData?.lineItems?.[i];
+
+          const lineItemData = {
+            invoiceId: createdInvoice.id,
+            lineNumber: lineItem.lineNumber || i + 1,
+            productCode: (lineItem.productCode?.trim() || 'UNKNOWN').substring(0, 100),
+            description: (lineItem.description?.trim() || 'No description').substring(0, 500),
+            adjustment: lineItem.adjustment?.trim() || null,
+            quantity: this.parseDecimal(transformedLineItem?.quantity || lineItem.quantity || 0),
+            partsCost: this.parseDecimal(transformedLineItem?.partsCost || lineItem.partsCost || 0),
+            laborCost: this.parseDecimal(transformedLineItem?.laborCost || lineItem.laborCost || 0),
+            fet: this.parseDecimal(transformedLineItem?.fet || lineItem.fet || 0),
+            lineTotal: this.parseDecimal(transformedLineItem?.lineTotal || lineItem.lineTotal || 0),
+            costPrice: this.parseDecimal(transformedLineItem?.costPrice || lineItem.cost || 0),
+            grossProfitMargin: this.parseDecimal(transformedLineItem?.grossProfitMargin || lineItem.grossProfitMargin || 0),
+            grossProfit: this.parseDecimal(transformedLineItem?.grossProfit || lineItem.grossProfit || 0),
+            category: this.categorizeProduct(lineItem.description || lineItem.productCode || 'OTHER')
+          };
+
+          this.logger.debug(`Creating line item ${i + 1}:`, JSON.stringify(lineItemData, null, 2));
+
+          await tx.invoiceLineItem.create({
+            data: lineItemData
+          });
+        }
+
+        this.logger.debug(`Created ${lineItems.length} line items for invoice ${header.invoiceNumber}`);
+      });
+
+    } catch (error) {
+      this.logger.error(`Failed to persist invoice ${header.invoiceNumber}:`, {
+        message: error.message,
+        stack: error.stack,
+        invoiceData: {
+          invoiceNumber: header.invoiceNumber,
+          customerName: header.customerName,
+          invoiceDate: header.invoiceDate,
+          totalAmount: header.totalAmount
+        },
+        errorDetails: error
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Parse a value to a safe decimal number for Prisma
+   */
+  private parseDecimal(value: any): number {
+    if (value === null || value === undefined || value === '') {
+      return 0;
+    }
+
+    const parsed = Number(value);
+    if (isNaN(parsed) || !isFinite(parsed)) {
+      return 0;
+    }
+
+    // Round to 2 decimal places to avoid precision issues
+    return Math.round(parsed * 100) / 100;
+  }
+
+  /**
+   * Categorize product based on description or product code
+   */
+  private categorizeProduct(description: string): 'TIRES' | 'SERVICES' | 'PARTS' | 'FEES' | 'OTHER' {
+    const desc = description.toLowerCase();
+
+    if (desc.includes('tire') || desc.includes('wheel')) {
+      return 'TIRES';
+    } else if (desc.includes('service') || desc.includes('labor') || desc.includes('install')) {
+      return 'SERVICES';
+    } else if (desc.includes('part') || desc.includes('filter') || desc.includes('oil')) {
+      return 'PARTS';
+    } else if (desc.includes('fee') || desc.includes('tax') || desc.includes('environmental')) {
+      return 'FEES';
+    } else {
+      return 'OTHER';
+    }
   }
 
   /**
@@ -429,6 +578,44 @@ export class CsvImportService {
       errorSummary: `Parsing failed: ${parsingResult.errors.length} errors found`,
       validationResult,
       duplicateInvoices: parsingResult.duplicateInvoices || []
+    };
+  }
+
+  /**
+   * Build historical result from existing batch data
+   */
+  private async buildHistoricalResult(batchId: string): Promise<CsvImportResult> {
+    const batch = await this.importBatchService.getBatch(batchId);
+    if (!batch) {
+      throw new BadRequestException(`Batch ${batchId} not found`);
+    }
+
+    // Calculate processing time from batch data
+    const processingTimeMs = batch.completedAt && batch.startedAt
+      ? new Date(batch.completedAt).getTime() - new Date(batch.startedAt).getTime()
+      : 0;
+
+    const successRate = batch.totalRecords > 0
+      ? (batch.successfulRecords / batch.totalRecords) * 100
+      : 0;
+
+    return {
+      batchId: batch.id,
+      success: batch.status === 'COMPLETED',
+      totalRecords: batch.totalRecords,
+      successfulRecords: batch.successfulRecords,
+      failedRecords: batch.failedRecords,
+      processingTimeMs,
+      successRate,
+      errorSummary: batch.errorSummary || undefined,
+      validationResult: {
+        isValid: batch.status === 'COMPLETED',
+        formatErrors: [],
+        estimatedRecords: batch.totalRecords
+      },
+      duplicateInvoices: [],
+      isHistorical: true,
+      originalProcessingDate: batch.startedAt
     };
   }
 

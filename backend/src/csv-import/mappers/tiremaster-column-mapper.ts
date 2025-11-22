@@ -57,10 +57,12 @@ export class TireMasterColumnMapper {
   public static identifyRowType(row: string[]): 'customer_start' | 'invoice_header' | 'invoice_end' | 'lineitem' | 'lineitem_in_report' | 'ignore' {
     if (!row || row.length === 0) return 'ignore';
 
+    console.log(`[DEBUG] identifyRowType called with row: [${row.join('|')}]`);
+
     const firstColumn = row[0] || '';
     const trimmedFirstColumn = firstColumn.trim();
 
-    // Check for invoice termination in ANY column - "Totals for Invoice" marks end of invoice
+    // STEP 1: Check for invoice termination - "Totals for Invoice" anywhere in row
     for (let i = 0; i < row.length; i++) {
       const cell = (row[i] || '').trim();
       if (cell.includes('Totals for Invoice') ||
@@ -70,68 +72,59 @@ export class TireMasterColumnMapper {
       }
     }
 
-    // Check for invoice start - "Invoice #" in ANY column indicates new invoice
+    // STEP 2: Check for invoice header - "Invoice #" anywhere in row
+    // This handles comma-separated format: "Invoice #   3-327553,Invoice Date:  11/21/2025,..."
+    if (trimmedFirstColumn.includes('Invoice #')) {
+      return 'invoice_header';
+    }
+
+    // Also check other columns for invoice header patterns
     for (let i = 0; i < row.length; i++) {
       const cell = (row[i] || '').trim();
-      if (cell.includes('Invoice #') ||
-          cell.includes('Invoice Number')) {
+      if (cell.includes('Invoice #') || cell.includes('Invoice Number')) {
         return 'invoice_header';
       }
     }
 
-    // CRITICAL FIX: Check for line items hidden in "Invoice Detail Report" rows
-    if (trimmedFirstColumn.includes('Invoice Detail Report')) {
-      // Look for line items in columns 27+ (after the report headers)
-      if (row.length > 30) {
-        // Look for line items at the exact column position (27 based on CSV analysis)
-        const potentialProductCode = (row[27] || '').trim();
-        const potentialQty = (row[30] || '').trim();
-
-        // Validate this looks like a real line item
-        if (potentialProductCode.length > 0 &&
-            potentialQty.length > 0 &&
-            !potentialProductCode.includes('Invoice #') &&
-            !potentialProductCode.includes('Customer Name') &&
-            !potentialProductCode.includes('Total') &&
-            !potentialProductCode.includes('Report') &&
-            !potentialProductCode.includes('Totals for') &&
-            !potentialProductCode.includes('Site#') &&
-            !potentialProductCode.includes('Page ')) {
-          return 'lineitem_in_report';
-        }
-      }
+    // STEP 3: Ignore report headers
+    if (trimmedFirstColumn.includes('Invoice Detail Report') ||
+        trimmedFirstColumn.includes('Report') ||
+        trimmedFirstColumn.includes('Page ') ||
+        trimmedFirstColumn.includes('Site#') ||
+        trimmedFirstColumn.includes('Total #') ||
+        trimmedFirstColumn.includes('Average') ||
+        trimmedFirstColumn.includes('Selected Date Range') ||
+        trimmedFirstColumn.includes('Report Notes') ||
+        trimmedFirstColumn.includes('Printed:') ||
+        trimmedFirstColumn.includes('Product Code') ||
+        trimmedFirstColumn.includes('Totals for Report')) {
       return 'ignore';
     }
 
-    // If Column A is NOT "Invoice Detail Report" and has content, it could be start of new invoice
-    // Look for customer name patterns or invoice number patterns
+    // STEP 4: Check for customer name - simple name format
+    // For CSV like "JOHNSON STEVE" - just the customer name on its own line
+    if (trimmedFirstColumn.length > 0 && TireMasterColumnMapper.looksLikeCustomerName(trimmedFirstColumn)) {
+      console.log(`[DEBUG] Row identified as customer_start: "${trimmedFirstColumn}" (looks like customer name: ${TireMasterColumnMapper.looksLikeCustomerName(trimmedFirstColumn)})`);
+      return 'customer_start';
+    }
+
+    // STEP 5: Check for line item - product code in first column with numeric data following
+    // For CSV like "OP789,TIRE 225/60R16 MICHELIN,BALANCE,4,160.00,30.00,12.00,812.00"
     if (trimmedFirstColumn.length > 0) {
-
-      // Check for explicit invoice number (appears a couple rows down from customer)
-      if (this.looksLikeInvoiceNumber(trimmedFirstColumn)) {
-        return 'invoice_header';
-      }
-
-      // Check if this looks like a customer name (typically appears first)
-      if (this.looksLikeCustomerName(trimmedFirstColumn)) {
-        return 'customer_start';
-      }
-
-      // Skip known header/summary patterns
-      if (trimmedFirstColumn.includes('Total #') ||
-          trimmedFirstColumn.includes('Average') ||
-          trimmedFirstColumn.includes('Selected Date Range') ||
-          trimmedFirstColumn.includes('Report Notes') ||
-          trimmedFirstColumn.includes('Printed:') ||
-          trimmedFirstColumn.includes('Product Code') ||
-          trimmedFirstColumn.includes('Totals for Report')) {
-        return 'ignore';
-      }
-
-      // If first column has content and doesn't match above patterns, likely a line item
-      if (!trimmedFirstColumn.includes('Report') &&
-          !trimmedFirstColumn.includes('Total')) {
-        return 'lineitem';
+      // Must have at least product code and numeric values in subsequent columns
+      if (row.length >= 4) {
+        const quantityCol = (row[3] || '').trim();
+        // Check if we have a product code and some numeric data (quantity)
+        if (!isNaN(parseFloat(quantityCol)) && quantityCol.length > 0) {
+          // Additional validation: ensure this isn't a header or summary row
+          if (!trimmedFirstColumn.includes('Total') &&
+              !trimmedFirstColumn.includes('Summary') &&
+              !trimmedFirstColumn.includes('Invoice') &&
+              !trimmedFirstColumn.includes('Customer') &&
+              !trimmedFirstColumn.includes('Date')) {
+            return 'lineitem';
+          }
+        }
       }
     }
 
@@ -140,22 +133,25 @@ export class TireMasterColumnMapper {
 
   /**
    * Extract invoice header information from header row
-   * This extracts from the invoice row itself, customer info is extracted separately
+   * This extracts all data from the invoice header row including customer info
    */
   public static extractInvoiceHeader(row: string[]): TireMasterInvoiceHeader {
     try {
-      // Extract basic invoice info - customer info will be filled in later from customer row
-      const invoiceNumber = this.extractInvoiceNumberFromRow(row);
-      const invoiceDate = this.extractInvoiceDateFromRow(row);
-      const salesperson = this.extractSalespersonFromRow(row);
-      const taxAmount = this.extractTaxFromRow(row);
-      const totalAmount = this.extractTotalFromRow(row);
+      // Extract all invoice info including customer data from the same row
+      const invoiceNumber = TireMasterColumnMapper.extractInvoiceNumberFromRow(row);
+      const customerName = TireMasterColumnMapper.extractCustomerNameFromRow(row);
+      const vehicleInfo = TireMasterColumnMapper.extractVehicleInfoFromRow(row);
+      const mileage = TireMasterColumnMapper.extractMileageFromRow(row);
+      const invoiceDate = TireMasterColumnMapper.extractInvoiceDateFromRow(row);
+      const salesperson = TireMasterColumnMapper.extractSalespersonFromRow(row);
+      const taxAmount = TireMasterColumnMapper.extractTaxFromRow(row);
+      const totalAmount = TireMasterColumnMapper.extractTotalFromRow(row);
 
       return {
         invoiceNumber: invoiceNumber || '',
-        customerName: '', // Will be filled from customer row
-        vehicleInfo: '',  // Will be filled from customer row
-        mileage: '',      // Will be filled from customer row
+        customerName: customerName,
+        vehicleInfo: vehicleInfo,
+        mileage: mileage,
         invoiceDate: invoiceDate || new Date(),
         salesperson: salesperson || '',
         taxAmount: taxAmount || 0,
@@ -196,7 +192,7 @@ export class TireMasterColumnMapper {
         cost,
         grossProfitMargin,
         grossProfit,
-        category: this.determineProductCategory(productCode),
+        category: TireMasterColumnMapper.determineProductCategory(productCode),
       };
     } catch (error) {
       throw new Error(`Failed to extract line item from row: ${error.message}`);
@@ -204,22 +200,22 @@ export class TireMasterColumnMapper {
   }
 
   /**
-   * Extract line item information from "Invoice Detail Report" row (columns 26-36)
-   * CRITICAL FIX: Line items can appear in columns 26-36 even in rows marked "Invoice Detail Report"
+   * Extract line item information from "Invoice Detail Report" row (columns 27-37)
+   * CRITICAL FIX: Line items can appear in columns 27-37 even in rows marked "Invoice Detail Report"
    */
   public static extractLineItemFromReport(row: string[]): TireMasterLineItem {
     try {
-      const productCode = (row[26] || '').trim();                  // Column 26: Product Code
-      const description = (row[27] || '').trim();                  // Column 27: Size & Desc.
-      const adjustment = (row[28] || '').trim();                   // Column 28: Adjustment
-      const quantity = parseFloat(row[29]) || 0;                   // Column 29: QTY
-      const partsCost = parseFloat(row[30]) || 0;                  // Column 30: Parts
-      const laborCost = parseFloat(row[31]) || 0;                  // Column 31: Labor
-      const fet = parseFloat(row[32]) || 0;                        // Column 32: FET (Federal Excise Tax)
-      const lineTotal = parseFloat(row[33]) || 0;                  // Column 33: Total
-      const cost = parseFloat(row[34]) || 0;                       // Column 34: Cost
-      const grossProfitMargin = parseFloat(row[35]) || 0;          // Column 35: GPM% (Gross Profit Margin %)
-      const grossProfit = parseFloat(row[36]) || 0;                // Column 36: GP$ (Gross Profit $)
+      const productCode = (row[27] || '').trim();                  // Column 27: Product Code
+      const description = (row[28] || '').trim();                  // Column 28: Size & Desc.
+      const adjustment = (row[29] || '').trim();                   // Column 29: Adjustment
+      const quantity = parseFloat(row[30]) || 0;                   // Column 30: QTY
+      const partsCost = parseFloat(row[31]) || 0;                  // Column 31: Parts
+      const laborCost = parseFloat(row[32]) || 0;                  // Column 32: Labor
+      const fet = parseFloat(row[33]) || 0;                        // Column 33: FET (Federal Excise Tax)
+      const lineTotal = parseFloat(row[34]) || 0;                  // Column 34: Total
+      const cost = parseFloat(row[35]) || 0;                       // Column 35: Cost
+      const grossProfitMargin = parseFloat(row[36]) || 0;          // Column 36: GPM% (Gross Profit Margin %)
+      const grossProfit = parseFloat(row[37]) || 0;                // Column 37: GP$ (Gross Profit $)
 
       return {
         productCode,
@@ -233,7 +229,7 @@ export class TireMasterColumnMapper {
         cost,
         grossProfitMargin,
         grossProfit,
-        category: this.determineProductCategory(productCode),
+        category: TireMasterColumnMapper.determineProductCategory(productCode),
       };
     } catch (error) {
       throw new Error(`Failed to extract line item from report row: ${error.message}`);
@@ -244,19 +240,19 @@ export class TireMasterColumnMapper {
    * Process a single CSV row and return structured data
    */
   public static mapRow(row: string[]): TireMasterRow {
-    const rowType = this.identifyRowType(row);
+    const rowType = TireMasterColumnMapper.identifyRowType(row);
 
     switch (rowType) {
       case 'customer_start':
         return {
           type: 'customer_start',
-          data: { customerName: this.extractCustomerName(row[0] || '') },
+          data: { customerName: TireMasterColumnMapper.extractCustomerName(row[0] || '') },
         };
 
       case 'invoice_header':
         return {
           type: 'invoice_header',
-          data: this.extractInvoiceHeader(row),
+          data: TireMasterColumnMapper.extractInvoiceHeader(row),
         };
 
       case 'invoice_end':
@@ -267,13 +263,13 @@ export class TireMasterColumnMapper {
       case 'lineitem':
         return {
           type: 'lineitem',
-          data: this.extractLineItem(row),
+          data: TireMasterColumnMapper.extractLineItem(row),
         };
 
       case 'lineitem_in_report':
         return {
           type: 'lineitem_in_report',
-          data: this.extractLineItemFromReport(row),
+          data: TireMasterColumnMapper.extractLineItemFromReport(row),
         };
 
       default:
@@ -286,11 +282,6 @@ export class TireMasterColumnMapper {
   private static extractInvoiceNumber(value: string): string {
     // "Invoice #   3-327551" → "3-327551"
     return value.replace(/^Invoice #\s+/, '').trim();
-  }
-
-  private static extractCustomerName(value: string): string {
-    // "Customer Name:  AKERS, KENNETH" → "AKERS, KENNETH"
-    return value.replace(/^Customer Name:\s+/, '').trim();
   }
 
   private static extractVehicleInfo(value: string): string {
@@ -324,13 +315,13 @@ export class TireMasterColumnMapper {
   private static extractTaxAmount(value: string): number {
     // "Tax:  $0.00" → 0.00
     const amount = value.replace(/^Tax:\s+/, '').trim();
-    return this.parseAmount(amount);
+    return TireMasterColumnMapper.parseAmount(amount);
   }
 
   private static extractTotalAmount(value: string): number {
     // "Total:  $0.00" → 0.00
     const amount = value.replace(/^Total:\s+/, '').trim();
-    return this.parseAmount(amount);
+    return TireMasterColumnMapper.parseAmount(amount);
   }
 
   private static parseAmount(amountStr: string): number {
@@ -367,36 +358,70 @@ export class TireMasterColumnMapper {
 
   /**
    * Check if a string looks like a customer name
-   * Customer names typically appear first and contain last name, first name format
+   * Updated to handle production TireMaster format: "Customer Name:  AKERS, KENNETH"
    */
   private static looksLikeCustomerName(value: string): boolean {
-    const trimmed = value.trim().toUpperCase();
+    const trimmed = value.trim();
 
     // Skip if empty or too short
     if (trimmed.length < 3) return false;
 
+    // Check for "Customer Name:" prefix format (production TireMaster)
+    if (trimmed.includes('Customer Name:')) {
+      // Extract the name part after "Customer Name:"
+      const namepart = trimmed.replace(/^Customer Name:\s*/, '').trim();
+      // Should have a valid customer name after the prefix
+      return namepart.length > 0 && !namepart.includes('$') && !namepart.includes('%');
+    }
+
+    const upper = trimmed.toUpperCase();
+
     // Skip if it contains patterns that indicate it's not a customer name
-    if (trimmed.includes('INVOICE') ||
-        trimmed.includes('REPORT') ||
-        trimmed.includes('TOTAL') ||
-        trimmed.includes('SUMMARY') ||
-        trimmed.includes('$') ||
-        trimmed.includes('%') ||
+    if (upper.includes('INVOICE') ||
+        upper.includes('REPORT') ||
+        upper.includes('TOTAL') ||
+        upper.includes('SUMMARY') ||
+        upper.includes('$') ||
+        upper.includes('%') ||
         /^\d+$/.test(trimmed)) { // Pure numbers
       return false;
     }
 
     // Look for patterns typical of customer names
-    // - Contains comma (LAST, FIRST format)
-    // - Contains multiple words with letters
-    // - Not purely numeric
-    if (trimmed.includes(',') && /[A-Z]{2,}/.test(trimmed)) {
-      return true;
+    // Simple pattern for "JOHNSON STEVE" format - two words, all letters
+    const words = trimmed.split(/\s+/).filter(word => word.length > 0);
+
+    // Customer name should be 1-3 words, all alphabetic
+    if (words.length >= 1 && words.length <= 3) {
+      // All words should be primarily alphabetic (allow some punctuation like apostrophes)
+      const allWordsValid = words.every(word =>
+        /^[A-Z][A-Z\s'.-]*$/.test(word) && word.length >= 2
+      );
+
+      if (allWordsValid) {
+        // Additional check: at least one word should be longer than 2 characters
+        const hasSubstantialWord = words.some(word => word.length >= 3);
+        return hasSubstantialWord;
+      }
     }
 
-    // Multiple words that look like names
-    const words = trimmed.split(/\s+/);
-    if (words.length >= 2 && words.every(word => /^[A-Z]{2,}$/.test(word))) {
+    // Legacy pattern: "LASTNAME, FIRSTNAME" format (TireMaster standard)
+    if (trimmed.includes(',')) {
+      const parts = trimmed.split(',');
+      if (parts.length === 2 &&
+          parts[0].trim().length >= 2 &&
+          parts[1].trim().length >= 2 &&
+          /^[A-Z\s]+$/.test(parts[0].trim()) &&
+          /^[A-Z\s]+$/.test(parts[1].trim())) {
+        return true;
+      }
+    }
+
+    // Secondary pattern: Multiple words that look like names (fallback)
+    // Handle formats like "JOHNSON STEVE" (space-separated) - reuse words variable
+    if (words.length >= 2 &&
+        words.length <= 4 && // Reasonable name length
+        words.every(word => /^[A-Z]{2,}$/.test(word))) {
       return true;
     }
 
@@ -427,9 +452,61 @@ export class TireMasterColumnMapper {
   /**
    * Extract customer name from a customer row
    * Customer name typically appears in Column A when it's the start of an invoice
+   * Updated to handle raw customer names without "Customer Name:" prefix
    */
   public static extractCustomerName(value: string): string {
+    // Handle both formats:
+    // 1. "Customer Name:  AKERS, KENNETH" → "AKERS, KENNETH" (legacy)
+    // 2. "AKERS, KENNETH" → "AKERS, KENNETH" (actual TireMaster format)
+
+    if (value.includes('Customer Name:')) {
+      return value.replace(/^Customer Name:\s+/, '').trim();
+    }
+
+    // For raw customer names, just return trimmed value
     return value.trim();
+  }
+
+  /**
+   * Extract customer name from an invoice header row
+   * Scans all columns to find "Customer Name:" pattern
+   */
+  private static extractCustomerNameFromRow(row: string[]): string {
+    for (let i = 0; i < row.length; i++) {
+      const cell = (row[i] || '').trim();
+      if (cell.includes('Customer Name:')) {
+        return TireMasterColumnMapper.extractCustomerName(cell);
+      }
+    }
+    return '';
+  }
+
+  /**
+   * Extract vehicle information from an invoice header row
+   * Looks for "Vehicle:" pattern in any column
+   */
+  private static extractVehicleInfoFromRow(row: string[]): string {
+    for (let i = 0; i < row.length; i++) {
+      const cell = (row[i] || '').trim();
+      if (cell.includes('Vehicle:')) {
+        return cell.replace(/^Vehicle:\s*/, '').trim();
+      }
+    }
+    return '';
+  }
+
+  /**
+   * Extract mileage information from an invoice header row
+   * Looks for "Mileage:" pattern in any column
+   */
+  private static extractMileageFromRow(row: string[]): string {
+    for (let i = 0; i < row.length; i++) {
+      const cell = (row[i] || '').trim();
+      if (cell.includes('Mileage:')) {
+        return cell.replace(/^Mileage:\s*/, '').trim();
+      }
+    }
+    return '';
   }
 
   /**
@@ -457,14 +534,14 @@ export class TireMasterColumnMapper {
         const trimmedCell = cell.trim();
 
         // Check if this looks like an invoice number
-        if (this.looksLikeInvoiceNumber(trimmedCell) ||
+        if (TireMasterColumnMapper.looksLikeInvoiceNumber(trimmedCell) ||
             trimmedCell.includes('Invoice #')) {
 
-          const invoiceNumber = this.extractInvoiceNumber(trimmedCell);
+          const invoiceNumber = TireMasterColumnMapper.extractInvoiceNumber(trimmedCell);
 
           if (invoiceNumber) {
             // Also look for vehicle, mileage, salesperson in the same area
-            const additionalInfo = this.extractAdditionalInfoFromArea(rows, startIndex, startIndex + searchRange);
+            const additionalInfo = TireMasterColumnMapper.extractAdditionalInfoFromArea(rows, startIndex, startIndex + searchRange);
 
             return {
               invoiceNumber,
@@ -483,11 +560,22 @@ export class TireMasterColumnMapper {
    * Extract invoice date from invoice row (Column C)
    */
   private static extractInvoiceDateFromRow(row: string[]): Date | null {
-    // Look for "Invoice Date:" in any column
+    // Handle comma-separated format
+    const firstColumn = row[0] || '';
+    if (firstColumn.includes('Invoice Date:')) {
+      const parts = firstColumn.split(',');
+      for (const part of parts) {
+        if (part.includes('Invoice Date:')) {
+          return TireMasterColumnMapper.extractInvoiceDate(part.trim());
+        }
+      }
+    }
+
+    // Fallback: Look for "Invoice Date:" in any column
     for (let i = 0; i < row.length; i++) {
       const cell = row[i] || '';
       if (cell.includes('Invoice Date:')) {
-        return this.extractInvoiceDate(cell);
+        return TireMasterColumnMapper.extractInvoiceDate(cell);
       }
     }
     return null;
@@ -497,11 +585,22 @@ export class TireMasterColumnMapper {
    * Extract tax amount from invoice row (Column I)
    */
   private static extractTaxFromRow(row: string[]): number | null {
-    // Look for "Tax:" in any column
+    // Handle comma-separated format
+    const firstColumn = row[0] || '';
+    if (firstColumn.includes('Tax:')) {
+      const parts = firstColumn.split(',');
+      for (const part of parts) {
+        if (part.includes('Tax:')) {
+          return TireMasterColumnMapper.extractTaxAmount(part.trim());
+        }
+      }
+    }
+
+    // Fallback: Look for "Tax:" in any column
     for (let i = 0; i < row.length; i++) {
       const cell = row[i] || '';
       if (cell.includes('Tax:')) {
-        return this.extractTaxAmount(cell);
+        return TireMasterColumnMapper.extractTaxAmount(cell);
       }
     }
     return null;
@@ -511,11 +610,73 @@ export class TireMasterColumnMapper {
    * Extract total amount from invoice row (Column K)
    */
   private static extractTotalFromRow(row: string[]): number | null {
-    // Look for "Total:" in any column
+    // Handle comma-separated format
+    const firstColumn = row[0] || '';
+    if (firstColumn.includes('Total:')) {
+      const parts = firstColumn.split(',');
+      for (const part of parts) {
+        if (part.includes('Total:')) {
+          return TireMasterColumnMapper.extractTotalAmount(part.trim());
+        }
+      }
+    }
+
+    // Fallback: Look for "Total:" in any column
     for (let i = 0; i < row.length; i++) {
       const cell = row[i] || '';
       if (cell.includes('Total:')) {
-        return this.extractTotalAmount(cell);
+        return TireMasterColumnMapper.extractTotalAmount(cell);
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Extract invoice number from invoice row
+   */
+  private static extractInvoiceNumberFromRow(row: string[]): string | null {
+    // Handle comma-separated format: "Invoice #   3-327553,Invoice Date:  11/21/2025,..."
+    const firstColumn = row[0] || '';
+    if (firstColumn.includes('Invoice #')) {
+      // Parse comma-separated values and find the invoice number
+      const parts = firstColumn.split(',');
+      for (const part of parts) {
+        if (part.includes('Invoice #')) {
+          return TireMasterColumnMapper.extractInvoiceNumber(part.trim());
+        }
+      }
+    }
+
+    // Fallback: Look for "Invoice #" in any column (legacy format)
+    for (let i = 0; i < row.length; i++) {
+      const cell = row[i] || '';
+      if (cell.includes('Invoice #')) {
+        return TireMasterColumnMapper.extractInvoiceNumber(cell);
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Extract salesperson from invoice row
+   */
+  private static extractSalespersonFromRow(row: string[]): string | null {
+    // Handle comma-separated format
+    const firstColumn = row[0] || '';
+    if (firstColumn.includes('Salesperson:')) {
+      const parts = firstColumn.split(',');
+      for (const part of parts) {
+        if (part.includes('Salesperson:')) {
+          return TireMasterColumnMapper.extractSalesperson(part.trim());
+        }
+      }
+    }
+
+    // Fallback: Look for "Salesperson:" in any column
+    for (let i = 0; i < row.length; i++) {
+      const cell = row[i] || '';
+      if (cell.includes('Salesperson:')) {
+        return TireMasterColumnMapper.extractSalesperson(cell);
       }
     }
     return null;
@@ -544,17 +705,17 @@ export class TireMasterColumnMapper {
 
         // Look for vehicle info patterns
         if (trimmedCell.includes('Vehicle:') && !vehicleInfo) {
-          vehicleInfo = this.extractVehicleInfo(trimmedCell);
+          vehicleInfo = TireMasterColumnMapper.extractVehicleInfo(trimmedCell);
         }
 
         // Look for mileage patterns
         if (trimmedCell.includes('Mileage:') && !mileage) {
-          mileage = this.extractMileage(trimmedCell);
+          mileage = TireMasterColumnMapper.extractMileage(trimmedCell);
         }
 
         // Look for salesperson patterns
         if (trimmedCell.includes('Salesperson:') && !salesperson) {
-          salesperson = this.extractSalesperson(trimmedCell);
+          salesperson = TireMasterColumnMapper.extractSalesperson(trimmedCell);
         }
       }
     }
@@ -573,11 +734,18 @@ export class TireMasterColumnMapper {
       return { isValid: false, errors };
     }
 
-    const rowType = this.identifyRowType(row);
+    const rowType = TireMasterColumnMapper.identifyRowType(row);
 
+    // Debug logging for customer rows
     if (rowType === 'customer_start') {
-      if (!row[0]?.trim()) {
+      console.log(`[DEBUG] Customer validation - Row data: [${row.join('|')}], First cell: "${row[0]}", Trimmed: "${row[0]?.trim()}", Length: ${row[0]?.trim()?.length || 0}`);
+
+      const customerName = row[0]?.trim();
+      if (!customerName) {
+        console.log(`[DEBUG] Customer validation failed - no customer name found`);
         errors.push('Customer name is required');
+      } else {
+        console.log(`[DEBUG] Customer validation passed - customer name: "${customerName}"`);
       }
     } else if (rowType === 'invoice_header') {
       if (!row[0]?.trim()) {

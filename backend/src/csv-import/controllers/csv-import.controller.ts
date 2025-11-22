@@ -36,7 +36,7 @@ import {
  */
 
 @ApiTags('CSV Import')
-@Controller('api/csv-import')
+@Controller('csv-import')
 export class CsvImportController {
   private readonly logger = new Logger(CsvImportController.name);
 
@@ -110,7 +110,9 @@ export class CsvImportController {
       return {
         success: true,
         batchId: result.batchId,
-        message: 'Import started successfully',
+        message: result.isHistorical ? 'Displaying results from previous processing' : 'Import started successfully',
+        isHistorical: result.isHistorical || false,
+        originalProcessingDate: result.originalProcessingDate,
         result
       };
 

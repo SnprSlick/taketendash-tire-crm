@@ -69,7 +69,6 @@ export class TireMasterCsvParser {
 
   constructor(
     private readonly csvFileProcessor: CsvFileProcessor,
-    private readonly csvFormatValidator: CsvFormatValidator,
     private readonly eventEmitter: EventEmitter2
   ) {}
 
@@ -111,7 +110,7 @@ export class TireMasterCsvParser {
 
       if (validateFormat) {
         this.logger.log('Validating CSV format...');
-        validation = await (this.csvFormatValidator as any).validateTireMasterCsv(fileInfo.firstLines);
+        validation = await CsvFormatValidator.validateTireMasterCsv(fileInfo.firstLines);
 
         if (!validation.isValid && strictMode && !skipValidationErrors) {
           throw new Error(`CSV validation failed: ${validation.errors.length} errors found`);
@@ -269,10 +268,10 @@ export class TireMasterCsvParser {
         }
       }
 
-      // Check if this row has line item data in columns 26+ (even if it also has invoice termination)
-      if (firstColumn.includes('Invoice Detail Report') && fields.length > 29) {
-        const potentialProductCode = (fields[26] || '').trim();
-        const potentialQty = (fields[29] || '').trim();
+      // Check if this row has line item data in columns 27+ (even if it also has invoice termination)
+      if (firstColumn.includes('Invoice Detail Report') && fields.length > 30) {
+        const potentialProductCode = (fields[27] || '').trim();
+        const potentialQty = (fields[30] || '').trim();
 
         if (potentialProductCode.length > 0 &&
             potentialQty.length > 0 &&
@@ -298,6 +297,10 @@ export class TireMasterCsvParser {
       const mappedRow = TireMasterColumnMapper.mapRow(fields);
 
       switch (mappedRow.type) {
+        case 'customer_start':
+          this.processCustomerStart(mappedRow, lineNumber, line, state);
+          return true;
+
         case 'invoice_header':
           this.processInvoiceHeader(mappedRow, lineNumber, line, state);
           return true;
@@ -337,6 +340,21 @@ export class TireMasterCsvParser {
   }
 
   /**
+   * Process customer start row
+   */
+  private processCustomerStart(
+    mappedRow: TireMasterRow,
+    lineNumber: number,
+    rawLine: string,
+    state: TireMasterParsingState
+  ): void {
+    const customerData = mappedRow.data as { customerName: string };
+
+    // Store current customer name in state for next invoice header
+    state.currentCustomerName = customerData.customerName;
+  }
+
+  /**
    * Process invoice header row
    */
   private processInvoiceHeader(
@@ -346,6 +364,11 @@ export class TireMasterCsvParser {
     state: TireMasterParsingState
   ): void {
     const headerData = mappedRow.data as TireMasterInvoiceHeader;
+
+    // Use stored customer name from customer_start row
+    if (state.currentCustomerName) {
+      headerData.customerName = state.currentCustomerName;
+    }
 
     // Finalize previous invoice if exists
     if (state.currentInvoice) {
@@ -477,7 +500,7 @@ export class TireMasterCsvParser {
 
     // Quick validation with first 20 lines
     const sampleLines = fileInfo.firstLines;
-    const validation = await (this.csvFormatValidator as any).validateTireMasterCsv(sampleLines);
+    const validation = await CsvFormatValidator.validateTireMasterCsv(sampleLines);
 
     // Extract sample invoice numbers
     const sampleInvoices: string[] = [];
@@ -486,7 +509,7 @@ export class TireMasterCsvParser {
         const fields = this.csvFileProcessor.parseCsvLine(line);
         try {
           const mappedRow = TireMasterColumnMapper.mapRow(fields);
-          if (mappedRow.type === 'header') {
+          if (mappedRow.type === 'invoice_header') {
             const header = mappedRow.data as TireMasterInvoiceHeader;
             sampleInvoices.push(header.invoiceNumber);
           }
@@ -516,4 +539,5 @@ class TireMasterParsingState {
   currentInvoice: Omit<ParsedInvoice, 'transformedData'> | null = null;
   invoices: Omit<ParsedInvoice, 'transformedData'>[] = [];
   completedInvoices: Omit<ParsedInvoice, 'transformedData'>[] = [];
+  currentCustomerName: string = '';
 }

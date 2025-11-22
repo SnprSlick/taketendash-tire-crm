@@ -49,7 +49,7 @@ export interface TransformedLineItem {
   quantity: number;
   unitPrice: number;
   lineTotal: number;
-  costPrice: number;
+  cost: number;
   grossProfitMargin: number;
   grossProfit: number;
   category: ProductCategory;
@@ -134,7 +134,7 @@ export class TireMasterDataTransformer {
       quantity: item.quantity,
       unitPrice: this.roundToTwoDecimals(unitPrice),
       lineTotal: item.lineTotal,
-      costPrice: item.costPrice,
+      cost: item.cost,
       grossProfitMargin: item.grossProfitMargin,
       grossProfit: item.grossProfit,
       category: item.category,

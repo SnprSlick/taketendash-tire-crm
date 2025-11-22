@@ -27,5 +27,5 @@
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "frontend/**/*", "backend/**/*", "src/services.disabled/**/*", "src/_disabled/**/*"]
+  "exclude": ["node_modules", "dist", "frontend/**/*", "backend/**/*", "src/services.disabled/**/*", "src/_disabled/**/*", "**/src/_disabled/**/*", "**/_disabled/**/*"]
 }

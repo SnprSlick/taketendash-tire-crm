@@ -143,8 +143,8 @@ async function generateFrontendData() {
       allInvoices.push(currentInvoice);
     }
 
-    // Generate frontend-compatible data structure
-    const frontendData = allInvoices.slice(0, 15).map(inv => ({
+    // Generate frontend-compatible data structure (all invoices)
+    const frontendData = allInvoices.map(inv => ({
       invoiceNumber: inv.invoiceNumber,
       customerName: inv.customerName,
       vehicleInfo: inv.vehicleInfo,

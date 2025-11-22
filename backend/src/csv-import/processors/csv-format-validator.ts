@@ -83,7 +83,7 @@ export class CsvFormatValidator {
         const rowType = TireMasterColumnMapper.identifyRowType(row);
 
         switch (rowType) {
-          case 'header':
+          case 'invoice_header':
             headerRows++;
             const headerValidation = this.validateInvoiceHeader(row, rowNumber);
             errors.push(...headerValidation.errors);
@@ -327,19 +327,19 @@ export class CsvFormatValidator {
         });
       }
 
-      // Validate cost price
-      if (lineItem.costPrice < 0) {
+      // Validate cost
+      if (lineItem.cost < 0) {
         errors.push({
           rowNumber,
           errorType: ErrorType.VALIDATION,
-          message: 'Cost price cannot be negative',
-          field: 'costPrice',
+          message: 'Cost cannot be negative',
+          field: 'cost',
         });
       }
 
       // Validate profit calculations
-      if (lineItem.lineTotal > 0 && lineItem.costPrice > 0) {
-        const expectedGrossProfit = lineItem.lineTotal - lineItem.costPrice;
+      if (lineItem.lineTotal > 0 && lineItem.cost > 0) {
+        const expectedGrossProfit = lineItem.lineTotal - lineItem.cost;
         const profitDifference = Math.abs(expectedGrossProfit - lineItem.grossProfit);
 
         if (profitDifference > 0.01) {

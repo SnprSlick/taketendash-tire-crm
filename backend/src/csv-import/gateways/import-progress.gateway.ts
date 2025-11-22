@@ -394,4 +394,18 @@ export class ImportProgressGateway implements OnGatewayConnection, OnGatewayDisc
       }
     });
   }
+
+  /**
+   * Emit parsing progress update
+   */
+  emitParsingProgress(data: { fileName: string; processedLines: number; totalLines: number }) {
+    this.broadcastToAll('parsing.progress', data);
+  }
+
+  /**
+   * Emit import progress update
+   */
+  emitImportProgress(data: { fileName: string; processedInvoices: number; totalInvoices: number; currentInvoice?: string }) {
+    this.broadcastToAll('import.progress', data);
+  }
 }

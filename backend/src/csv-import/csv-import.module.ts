@@ -19,9 +19,11 @@ import { FileMonitorSchedulerService } from './services/file-monitor-scheduler.s
 import { FileSystemScannerService } from './services/file-system-scanner.service';
 import { FileArchiverService } from './services/file-archiver.service';
 import { MockConfigService } from './services/mock-config.service';
+import { DatabaseImportService } from './services/database-import.service';
 
 // Controllers
 import { CsvImportController } from './controllers/csv-import.controller';
+import { CsvDatabaseImportController } from './controllers/csv-database-import.controller';
 
 // Gateways
 import { ImportProgressGateway } from './gateways/import-progress.gateway';
@@ -65,11 +67,12 @@ import { TireMasterDataTransformer } from './mappers/tiremaster-data-transformer
     })
   ],
   controllers: [
-    CsvImportController
+    CsvImportController,
+    // CsvDatabaseImportController // Temporarily disabled due to ImportProgressGateway dependency
   ],
   providers: [
     // Gateways
-    ImportProgressGateway,
+    // ImportProgressGateway, // Temporarily disabled due to missing WebSocket driver
 
     // Entity Services
     ImportBatchEntity,
@@ -79,6 +82,7 @@ import { TireMasterDataTransformer } from './mappers/tiremaster-data-transformer
     ImportBatchService,
     CsvImportService,
     RollbackService,
+    DatabaseImportService,
 
     // Monitoring Services
     FileMonitorSchedulerService,
@@ -108,6 +112,7 @@ import { TireMasterDataTransformer } from './mappers/tiremaster-data-transformer
     CsvImportService,
     ImportBatchService,
     RollbackService,
+    DatabaseImportService,
 
     // Export monitoring services
     FileMonitorSchedulerService,
