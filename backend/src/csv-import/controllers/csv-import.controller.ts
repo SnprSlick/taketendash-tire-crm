@@ -15,6 +15,8 @@ import {
   HttpStatus
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import * as fs from 'fs';
+import * as path from 'path';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody } from '../utils/mock-swagger';
 import { CsvImportService } from '../services/csv-import.service';
 import { ImportBatchService } from '../services/import-batch.service';
@@ -73,18 +75,7 @@ export class CsvImportController {
   })
   @ApiResponse({ status: 202, description: 'Import started successfully' })
   @ApiResponse({ status: 400, description: 'Invalid file or parameters' })
-  @UseInterceptors(FileInterceptor('file', {
-    limits: {
-      fileSize: 100 * 1024 * 1024 // 100MB max
-    },
-    fileFilter: (req, file, callback) => {
-      if (!file.originalname.toLowerCase().endsWith('.csv')) {
-        callback(new BadRequestException('Only CSV files are allowed'), false);
-        return;
-      }
-      callback(null, true);
-    }
-  }))
+  @UseInterceptors(FileInterceptor('file'))
   async uploadAndImport(
     @UploadedFile() file: any,
     @Body('options') options?: string
@@ -93,19 +84,67 @@ export class CsvImportController {
       throw new BadRequestException('No file uploaded');
     }
 
-    this.logger.log(`Processing uploaded file: ${file.originalname}`);
+    // Validate file type
+    if (!file.originalname.toLowerCase().endsWith('.csv')) {
+      throw new BadRequestException('Only CSV files are allowed');
+    }
+
+    // Validate file size (100MB max)
+    if (file.size > 100 * 1024 * 1024) {
+      throw new BadRequestException('File size cannot exceed 100MB');
+    }
+
+    this.logger.log(`=== UPDATED CODE: Processing uploaded file: ${file.originalname} ===`);
+    this.logger.log(`File buffer available: ${file.buffer ? file.buffer.length + ' bytes' : 'undefined'}`);
+
+    // Handle file path - create temporary file if file.path is undefined
+    let filePath: string;
+    let shouldCleanup = false;
 
     try {
       const parsedOptions = options ? JSON.parse(options) : {};
 
+      if (file.path) {
+        // Use the existing file path from disk storage
+        filePath = file.path;
+      } else {
+        // Create temporary file from buffer
+        const tempDir = './uploads/csv';
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        const ext = path.extname(file.originalname);
+        const tempFileName = `file-${uniqueSuffix}${ext}`;
+        filePath = path.join(tempDir, tempFileName);
+
+        // Ensure the directory exists
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true });
+        }
+
+        // Write buffer to temporary file
+        fs.writeFileSync(filePath, file.buffer);
+        shouldCleanup = true;
+
+        this.logger.log(`Created temporary file: ${filePath}`);
+      }
+
       const importRequest = {
-        filePath: file.path,
+        filePath: filePath,
         fileName: file.originalname,
         userId: 'upload-user', // TODO: Get from authentication
         ...parsedOptions
       };
 
       const result = await this.csvImportService.importCsv(importRequest);
+
+      // Cleanup temporary file if we created one
+      if (shouldCleanup && fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+          this.logger.log(`Cleaned up temporary file: ${filePath}`);
+        } catch (cleanupError) {
+          this.logger.warn(`Failed to cleanup temporary file: ${cleanupError.message}`);
+        }
+      }
 
       return {
         success: true,
@@ -117,6 +156,16 @@ export class CsvImportController {
       };
 
     } catch (error) {
+      // Cleanup temporary file on error
+      if (filePath && shouldCleanup && fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+          this.logger.log(`Cleaned up temporary file after error: ${filePath}`);
+        } catch (cleanupError) {
+          this.logger.warn(`Failed to cleanup temporary file after error: ${cleanupError.message}`);
+        }
+      }
+
       this.logger.error(`Upload import failed: ${error.message}`);
       throw new BadRequestException(error.message);
     }
