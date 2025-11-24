@@ -492,4 +492,305 @@ export class InvoiceController {
       throw new BadRequestException('Failed to calculate analytics');
     }
   }
+
+  /**
+   * Get detailed salesperson performance report
+   */
+  @Get('reports/salespeople')
+  async getSalespersonReport(@Query('startDate') startDateStr?: string, @Query('endDate') endDateStr?: string) {
+    try {
+      const startDate = startDateStr ? new Date(startDateStr) : new Date(new Date().setFullYear(new Date().getFullYear() - 1));
+      const endDate = endDateStr ? new Date(endDateStr) : new Date();
+
+      const report = await this.prisma.$queryRaw`
+        SELECT 
+          i.salesperson,
+          COUNT(DISTINCT i.id)::int as invoice_count,
+          SUM(ili.line_total) as total_revenue,
+          SUM(ili.gross_profit) as total_profit,
+          CASE 
+            WHEN SUM(ili.line_total) > 0 THEN (SUM(ili.gross_profit) / SUM(ili.line_total) * 100)
+            ELSE 0 
+          END as profit_margin,
+          SUM(ili.line_total) / COUNT(DISTINCT i.id) as avg_ticket
+        FROM invoices i
+        JOIN invoice_line_items ili ON i.id = ili.invoice_id
+        WHERE i.invoice_date >= ${startDate} AND i.invoice_date <= ${endDate} AND i.status = 'ACTIVE'::"InvoiceStatus"
+        GROUP BY i.salesperson
+        ORDER BY total_revenue DESC
+      `;
+
+      return { success: true, data: report };
+    } catch (error) {
+      this.logger.error('Failed to get salesperson report', error);
+      throw new BadRequestException('Failed to generate salesperson report');
+    }
+  }
+
+  /**
+   * Get detailed customer performance report
+   */
+  @Get('reports/customers')
+  async getCustomerReport(
+    @Query('startDate') startDateStr?: string, 
+    @Query('endDate') endDateStr?: string,
+    @Query('limit') limit: string = '100',
+    @Query('offset') offset: string = '0'
+  ) {
+    try {
+      const startDate = startDateStr ? new Date(startDateStr) : new Date(new Date().setFullYear(new Date().getFullYear() - 1));
+      const endDate = endDateStr ? new Date(endDateStr) : new Date();
+      const limitNum = parseInt(limit) || 100;
+      const offsetNum = parseInt(offset) || 0;
+
+      const report = await this.prisma.$queryRaw`
+        SELECT 
+          c.id as customer_id,
+          c.name as customer_name,
+          c."customerCode" as customer_code,
+          COUNT(DISTINCT i.id)::int as invoice_count,
+          SUM(ili.line_total) as total_revenue,
+          SUM(ili.gross_profit) as total_profit,
+          CASE 
+            WHEN SUM(ili.line_total) > 0 THEN (SUM(ili.gross_profit) / SUM(ili.line_total) * 100)
+            ELSE 0 
+          END as profit_margin,
+          MAX(i.invoice_date) as last_purchase_date
+        FROM invoices i
+        JOIN invoice_customers c ON c.id = i.customer_id
+        JOIN invoice_line_items ili ON i.id = ili.invoice_id
+        WHERE i.invoice_date >= ${startDate} AND i.invoice_date <= ${endDate} AND i.status = 'ACTIVE'::"InvoiceStatus"
+        GROUP BY c.id, c.name, c."customerCode"
+        ORDER BY total_revenue DESC
+        LIMIT ${limitNum} OFFSET ${offsetNum}
+      `;
+      
+      // Get total count for pagination
+      const countResult: any[] = await this.prisma.$queryRaw`
+        SELECT COUNT(DISTINCT c.id)::int as total
+        FROM invoices i
+        JOIN invoice_customers c ON c.id = i.customer_id
+        WHERE i.invoice_date >= ${startDate} AND i.invoice_date <= ${endDate} AND i.status = 'ACTIVE'::"InvoiceStatus"
+      `;
+      
+      const total = countResult[0]?.total || 0;
+
+      return { success: true, data: report, meta: { total, limit: limitNum, offset: offsetNum } };
+    } catch (error) {
+      this.logger.error('Failed to get customer report', error);
+      throw new BadRequestException(`Failed to generate customer report: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get monthly detailed report
+   */
+  @Get('reports/monthly')
+  async getMonthlyReport(@Query('year') yearStr?: string) {
+    try {
+      const year = parseInt(yearStr) || new Date().getFullYear();
+      const startDate = new Date(year, 0, 1);
+      const endDate = new Date(year, 11, 31, 23, 59, 59);
+
+      const report = await this.prisma.$queryRaw`
+        SELECT 
+          TO_CHAR(i.invoice_date, 'YYYY-MM') as month_key,
+          TO_CHAR(i.invoice_date, 'Month') as month_name,
+          COUNT(DISTINCT i.id)::int as invoice_count,
+          SUM(ili.line_total) as total_revenue,
+          SUM(ili.gross_profit) as total_profit,
+          CASE 
+            WHEN SUM(ili.line_total) > 0 THEN (SUM(ili.gross_profit) / SUM(ili.line_total) * 100)
+            ELSE 0 
+          END as profit_margin
+        FROM invoices i
+        JOIN invoice_line_items ili ON i.id = ili.invoice_id
+        WHERE i.invoice_date >= ${startDate} AND i.invoice_date <= ${endDate} AND i.status = 'ACTIVE'::"InvoiceStatus"
+        GROUP BY TO_CHAR(i.invoice_date, 'YYYY-MM'), TO_CHAR(i.invoice_date, 'Month')
+        ORDER BY month_key
+      `;
+
+      return { success: true, data: report };
+    } catch (error) {
+      this.logger.error('Failed to get monthly report', error);
+      throw new BadRequestException('Failed to generate monthly report');
+    }
+  }
+
+  /**
+   * Get specific customer details
+   */
+  @Get('reports/customers/:id')
+  async getCustomerDetails(
+    @Param('id') id: string,
+    @Query('year') yearStr?: string
+  ) {
+    try {
+      const year = parseInt(yearStr) || new Date().getFullYear();
+      const startDate = new Date(year, 0, 1);
+      const endDate = new Date(year, 11, 31, 23, 59, 59);
+
+      // 1. Customer Info & Totals
+      const customerInfo = await this.prisma.invoiceCustomer.findUnique({
+        where: { id },
+        include: {
+          _count: {
+            select: { invoices: true }
+          }
+        }
+      });
+
+      if (!customerInfo) {
+        throw new NotFoundException('Customer not found');
+      }
+
+      // 2. Monthly Stats
+      const monthlyStats = await this.prisma.$queryRaw`
+        SELECT 
+          TO_CHAR(i.invoice_date, 'YYYY-MM') as month_key,
+          TO_CHAR(i.invoice_date, 'Month') as month_name,
+          COUNT(DISTINCT i.id)::int as invoice_count,
+          SUM(ili.line_total) as total_revenue,
+          SUM(ili.gross_profit) as total_profit,
+          CASE 
+            WHEN SUM(ili.line_total) > 0 THEN (SUM(ili.gross_profit) / SUM(ili.line_total) * 100)
+            ELSE 0 
+          END as profit_margin
+        FROM invoices i
+        JOIN invoice_line_items ili ON i.id = ili.invoice_id
+        WHERE i.customer_id = ${id} 
+          AND i.invoice_date >= ${startDate} 
+          AND i.invoice_date <= ${endDate} 
+          AND i.status = 'ACTIVE'::"InvoiceStatus"
+        GROUP BY TO_CHAR(i.invoice_date, 'YYYY-MM'), TO_CHAR(i.invoice_date, 'Month')
+        ORDER BY month_key
+      `;
+
+      // 3. Recent Invoices
+      const recentInvoices = await this.prisma.invoice.findMany({
+        where: { 
+          customerId: id,
+          status: 'ACTIVE'
+        },
+        orderBy: { invoiceDate: 'desc' },
+        take: 20,
+        select: {
+          id: true,
+          invoiceNumber: true,
+          invoiceDate: true,
+          totalAmount: true,
+          grossProfit: true,
+          salesperson: true,
+          vehicleInfo: true
+        }
+      });
+
+      // 4. Top Categories
+      const topCategories = await this.prisma.$queryRaw`
+        SELECT 
+          ili.category,
+          SUM(ili.line_total) as total_revenue,
+          SUM(ili.quantity) as total_quantity
+        FROM invoices i
+        JOIN invoice_line_items ili ON i.id = ili.invoice_id
+        WHERE i.customer_id = ${id} AND i.status = 'ACTIVE'::"InvoiceStatus"
+        GROUP BY ili.category
+        ORDER BY total_revenue DESC
+        LIMIT 5
+      `;
+
+      return {
+        success: true,
+        data: {
+          customer: customerInfo,
+          monthlyStats,
+          recentInvoices,
+          topCategories
+        }
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get details for customer ${id}`, error);
+      throw new BadRequestException('Failed to get customer details');
+    }
+  }
+
+  /**
+   * Get specific salesperson details
+   */
+  @Get('reports/salespeople/:name')
+  async getSalespersonDetails(
+    @Param('name') name: string,
+    @Query('year') yearStr?: string
+  ) {
+    try {
+      const decodedName = decodeURIComponent(name);
+      const year = parseInt(yearStr) || new Date().getFullYear();
+      const startDate = new Date(year, 0, 1);
+      const endDate = new Date(year, 11, 31, 23, 59, 59);
+
+      // 1. Monthly Stats
+      const monthlyStats = await this.prisma.$queryRaw`
+        SELECT 
+          TO_CHAR(i.invoice_date, 'YYYY-MM') as month_key,
+          TO_CHAR(i.invoice_date, 'Month') as month_name,
+          COUNT(DISTINCT i.id)::int as invoice_count,
+          SUM(ili.line_total) as total_revenue,
+          SUM(ili.gross_profit) as total_profit,
+          CASE 
+            WHEN SUM(ili.line_total) > 0 THEN (SUM(ili.gross_profit) / SUM(ili.line_total) * 100)
+            ELSE 0 
+          END as profit_margin
+        FROM invoices i
+        JOIN invoice_line_items ili ON i.id = ili.invoice_id
+        WHERE i.salesperson = ${decodedName} 
+          AND i.invoice_date >= ${startDate} 
+          AND i.invoice_date <= ${endDate} 
+          AND i.status = 'ACTIVE'::"InvoiceStatus"
+        GROUP BY TO_CHAR(i.invoice_date, 'YYYY-MM'), TO_CHAR(i.invoice_date, 'Month')
+        ORDER BY month_key
+      `;
+
+      // 2. Recent Invoices
+      const recentInvoices = await this.prisma.invoice.findMany({
+        where: { 
+          salesperson: decodedName,
+          status: 'ACTIVE'
+        },
+        orderBy: { invoiceDate: 'desc' },
+        take: 20,
+        include: {
+          customer: {
+            select: { name: true }
+          }
+        }
+      });
+
+      // 3. Top Customers for this salesperson
+      const topCustomers = await this.prisma.$queryRaw`
+        SELECT 
+          c.name,
+          COUNT(DISTINCT i.id)::int as invoice_count,
+          SUM(i.total_amount) as total_revenue
+        FROM invoices i
+        JOIN invoice_customers c ON c.id = i.customer_id
+        WHERE i.salesperson = ${decodedName} AND i.status = 'ACTIVE'::"InvoiceStatus"
+        GROUP BY c.id, c.name
+        ORDER BY total_revenue DESC
+        LIMIT 10
+      `;
+
+      return {
+        success: true,
+        data: {
+          salesperson: decodedName,
+          monthlyStats,
+          recentInvoices,
+          topCustomers
+        }
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get details for salesperson ${name}`, error);
+      throw new BadRequestException('Failed to get salesperson details');
+    }
+  }
 }

@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import DashboardLayout from '../../../components/dashboard/dashboard-layout';
 import SalesCharts from '../../../components/analytics/sales-charts';
-import { RefreshCw, Calendar, Filter, Download, TrendingUp } from 'lucide-react';
+import { RefreshCw, Calendar, Filter, Download, TrendingUp, FileText } from 'lucide-react';
 
 interface SalesData {
   totalSales: number;
@@ -172,6 +173,14 @@ export default function SalesDashboardPage() {
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 {loading ? 'Loading...' : 'Refresh'}
               </button>
+
+              <Link 
+                href="/dashboard/sales/reports"
+                className="inline-flex items-center px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-all duration-200 shadow hover:shadow-md"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Detailed Reports
+              </Link>
 
               <button className="inline-flex items-center px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-all duration-200 shadow hover:shadow-md">
                 <Download className="w-4 h-4 mr-2" />
