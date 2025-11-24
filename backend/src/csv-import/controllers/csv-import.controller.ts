@@ -131,28 +131,37 @@ export class CsvImportController {
         filePath: filePath,
         fileName: file.originalname,
         userId: 'upload-user', // TODO: Get from authentication
+        deleteFileAfterProcessing: shouldCleanup,
         ...parsedOptions
       };
 
-      const result = await this.csvImportService.importCsv(importRequest);
+      const result = await this.csvImportService.importCsvAsync(importRequest);
 
-      // Cleanup temporary file if we created one
-      if (shouldCleanup && fs.existsSync(filePath)) {
-        try {
-          fs.unlinkSync(filePath);
-          this.logger.log(`Cleaned up temporary file: ${filePath}`);
-        } catch (cleanupError) {
-          this.logger.warn(`Failed to cleanup temporary file: ${cleanupError.message}`);
-        }
-      }
+      // File cleanup is handled by the service after processing completes
+      shouldCleanup = false;
 
       return {
         success: true,
         batchId: result.batchId,
-        message: result.isHistorical ? 'Displaying results from previous processing' : 'Import started successfully',
+        message: result.message,
         isHistorical: result.isHistorical || false,
-        originalProcessingDate: result.originalProcessingDate,
-        result
+        originalProcessingDate: undefined,
+        result: {
+          batchId: result.batchId,
+          success: true,
+          totalRecords: 0,
+          successfulRecords: 0,
+          failedRecords: 0,
+          processingTimeMs: 0,
+          successRate: 0,
+          validationResult: { isValid: true, formatErrors: [], estimatedRecords: 0 },
+          duplicateInvoices: [],
+          skippedDuplicates: 0,
+          updatedDuplicates: 0,
+          renamedDuplicates: 0,
+          mergedDuplicates: 0,
+          failedDuplicates: 0
+        }
       };
 
     } catch (error) {

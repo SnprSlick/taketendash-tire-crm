@@ -1,4 +1,5 @@
 import { Injectable, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import * as fs from 'fs';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ImportBatchService, BatchCompletionResult } from './import-batch.service';
@@ -25,6 +26,7 @@ export interface CsvImportRequest {
   batchSize?: number;
   strictMode?: boolean;
   duplicateHandling?: string;
+  deleteFileAfterProcessing?: boolean;
 }
 
 export interface CsvImportResult {
@@ -164,10 +166,7 @@ export class CsvImportService {
 
       this.logger.log(`Created import batch: ${batch.id}`);
 
-      // Step 4: Start processing
-      await this.importBatchService.startProcessing(batch.id);
-
-      // Step 5: Parse CSV file
+      // Step 4: Start processing (Async or Sync based on caller)
       const parsingOptions: TireMasterParsingOptions = {
         validateFormat: !validationResult.isValid, // Re-validate if initial validation failed
         strictMode,
@@ -176,6 +175,151 @@ export class CsvImportService {
         progressCallback: (progress) => this.handleParsingProgress(batch.id, progress)
       };
 
+      return await this.processBatch(
+        batch,
+        filePath,
+        fileName,
+        validationResult,
+        parsingOptions,
+        batchSize,
+        duplicateHandling,
+        startTime,
+        request.deleteFileAfterProcessing
+      );
+
+    } catch (error) {
+      this.logger.error(`CSV import failed: ${error.message}`, error.stack);
+
+      // Emit error event
+      this.eventEmitter.emit('csv.import.failed', {
+        fileName,
+        error: error.message,
+        processingTimeMs: Date.now() - startTime
+      });
+
+      throw error;
+    }
+  }
+
+  /**
+   * Import CSV file asynchronously (returns immediately after batch creation)
+   */
+  async importCsvAsync(request: CsvImportRequest): Promise<{ batchId: string, message: string, isHistorical: boolean }> {
+    const startTime = Date.now();
+    this.logger.log(`Starting Async CSV import: ${request.fileName}`);
+
+    const {
+      filePath,
+      fileName,
+      userId,
+      overwriteExisting = false,
+      validateOnly = false,
+      batchSize = 100,
+      strictMode = false,
+      duplicateHandling = 'SKIP'
+    } = request;
+
+    // Step 1: Validate file accessibility
+    const fileValidation = await this.csvFileProcessor.validateFile(filePath);
+    if (!fileValidation.isValid) {
+      throw new BadRequestException(
+        `File validation failed: ${fileValidation.errors.join(', ')}`
+      );
+    }
+
+    // Step 2: Get file summary and validate format
+    const fileSummary = await this.tireMasterCsvParser.getFileSummary(filePath);
+
+    const validationResult = {
+      isValid: fileSummary.isValidFormat,
+      formatErrors: fileSummary.formatErrors,
+      estimatedRecords: fileSummary.estimatedInvoices
+    };
+
+    if (!validationResult.isValid && strictMode) {
+      throw new BadRequestException(
+        `TireMaster format validation failed: ${validationResult.formatErrors.join(', ')}`
+      );
+    }
+
+    // Step 3: Create import batch
+    const batchInput: CreateImportBatchInput = {
+      fileName,
+      originalPath: filePath,
+      totalRecords: validationResult.estimatedRecords,
+      userId
+    };
+
+    let batch;
+    try {
+      batch = await this.importBatchService.createBatch(batchInput);
+    } catch (error) {
+      if (error.message.includes('already been successfully processed') && !overwriteExisting) {
+        const batchIdMatch = error.message.match(/Previous batch ID: ([\w-]+)/);
+        if (batchIdMatch) {
+          return { 
+            batchId: batchIdMatch[1], 
+            message: 'Displaying results from previous processing',
+            isHistorical: true
+          };
+        }
+        throw new BadRequestException(error.message);
+      }
+      throw error;
+    }
+
+    this.logger.log(`Created import batch for async processing: ${batch.id}`);
+
+    // Start processing in background
+    const parsingOptions: TireMasterParsingOptions = {
+      validateFormat: !validationResult.isValid,
+      strictMode,
+      skipValidationErrors: !strictMode,
+      batchSize,
+      progressCallback: (progress) => this.handleParsingProgress(batch.id, progress)
+    };
+
+    // Fire and forget (with error logging)
+    this.processBatch(
+      batch,
+      filePath,
+      fileName,
+      validationResult,
+      parsingOptions,
+      batchSize,
+      duplicateHandling,
+      startTime,
+      request.deleteFileAfterProcessing
+    ).catch(err => {
+      this.logger.error(`Background import failed for batch ${batch.id}`, err);
+    });
+
+    return {
+      batchId: batch.id,
+      message: 'Import started successfully in background',
+      isHistorical: false
+    };
+  }
+
+  /**
+   * Internal method to process the batch
+   */
+  private async processBatch(
+    batch: any,
+    filePath: string,
+    fileName: string,
+    validationResult: any,
+    parsingOptions: TireMasterParsingOptions,
+    batchSize: number,
+    duplicateHandling: string,
+    startTime: number,
+    deleteFileAfterProcessing: boolean = false
+  ): Promise<CsvImportResult> {
+    try {
+      // Step 4: Start processing
+      await this.importBatchService.startProcessing(batch.id);
+
+      // Step 5: Parse CSV file
       const parsingResult = await this.tireMasterCsvParser.parseFile(filePath, parsingOptions);
 
       // Step 6: Process parsing results
@@ -240,18 +384,24 @@ export class CsvImportService {
       });
 
       return result;
-
     } catch (error) {
-      this.logger.error(`CSV import failed: ${error.message}`, error.stack);
-
-      // Emit error event
-      this.eventEmitter.emit('csv.import.failed', {
-        fileName,
-        error: error.message,
-        processingTimeMs: Date.now() - startTime
-      });
-
-      throw error;
+       // Ensure batch is marked as failed if something goes wrong in processBatch
+       try {
+         await this.importBatchService.failBatch(batch.id, error.message);
+       } catch (e) {
+         this.logger.error(`Failed to mark batch ${batch.id} as failed`, e);
+       }
+       throw error;
+    } finally {
+      // Cleanup file if requested
+      if (deleteFileAfterProcessing && fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+          this.logger.log(`Cleaned up temporary file after processing: ${filePath}`);
+        } catch (cleanupError) {
+          this.logger.warn(`Failed to cleanup temporary file: ${cleanupError.message}`);
+        }
+      }
     }
   }
 
