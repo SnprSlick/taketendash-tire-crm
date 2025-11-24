@@ -53,14 +53,29 @@ export default function SalesReportsPage() {
   const [data, setData] = useState<any[]>([]);
   const [period, setPeriod] = useState('365'); // Default to last year
   
+  // Search & Sort
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [sortField, setSortField] = useState('total_revenue');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
   // Pagination for customers
   const [page, setPage] = useState(1);
   const [limit] = useState(50);
   const [totalRecords, setTotalRecords] = useState(0);
 
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPage(1); // Reset page on search
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   useEffect(() => {
     fetchReport();
-  }, [activeTab, period, page]);
+  }, [activeTab, period, page, debouncedSearch, sortField, sortDirection]);
 
   const fetchReport = async () => {
     setLoading(true);
@@ -71,12 +86,14 @@ export default function SalesReportsPage() {
       startDate.setDate(startDate.getDate() - parseInt(period));
       
       const dateParams = `startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
+      const sortParams = `sortBy=${sortField}&sortOrder=${sortDirection}`;
+      const searchParams = debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}` : '';
 
       if (activeTab === 'salespeople') {
-        url = `/api/v1/invoices/reports/salespeople?${dateParams}`;
+        url = `/api/v1/invoices/reports/salespeople?${dateParams}&${sortParams}${searchParams}`;
       } else if (activeTab === 'customers') {
         const offset = (page - 1) * limit;
-        url = `/api/v1/invoices/reports/customers?${dateParams}&limit=${limit}&offset=${offset}`;
+        url = `/api/v1/invoices/reports/customers?${dateParams}&limit=${limit}&offset=${offset}&${sortParams}${searchParams}`;
       } else if (activeTab === 'monthly') {
         url = `/api/v1/invoices/reports/monthly?year=${new Date().getFullYear()}`;
       }
@@ -96,6 +113,32 @@ export default function SalesReportsPage() {
       setLoading(false);
     }
   };
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
+  const SortIcon = ({ field }: { field: string }) => {
+    if (sortField !== field) return <div className="w-4 h-4" />;
+    return sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />;
+  };
+
+  const SortableHeader = ({ field, label, align = 'left' }: { field: string, label: string, align?: 'left' | 'right' }) => (
+    <th 
+      className={`px-6 py-4 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100 transition-colors ${align === 'right' ? 'text-right' : 'text-left'}`}
+      onClick={() => handleSort(field)}
+    >
+      <div className={`flex items-center gap-2 ${align === 'right' ? 'justify-end' : 'justify-start'}`}>
+        {label}
+        <SortIcon field={field} />
+      </div>
+    </th>
+  );
 
   const formatCurrency = (val: number | string) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(val));
@@ -117,6 +160,17 @@ export default function SalesReportsPage() {
             </div>
             
             <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
+                />
+              </div>
+
               <select 
                 value={period}
                 onChange={(e) => setPeriod(e.target.value)}
@@ -138,7 +192,7 @@ export default function SalesReportsPage() {
           {/* Tabs */}
           <div className="flex items-center gap-1 mt-8 border-b border-slate-200">
             <button
-              onClick={() => { setActiveTab('salespeople'); setPage(1); }}
+              onClick={() => { setActiveTab('salespeople'); setPage(1); setSortField('total_revenue'); }}
               className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'salespeople' 
                   ? 'border-blue-600 text-blue-600' 
@@ -151,7 +205,7 @@ export default function SalesReportsPage() {
               </div>
             </button>
             <button
-              onClick={() => { setActiveTab('customers'); setPage(1); }}
+              onClick={() => { setActiveTab('customers'); setPage(1); setSortField('total_revenue'); }}
               className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'customers' 
                   ? 'border-blue-600 text-blue-600' 
@@ -192,22 +246,22 @@ export default function SalesReportsPage() {
                   <tr>
                     {activeTab === 'salespeople' && (
                       <>
-                        <th className="px-6 py-4 font-semibold text-slate-700">Salesperson</th>
-                        <th className="px-6 py-4 font-semibold text-slate-700 text-right">Invoices</th>
-                        <th className="px-6 py-4 font-semibold text-slate-700 text-right">Revenue</th>
-                        <th className="px-6 py-4 font-semibold text-slate-700 text-right">Gross Profit</th>
-                        <th className="px-6 py-4 font-semibold text-slate-700 text-right">Margin</th>
-                        <th className="px-6 py-4 font-semibold text-slate-700 text-right">Avg Ticket</th>
+                        <SortableHeader field="salesperson" label="Salesperson" />
+                        <SortableHeader field="invoice_count" label="Invoices" align="right" />
+                        <SortableHeader field="total_revenue" label="Revenue" align="right" />
+                        <SortableHeader field="total_profit" label="Gross Profit" align="right" />
+                        <SortableHeader field="profit_margin" label="Margin" align="right" />
+                        <SortableHeader field="avg_ticket" label="Avg Ticket" align="right" />
                       </>
                     )}
                     {activeTab === 'customers' && (
                       <>
-                        <th className="px-6 py-4 font-semibold text-slate-700">Customer</th>
-                        <th className="px-6 py-4 font-semibold text-slate-700 text-right">Invoices</th>
-                        <th className="px-6 py-4 font-semibold text-slate-700 text-right">Revenue</th>
-                        <th className="px-6 py-4 font-semibold text-slate-700 text-right">Gross Profit</th>
-                        <th className="px-6 py-4 font-semibold text-slate-700 text-right">Margin</th>
-                        <th className="px-6 py-4 font-semibold text-slate-700 text-right">Last Purchase</th>
+                        <SortableHeader field="customer_name" label="Customer" />
+                        <SortableHeader field="invoice_count" label="Invoices" align="right" />
+                        <SortableHeader field="total_revenue" label="Revenue" align="right" />
+                        <SortableHeader field="total_profit" label="Gross Profit" align="right" />
+                        <SortableHeader field="profit_margin" label="Margin" align="right" />
+                        <SortableHeader field="last_purchase_date" label="Last Purchase" align="right" />
                       </>
                     )}
                     {activeTab === 'monthly' && (

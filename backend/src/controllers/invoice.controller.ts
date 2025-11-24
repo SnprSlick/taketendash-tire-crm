@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 // import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 /**
  * Invoice Controller
@@ -497,10 +498,27 @@ export class InvoiceController {
    * Get detailed salesperson performance report
    */
   @Get('reports/salespeople')
-  async getSalespersonReport(@Query('startDate') startDateStr?: string, @Query('endDate') endDateStr?: string) {
+  async getSalespersonReport(
+    @Query('startDate') startDateStr?: string, 
+    @Query('endDate') endDateStr?: string,
+    @Query('search') search?: string,
+    @Query('sortBy') sortBy: string = 'total_revenue',
+    @Query('sortOrder') sortOrder: string = 'desc'
+  ) {
     try {
       const startDate = startDateStr ? new Date(startDateStr) : new Date(new Date().setFullYear(new Date().getFullYear() - 1));
       const endDate = endDateStr ? new Date(endDateStr) : new Date();
+      
+      // Whitelist sort columns to prevent SQL injection
+      const allowedSorts = ['salesperson', 'invoice_count', 'total_revenue', 'total_profit', 'profit_margin', 'avg_ticket'];
+      const sortColumn = allowedSorts.includes(sortBy) ? sortBy : 'total_revenue';
+      const orderDirection = sortOrder.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
+      // Build search condition
+      let searchCondition = Prisma.sql``;
+      if (search) {
+        searchCondition = Prisma.sql`AND (i.salesperson ILIKE ${`%${search}%`} OR i.invoice_number ILIKE ${`%${search}%`})`;
+      }
 
       const report = await this.prisma.$queryRaw`
         SELECT 
@@ -515,9 +533,12 @@ export class InvoiceController {
           SUM(ili.line_total) / COUNT(DISTINCT i.id) as avg_ticket
         FROM invoices i
         JOIN invoice_line_items ili ON i.id = ili.invoice_id
-        WHERE i.invoice_date >= ${startDate} AND i.invoice_date <= ${endDate} AND i.status = 'ACTIVE'::"InvoiceStatus"
+        WHERE i.invoice_date >= ${startDate} 
+          AND i.invoice_date <= ${endDate} 
+          AND i.status = 'ACTIVE'::"InvoiceStatus"
+          ${searchCondition}
         GROUP BY i.salesperson
-        ORDER BY total_revenue DESC
+        ORDER BY ${Prisma.raw(sortColumn)} ${Prisma.raw(orderDirection)}
       `;
 
       return { success: true, data: report };
@@ -535,13 +556,27 @@ export class InvoiceController {
     @Query('startDate') startDateStr?: string, 
     @Query('endDate') endDateStr?: string,
     @Query('limit') limit: string = '100',
-    @Query('offset') offset: string = '0'
+    @Query('offset') offset: string = '0',
+    @Query('search') search?: string,
+    @Query('sortBy') sortBy: string = 'total_revenue',
+    @Query('sortOrder') sortOrder: string = 'desc'
   ) {
     try {
       const startDate = startDateStr ? new Date(startDateStr) : new Date(new Date().setFullYear(new Date().getFullYear() - 1));
       const endDate = endDateStr ? new Date(endDateStr) : new Date();
       const limitNum = parseInt(limit) || 100;
       const offsetNum = parseInt(offset) || 0;
+
+      // Whitelist sort columns
+      const allowedSorts = ['customer_name', 'invoice_count', 'total_revenue', 'total_profit', 'profit_margin', 'last_purchase_date'];
+      const sortColumn = allowedSorts.includes(sortBy) ? sortBy : 'total_revenue';
+      const orderDirection = sortOrder.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
+      // Build search condition
+      let searchCondition = Prisma.sql``;
+      if (search) {
+        searchCondition = Prisma.sql`AND (c.name ILIKE ${`%${search}%`} OR c."customerCode" ILIKE ${`%${search}%`} OR i.invoice_number ILIKE ${`%${search}%`})`;
+      }
 
       const report = await this.prisma.$queryRaw`
         SELECT 
@@ -559,9 +594,12 @@ export class InvoiceController {
         FROM invoices i
         JOIN invoice_customers c ON c.id = i.customer_id
         JOIN invoice_line_items ili ON i.id = ili.invoice_id
-        WHERE i.invoice_date >= ${startDate} AND i.invoice_date <= ${endDate} AND i.status = 'ACTIVE'::"InvoiceStatus"
+        WHERE i.invoice_date >= ${startDate} 
+          AND i.invoice_date <= ${endDate} 
+          AND i.status = 'ACTIVE'::"InvoiceStatus"
+          ${searchCondition}
         GROUP BY c.id, c.name, c."customerCode"
-        ORDER BY total_revenue DESC
+        ORDER BY ${Prisma.raw(sortColumn)} ${Prisma.raw(orderDirection)}
         LIMIT ${limitNum} OFFSET ${offsetNum}
       `;
       
@@ -570,7 +608,10 @@ export class InvoiceController {
         SELECT COUNT(DISTINCT c.id)::int as total
         FROM invoices i
         JOIN invoice_customers c ON c.id = i.customer_id
-        WHERE i.invoice_date >= ${startDate} AND i.invoice_date <= ${endDate} AND i.status = 'ACTIVE'::"InvoiceStatus"
+        WHERE i.invoice_date >= ${startDate} 
+          AND i.invoice_date <= ${endDate} 
+          AND i.status = 'ACTIVE'::"InvoiceStatus"
+          ${searchCondition}
       `;
       
       const total = countResult[0]?.total || 0;
