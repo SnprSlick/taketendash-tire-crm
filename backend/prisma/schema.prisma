@@ -368,6 +368,7 @@ model Invoice {
   lineItems    InvoiceLineItem[]
   importBatch  ImportBatch       @relation(fields: [importBatchId], references: [id])
   salesData    SalesData[]
+  reconciliationRecords ReconciliationRecord[]
 
   @@index([invoiceDate])
   @@index([customerId])
@@ -776,3 +777,53 @@ model TireMasterSyncHistory {
   @@index([startTime])
   @@map("tire_master_sync_history")
 }
+// National Account Reconciliation Models
+
+model ReconciliationBatch {
+  id          String   @id @default(cuid())
+  filename    String
+  uploadDate  DateTime @default(now())
+  status      String   // PENDING, PROCESSED, COMPLETED
+  totalRecords Int     @default(0)
+  matchedCount Int     @default(0)
+  unmatchedCount Int   @default(0)
+  
+  records     ReconciliationRecord[]
+  
+  @@map("reconciliation_batches")
+}
+
+model ReconciliationRecord {
+  id              String   @id @default(cuid())
+  batchId         String
+  
+  // Fields from CSV
+  invoiceNumber   String   // The raw invoice number from CSV
+  accountName     String?  // "Account Name"
+  invoiceDate     DateTime?
+  invoiceAmount   Decimal  @db.Decimal(10, 2) // "Invoice Amt"
+  creditAmount    Decimal  @db.Decimal(10, 2) // "CR Amount"
+  commission      Decimal  @db.Decimal(10, 2) // "CR Comm"
+  difference      Decimal  @db.Decimal(10, 2) // "Difference"
+  
+  // Categorization
+  category        String?  // "Government Support", "Other Adjustments", etc.
+  subCategory     String?  // "Bridgestone", "Firestone", etc.
+  
+  // Matching
+  status          String   // MATCHED, UNMATCHED, PARTIAL, OVERPAID
+  matchedInvoiceId String?
+  
+  // Relationships
+  batch           ReconciliationBatch @relation(fields: [batchId], references: [id])
+  matchedInvoice  Invoice?            @relation(fields: [matchedInvoiceId], references: [id])
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([batchId])
+  @@index([invoiceNumber])
+  @@index([status])
+  @@map("reconciliation_records")
+}
+

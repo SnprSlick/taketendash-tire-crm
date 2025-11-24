@@ -12,7 +12,8 @@ import {
   Bell,
   User,
   Gauge,
-  Database
+  Database,
+  ClipboardCheck
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -101,6 +102,12 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
               icon={<Building2 className="w-4 h-4" />}
               label="Large Accounts"
               active={isActive('/accounts/large-accounts')}
+            />
+            <NavItem
+              href="/dashboard/reconciliation"
+              icon={<ClipboardCheck className="w-4 h-4" />}
+              label="Reconciliation"
+              active={isActive('/dashboard/reconciliation')}
             />
             <NavItem
               href="/tire-master"
