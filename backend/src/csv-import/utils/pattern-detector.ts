@@ -220,12 +220,13 @@ export class TireMasterPatternDetector {
 
     // Reject pure numeric values that are likely financial totals
     // (valid product codes have alpha characters)
-    if (/^\d+\.?\d*$/.test(trimmed)) {
-      return false;
-    }
+    // DISABLED: Some product codes ARE numeric (e.g. "380259", "10524")
+    // if (/^\d+\.?\d*$/.test(trimmed)) {
+    //   return false;
+    // }
 
     // Test against patterns
-    return this.PRODUCT_CODE_PATTERNS.some(pattern => pattern.test(trimmed));
+    return this.PRODUCT_CODE_PATTERNS.some(pattern => pattern.test(trimmed)) || /^\d+$/.test(trimmed);
   }
 
   /**
@@ -234,9 +235,19 @@ export class TireMasterPatternDetector {
   private static isValidQuantity(value: string): boolean {
     if (!value) return false;
 
-    const num = parseFloat(value);
-    // Quantities are typically small positive numbers
-    return !isNaN(num) && num > 0 && num <= 1000 && this.DECIMAL_PATTERN.test(value);
+    // Handle accounting format negative numbers: (123.45) or (123.45
+    let cleanValue = value.replace(/[$,]/g, '');
+    if (cleanValue.startsWith('(')) {
+      if (cleanValue.endsWith(')')) {
+        cleanValue = '-' + cleanValue.slice(1, -1);
+      } else {
+        cleanValue = '-' + cleanValue.slice(1);
+      }
+    }
+
+    const num = parseFloat(cleanValue);
+    // Quantities are typically small numbers (can be negative for returns)
+    return !isNaN(num) && Math.abs(num) <= 1000 && this.DECIMAL_PATTERN.test(value.replace(/[()]/g, ''));
   }
 
   /**
@@ -245,9 +256,19 @@ export class TireMasterPatternDetector {
   private static isValidCurrency(value: string): boolean {
     if (!value) return true; // Empty values are OK for currency fields
 
-    const cleanValue = value.replace(/[$,]/g, '');
+    // Handle accounting format negative numbers: (123.45) or (123.45
+    let cleanValue = value.replace(/[$,]/g, '');
+    if (cleanValue.startsWith('(')) {
+      if (cleanValue.endsWith(')')) {
+        cleanValue = '-' + cleanValue.slice(1, -1);
+      } else {
+        cleanValue = '-' + cleanValue.slice(1);
+      }
+    }
+
     const num = parseFloat(cleanValue);
-    return !isNaN(num) && num >= 0 && this.DECIMAL_PATTERN.test(cleanValue);
+    // Allow negative currency values
+    return !isNaN(num) && this.DECIMAL_PATTERN.test(value.replace(/[()$,]/g, ''));
   }
 
   /**
@@ -256,9 +277,18 @@ export class TireMasterPatternDetector {
   private static isValidPercentage(value: string): boolean {
     if (!value) return true; // Empty percentages are OK
 
-    const cleanValue = value.replace(/%/g, '');
+    // Handle accounting format negative numbers: (123.45) or (123.45
+    let cleanValue = value.replace(/[%]/g, '');
+    if (cleanValue.startsWith('(')) {
+      if (cleanValue.endsWith(')')) {
+        cleanValue = '-' + cleanValue.slice(1, -1);
+      } else {
+        cleanValue = '-' + cleanValue.slice(1);
+      }
+    }
+
     const num = parseFloat(cleanValue);
-    return !isNaN(num) && num >= -100 && num <= 1000 && this.PERCENTAGE_PATTERN.test(cleanValue);
+    return !isNaN(num) && num >= -1000 && num <= 1000 && this.PERCENTAGE_PATTERN.test(value.replace(/[()%]/g, ''));
   }
 
   /**
@@ -284,7 +314,7 @@ export class TireMasterPatternDetector {
       productCode: (row[pattern.productCodeIndex] || '').trim(),
       description: (row[pattern.descriptionIndex] || '').trim(),
       adjustment: (row[pattern.adjustmentIndex] || '').trim(),
-      quantity: parseFloat(row[pattern.quantityIndex]) || 0,
+      quantity: this.parseCurrency(row[pattern.quantityIndex]), // Use parseCurrency to handle (123) format
       partsCost: this.parseCurrency(row[pattern.partsIndex]),
       laborCost: this.parseCurrency(row[pattern.laborIndex]),
       fet: this.parseCurrency(row[pattern.fetIndex]),
@@ -296,21 +326,39 @@ export class TireMasterPatternDetector {
   }
 
   /**
-   * Parse currency value, handling $ signs and commas
+   * Parse currency value, handling $ signs, commas, and accounting format (123.45)
    */
   private static parseCurrency(value: string): number {
     if (!value) return 0;
-    const cleaned = value.replace(/[$,]/g, '');
+    
+    let cleaned = value.replace(/[$,]/g, '');
+    if (cleaned.startsWith('(')) {
+      if (cleaned.endsWith(')')) {
+        cleaned = '-' + cleaned.slice(1, -1);
+      } else {
+        cleaned = '-' + cleaned.slice(1);
+      }
+    }
+    
     const parsed = parseFloat(cleaned);
     return isNaN(parsed) ? 0 : parsed;
   }
 
   /**
-   * Parse percentage value, handling % signs
+   * Parse percentage value, handling % signs and accounting format (12.34)
    */
   private static parsePercentage(value: string): number {
     if (!value) return 0;
-    const cleaned = value.replace(/%/g, '');
+    
+    let cleaned = value.replace(/%/g, '');
+    if (cleaned.startsWith('(')) {
+      if (cleaned.endsWith(')')) {
+        cleaned = '-' + cleaned.slice(1, -1);
+      } else {
+        cleaned = '-' + cleaned.slice(1);
+      }
+    }
+    
     const parsed = parseFloat(cleaned);
     return isNaN(parsed) ? 0 : parsed;
   }
