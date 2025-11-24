@@ -46,7 +46,10 @@ export default function SalespersonDetailPage() {
       const encodedName = encodeURIComponent(params.name as string);
       const res = await fetch(`/api/v1/invoices/reports/salespeople/${encodedName}?year=${year}`);
       const result = await res.json();
-      if (result.success) {
+      
+      if (result.salesperson) {
+        setData(result);
+      } else if (result.success) {
         setData(result.data);
       }
     } catch (error) {
@@ -90,7 +93,7 @@ export default function SalespersonDetailPage() {
     );
   }
 
-  const { salesperson, monthlyStats, recentInvoices, topCustomers } = data;
+  const { salesperson, monthlyStats, recentInvoices, topCustomers, totalCommission } = data;
 
   // Calculate totals from monthly stats
   const totalRevenue = monthlyStats.reduce((sum: number, m: any) => sum + Number(m.total_revenue), 0);
@@ -138,7 +141,7 @@ export default function SalespersonDetailPage() {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <div className="p-2 bg-blue-50 rounded-lg">
@@ -157,6 +160,16 @@ export default function SalespersonDetailPage() {
               <span className="text-xs font-medium text-slate-500 uppercase">Total Profit</span>
             </div>
             <div className="text-2xl font-bold text-slate-800">{formatCurrency(totalProfit)}</div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 bg-indigo-50 rounded-lg">
+                <DollarSign className="w-6 h-6 text-indigo-600" />
+              </div>
+              <span className="text-xs font-medium text-slate-500 uppercase">Total Commission</span>
+            </div>
+            <div className="text-2xl font-bold text-slate-800">{formatCurrency(totalCommission || 0)}</div>
           </div>
 
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
@@ -256,6 +269,7 @@ export default function SalespersonDetailPage() {
                   <th className="px-6 py-4">Customer</th>
                   <th className="px-6 py-4 text-right">Amount</th>
                   <th className="px-6 py-4 text-right">Profit</th>
+                  <th className="px-6 py-4 text-right">Commission</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -279,6 +293,9 @@ export default function SalespersonDetailPage() {
                     </td>
                     <td className="px-6 py-4 text-right text-green-600">
                       {formatCurrency(invoice.grossProfit)}
+                    </td>
+                    <td className="px-6 py-4 text-right text-indigo-600 font-medium">
+                      {formatCurrency(invoice.commission || 0)}
                     </td>
                   </tr>
                 ))}

@@ -819,7 +819,8 @@ export class InvoiceController {
           COALESCE(SUM(ili.gross_profit), 0) as "grossProfit",
           i.salesperson,
           i.vehicle_info as "vehicleInfo",
-          c.name as "customerName"
+          c.name as "customerName",
+          (SELECT SUM(commission) FROM reconciliation_records WHERE "matchedInvoiceId" = i.id) as "commission"
         FROM invoices i
         LEFT JOIN invoice_line_items ili ON i.id = ili.invoice_id
         LEFT JOIN invoice_customers c ON i.customer_id = c.id
@@ -849,14 +850,24 @@ export class InvoiceController {
         LIMIT 10
       `;
 
+      // 4. Total Commission
+      const commissionStats: any[] = await this.prisma.$queryRaw`
+        SELECT SUM(rr.commission) as total_commission
+        FROM invoices i
+        JOIN reconciliation_records rr ON i.id = rr."matchedInvoiceId"
+        WHERE i.salesperson = ${decodedName}
+          AND i.invoice_date >= ${startDate}
+          AND i.invoice_date <= ${endDate}
+          AND i.status = 'ACTIVE'::"InvoiceStatus"
+      `;
+      const totalCommission = commissionStats[0]?.total_commission || 0;
+
       return {
-        success: true,
-        data: {
-          salesperson: decodedName,
-          monthlyStats,
-          recentInvoices,
-          topCustomers
-        }
+        salesperson: decodedName,
+        monthlyStats,
+        recentInvoices,
+        topCustomers,
+        totalCommission
       };
     } catch (error) {
       this.logger.error(`Failed to get details for salesperson ${name}`, error);
