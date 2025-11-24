@@ -44,7 +44,9 @@ export class InvoiceController {
     @Query('search') search?: string,
     @Query('salesperson') salesperson?: string,
     @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string
+    @Query('endDate') endDate?: string,
+    @Query('sortBy') sortBy: string = 'invoiceDate',
+    @Query('sortOrder') sortOrder: string = 'desc'
   ) {
     try {
       // Validate and parse parameters
@@ -91,6 +93,18 @@ export class InvoiceController {
         }
       }
 
+      // Determine sort order
+      const orderBy: any = {};
+      const direction = sortOrder.toLowerCase() === 'asc' ? 'asc' : 'desc';
+      
+      if (sortBy === 'customerName') {
+        orderBy.customer = { name: direction };
+      } else if (['totalAmount', 'invoiceDate', 'invoiceNumber', 'salesperson'].includes(sortBy)) {
+        orderBy[sortBy] = direction;
+      } else {
+        orderBy.invoiceDate = 'desc';
+      }
+
       // Execute queries in parallel for better performance
       const [invoices, total] = await Promise.all([
         this.prisma.invoice.findMany({
@@ -103,37 +117,42 @@ export class InvoiceController {
               orderBy: { lineNumber: 'asc' }
             }
           },
-          orderBy: { invoiceDate: 'desc' }
+          orderBy
         }),
         this.prisma.invoice.count({ where })
       ]);
 
       // Transform data to match frontend format
-      const transformedInvoices = invoices.map(invoice => ({
-        invoiceNumber: invoice.invoiceNumber,
-        customerName: invoice.customer.name,
-        vehicleInfo: invoice.vehicleInfo || '',
-        mileage: invoice.mileage || '0 / 0',
-        invoiceDate: invoice.invoiceDate.toLocaleDateString('en-US'),
-        salesperson: invoice.salesperson,
-        taxAmount: Number(invoice.taxAmount),
-        totalAmount: Number(invoice.totalAmount),
-        lineItemsCount: invoice.lineItems.length,
-        lineItems: invoice.lineItems.map(item => ({
-          line: item.lineNumber || 0,
-          productCode: item.productCode,
-          description: item.description,
-          adjustment: item.adjustment,
-          quantity: Number(item.quantity),
-          partsCost: Number(item.partsCost),
-          laborCost: Number(item.laborCost),
-          fet: Number(item.fet),
-          lineTotal: Number(item.lineTotal),
-          cost: Number(item.costPrice),
-          grossProfitMargin: Number(item.grossProfitMargin),
-          grossProfit: Number(item.grossProfit)
-        }))
-      }));
+      const transformedInvoices = invoices.map(invoice => {
+        const calculatedGrossProfit = invoice.lineItems.reduce((sum, item) => sum + Number(item.grossProfit || 0), 0);
+        
+        return {
+          invoiceNumber: invoice.invoiceNumber,
+          customerName: invoice.customer.name,
+          vehicleInfo: invoice.vehicleInfo || '',
+          mileage: invoice.mileage || '0 / 0',
+          invoiceDate: invoice.invoiceDate.toLocaleDateString('en-US'),
+          salesperson: invoice.salesperson,
+          taxAmount: Number(invoice.taxAmount),
+          totalAmount: Number(invoice.totalAmount),
+          grossProfit: calculatedGrossProfit,
+          lineItemsCount: invoice.lineItems.length,
+          lineItems: invoice.lineItems.map(item => ({
+            line: item.lineNumber || 0,
+            productCode: item.productCode,
+            description: item.description,
+            adjustment: item.adjustment,
+            quantity: Number(item.quantity),
+            partsCost: Number(item.partsCost),
+            laborCost: Number(item.laborCost),
+            fet: Number(item.fet),
+            lineTotal: Number(item.lineTotal),
+            cost: Number(item.costPrice),
+            grossProfitMargin: Number(item.grossProfitMargin),
+            grossProfit: Number(item.grossProfit)
+          }))
+        };
+      });
 
       const totalPages = Math.ceil(total / limitNum);
       const totalLineItems = transformedInvoices.reduce((sum, inv) => sum + inv.lineItems.length, 0);

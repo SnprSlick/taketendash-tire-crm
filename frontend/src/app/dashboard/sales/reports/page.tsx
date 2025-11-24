@@ -13,7 +13,8 @@ import {
   ArrowDown,
   Search,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  FileText
 } from 'lucide-react';
 
 // Interfaces
@@ -94,6 +95,8 @@ export default function SalesReportsPage() {
       } else if (activeTab === 'customers') {
         const offset = (page - 1) * limit;
         url = `/api/v1/invoices/reports/customers?${dateParams}&limit=${limit}&offset=${offset}&${sortParams}${searchParams}`;
+      } else if (activeTab === 'invoices') {
+        url = `/api/v1/invoices?${dateParams}&limit=${limit}&page=${page}&${sortParams}${searchParams}`;
       } else if (activeTab === 'monthly') {
         url = `/api/v1/invoices/reports/monthly?year=${new Date().getFullYear()}`;
       }
@@ -102,9 +105,16 @@ export default function SalesReportsPage() {
       const result = await res.json();
 
       if (result.success) {
-        setData(result.data);
-        if (activeTab === 'customers' && result.meta) {
-          setTotalRecords(result.meta.total);
+        if (activeTab === 'invoices') {
+          setData(result.data.invoices);
+          if (result.data.pagination) {
+            setTotalRecords(result.data.pagination.total);
+          }
+        } else {
+          setData(result.data);
+          if (activeTab === 'customers' && result.meta) {
+            setTotalRecords(result.meta.total);
+          }
         }
       }
     } catch (error) {
@@ -218,6 +228,19 @@ export default function SalesReportsPage() {
               </div>
             </button>
             <button
+              onClick={() => { setActiveTab('invoices'); setPage(1); setSortField('invoiceDate'); }}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'invoices' 
+                  ? 'border-blue-600 text-blue-600' 
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Invoices
+              </div>
+            </button>
+            <button
               onClick={() => { setActiveTab('monthly'); setPage(1); }}
               className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'monthly' 
@@ -264,6 +287,17 @@ export default function SalesReportsPage() {
                         <SortableHeader field="last_purchase_date" label="Last Purchase" align="right" />
                       </>
                     )}
+                    {activeTab === 'invoices' && (
+                      <>
+                        <SortableHeader field="invoiceDate" label="Date" />
+                        <SortableHeader field="invoiceNumber" label="Invoice #" />
+                        <SortableHeader field="customerName" label="Customer" />
+                        <SortableHeader field="salesperson" label="Salesperson" />
+                        <SortableHeader field="totalAmount" label="Amount" align="right" />
+                        <th className="px-6 py-4 font-semibold text-slate-700 text-right">Gross Profit</th>
+                        <th className="px-6 py-4 font-semibold text-slate-700 text-right">Items</th>
+                      </>
+                    )}
                     {activeTab === 'monthly' && (
                       <>
                         <th className="px-6 py-4 font-semibold text-slate-700">Month</th>
@@ -285,6 +319,8 @@ export default function SalesReportsPage() {
                           router.push(`/dashboard/sales/reports/salesperson/${encodeURIComponent(row.salesperson)}`);
                         } else if (activeTab === 'customers') {
                           router.push(`/dashboard/sales/reports/customer/${row.customer_id}`);
+                        } else if (activeTab === 'invoices') {
+                          router.push(`/dashboard/sales/invoices/${row.invoiceNumber}`);
                         }
                       }}
                     >
@@ -325,6 +361,17 @@ export default function SalesReportsPage() {
                           </td>
                         </>
                       )}
+                      {activeTab === 'invoices' && (
+                        <>
+                          <td className="px-6 py-4 text-slate-600">{row.invoiceDate}</td>
+                          <td className="px-6 py-4 font-medium text-blue-600">{row.invoiceNumber}</td>
+                          <td className="px-6 py-4 text-slate-900">{row.customerName}</td>
+                          <td className="px-6 py-4 text-slate-600">{row.salesperson}</td>
+                          <td className="px-6 py-4 text-right font-medium text-slate-900">{formatCurrency(row.totalAmount)}</td>
+                          <td className="px-6 py-4 text-right text-green-600">{formatCurrency(row.grossProfit)}</td>
+                          <td className="px-6 py-4 text-right text-slate-600">{row.lineItemsCount}</td>
+                        </>
+                      )}
                       {activeTab === 'monthly' && (
                         <>
                           <td className="px-6 py-4 font-medium text-slate-900">{row.month_name}</td>
@@ -344,7 +391,7 @@ export default function SalesReportsPage() {
                   ))}
                   {data.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                      <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
                         No data available for the selected period
                       </td>
                     </tr>
@@ -354,8 +401,8 @@ export default function SalesReportsPage() {
             </div>
           )}
           
-          {/* Pagination for Customers */}
-          {activeTab === 'customers' && totalRecords > limit && (
+          {/* Pagination */}
+          {(activeTab === 'customers' || activeTab === 'invoices') && totalRecords > limit && (
             <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
               <div className="text-sm text-slate-500">
                 Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, totalRecords)} of {totalRecords} results
