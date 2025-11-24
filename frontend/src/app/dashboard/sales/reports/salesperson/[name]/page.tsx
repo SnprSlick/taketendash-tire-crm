@@ -219,13 +219,17 @@ export default function SalespersonDetailPage() {
             <h3 className="text-lg font-semibold text-slate-800 mb-6">Top Customers</h3>
             <div className="space-y-4">
               {topCustomers.map((customer: any, index: number) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <div 
+                  key={index} 
+                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-blue-50 cursor-pointer transition-colors group"
+                  onClick={() => router.push(`/dashboard/sales/reports/customer/${customer.customer_id || customer.id}`)}
+                >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-slate-600 font-bold text-xs border border-slate-200">
+                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-slate-600 font-bold text-xs border border-slate-200 group-hover:border-blue-200 group-hover:text-blue-600">
                       {index + 1}
                     </div>
                     <div>
-                      <div className="font-medium text-slate-900 text-sm">{customer.name}</div>
+                      <div className="font-medium text-slate-900 text-sm group-hover:text-blue-700">{customer.name}</div>
                       <div className="text-xs text-slate-500">{customer.invoice_count} invoices</div>
                     </div>
                   </div>
@@ -256,7 +260,11 @@ export default function SalespersonDetailPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {recentInvoices.map((invoice: any) => (
-                  <tr key={invoice.id} className="hover:bg-slate-50 transition-colors">
+                  <tr 
+                    key={invoice.id} 
+                    className="hover:bg-slate-50 transition-colors cursor-pointer"
+                    onClick={() => router.push(`/dashboard/sales/invoices/${encodeURIComponent(invoice.invoiceNumber)}`)}
+                  >
                     <td className="px-6 py-4 text-slate-600">
                       {new Date(invoice.invoiceDate).toLocaleDateString()}
                     </td>

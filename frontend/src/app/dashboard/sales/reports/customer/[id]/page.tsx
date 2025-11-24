@@ -278,7 +278,11 @@ export default function CustomerDetailPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {recentInvoices.map((invoice: any) => (
-                  <tr key={invoice.id} className="hover:bg-slate-50 transition-colors">
+                  <tr 
+                    key={invoice.id} 
+                    className="hover:bg-slate-50 transition-colors cursor-pointer"
+                    onClick={() => router.push(`/dashboard/sales/invoices/${encodeURIComponent(invoice.invoiceNumber)}`)}
+                  >
                     <td className="px-6 py-4 text-slate-600">
                       {new Date(invoice.invoiceDate).toLocaleDateString()}
                     </td>

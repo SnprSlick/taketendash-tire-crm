@@ -768,6 +768,7 @@ export class InvoiceController {
       // 3. Top Customers for this salesperson
       const topCustomers = await this.prisma.$queryRaw`
         SELECT 
+          c.id as customer_id,
           c.name,
           COUNT(DISTINCT i.id)::int as invoice_count,
           SUM(i.total_amount) as total_revenue
