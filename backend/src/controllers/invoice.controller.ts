@@ -667,23 +667,22 @@ export class InvoiceController {
       `;
 
       // 3. Recent Invoices
-      const recentInvoices = await this.prisma.invoice.findMany({
-        where: { 
-          customerId: id,
-          status: 'ACTIVE'
-        },
-        orderBy: { invoiceDate: 'desc' },
-        take: 20,
-        select: {
-          id: true,
-          invoiceNumber: true,
-          invoiceDate: true,
-          totalAmount: true,
-          grossProfit: true,
-          salesperson: true,
-          vehicleInfo: true
-        }
-      });
+      const recentInvoices = await this.prisma.$queryRaw`
+        SELECT 
+          i.id,
+          i.invoice_number as "invoiceNumber",
+          i.invoice_date as "invoiceDate",
+          i.total_amount as "totalAmount",
+          COALESCE(SUM(ili.gross_profit), 0) as "grossProfit",
+          i.salesperson,
+          i.vehicle_info as "vehicleInfo"
+        FROM invoices i
+        LEFT JOIN invoice_line_items ili ON i.id = ili.invoice_id
+        WHERE i.customer_id = ${id} AND i.status = 'ACTIVE'::"InvoiceStatus"
+        GROUP BY i.id
+        ORDER BY i.invoice_date DESC
+        LIMIT 20
+      `;
 
       // 4. Top Categories
       const topCategories = await this.prisma.$queryRaw`
@@ -751,19 +750,29 @@ export class InvoiceController {
       `;
 
       // 2. Recent Invoices
-      const recentInvoices = await this.prisma.invoice.findMany({
-        where: { 
-          salesperson: decodedName,
-          status: 'ACTIVE'
-        },
-        orderBy: { invoiceDate: 'desc' },
-        take: 20,
-        include: {
-          customer: {
-            select: { name: true }
-          }
-        }
-      });
+      const recentInvoicesRaw: any[] = await this.prisma.$queryRaw`
+        SELECT 
+          i.id,
+          i.invoice_number as "invoiceNumber",
+          i.invoice_date as "invoiceDate",
+          i.total_amount as "totalAmount",
+          COALESCE(SUM(ili.gross_profit), 0) as "grossProfit",
+          i.salesperson,
+          i.vehicle_info as "vehicleInfo",
+          c.name as "customerName"
+        FROM invoices i
+        LEFT JOIN invoice_line_items ili ON i.id = ili.invoice_id
+        LEFT JOIN invoice_customers c ON i.customer_id = c.id
+        WHERE i.salesperson = ${decodedName} AND i.status = 'ACTIVE'::"InvoiceStatus"
+        GROUP BY i.id, c.name
+        ORDER BY i.invoice_date DESC
+        LIMIT 20
+      `;
+
+      const recentInvoices = recentInvoicesRaw.map(inv => ({
+        ...inv,
+        customer: { name: inv.customerName }
+      }));
 
       // 3. Top Customers for this salesperson
       const topCustomers = await this.prisma.$queryRaw`
