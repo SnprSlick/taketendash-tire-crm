@@ -110,19 +110,21 @@ export class TireMasterColumnMapper {
       return 'ignore';
     }
 
-    // STEP 4: Check for customer name - simple name format
-    // For CSV like "JOHNSON STEVE" - just the customer name on its own line
-    if (trimmedFirstColumn.length > 0 && TireMasterColumnMapper.looksLikeCustomerName(trimmedFirstColumn)) {
-      console.log(`[DEBUG] Row identified as customer_start: "${trimmedFirstColumn}" (looks like customer name: ${TireMasterColumnMapper.looksLikeCustomerName(trimmedFirstColumn)})`);
-      return 'customer_start';
-    }
-
-    // STEP 5: Use intelligent pattern detection for line items
+    // STEP 4: Use intelligent pattern detection for line items
     // This handles both standard format and report format with column offsets
+    // MOVED UP: Check for line items BEFORE checking for customer name to avoid false positives
+    // where product codes (like "OIL FILTER") look like customer names
     const patternResult = TireMasterPatternDetector.detectLineItemPattern(row);
     if (patternResult.isLineItem && patternResult.confidence >= 60) { // Increased threshold to reduce false positives
       console.log(`[DEBUG] Line item detected with confidence ${patternResult.confidence}% using ${patternResult.detectedFormat} format`);
       return patternResult.detectedFormat === 'standard' ? 'lineitem' : 'lineitem_in_report';
+    }
+
+    // STEP 5: Check for customer name - simple name format
+    // For CSV like "JOHNSON STEVE" - just the customer name on its own line
+    if (trimmedFirstColumn.length > 0 && TireMasterColumnMapper.looksLikeCustomerName(trimmedFirstColumn)) {
+      console.log(`[DEBUG] Row identified as customer_start: "${trimmedFirstColumn}" (looks like customer name: ${TireMasterColumnMapper.looksLikeCustomerName(trimmedFirstColumn)})`);
+      return 'customer_start';
     }
 
     return 'ignore';

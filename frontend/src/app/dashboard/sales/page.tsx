@@ -28,13 +28,17 @@ interface AnalyticsResponse {
   basicAnalytics: SalesData;
   insights: SalesInsight[];
   kpis: KPI[];
+  categoryBreakdown?: any[];
+  topCustomers?: any[];
+  topSalespeople?: any[];
+  salesTrend?: any[];
 }
 
 export default function SalesDashboardPage() {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedPeriod, setSelectedPeriod] = useState('30');
+  const [selectedPeriod, setSelectedPeriod] = useState('365');
 
   useEffect(() => {
     fetchAnalyticsData();
@@ -45,37 +49,7 @@ export default function SalesDashboardPage() {
       setLoading(true);
       setError(null);
 
-      // GraphQL query to backend
-      const query = `
-        query {
-          enhancedAnalytics {
-            basicAnalytics {
-              totalSales
-              totalRevenue
-              averageOrderValue
-            }
-            insights {
-              type
-              title
-              description
-              impact
-            }
-            kpis {
-              name
-              value
-              trend
-            }
-          }
-        }
-      `;
-
-      const response = await fetch('http://localhost:3000/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query }),
-      });
+      const response = await fetch(`/api/v1/invoices/stats/sales?period=${selectedPeriod}`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -83,11 +57,11 @@ export default function SalesDashboardPage() {
 
       const result = await response.json();
 
-      if (result.errors) {
-        throw new Error(result.errors[0]?.message || 'GraphQL Error');
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to fetch analytics');
       }
 
-      setAnalyticsData(result.data.enhancedAnalytics);
+      setAnalyticsData(result.data);
     } catch (err) {
       console.error('Failed to fetch analytics data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load analytics data');
@@ -99,6 +73,20 @@ export default function SalesDashboardPage() {
           totalRevenue: 524000,
           averageOrderValue: 2113,
         },
+        categoryBreakdown: [
+          { category: 'TIRES', revenue: 350000, profit: 70000, quantity: 1200 },
+          { category: 'SERVICES', revenue: 120000, profit: 90000, quantity: 400 },
+          { category: 'PARTS', revenue: 54000, profit: 20000, quantity: 300 }
+        ],
+        topCustomers: [
+          { name: 'Fleet Corp A', total_spent: 45000, invoice_count: 12 },
+          { name: 'Transport Logistics', total_spent: 32000, invoice_count: 8 },
+          { name: 'City Services', total_spent: 28000, invoice_count: 15 }
+        ],
+        topSalespeople: [
+          { salesperson: 'John Doe', _sum: { totalAmount: 150000 }, _count: { id: 45 } },
+          { salesperson: 'Jane Smith', _sum: { totalAmount: 142000 }, _count: { id: 38 } }
+        ],
         insights: [
           {
             type: 'OPPORTUNITY',
@@ -216,6 +204,10 @@ export default function SalesDashboardPage() {
         {/* Analytics Charts */}
         <SalesCharts
           salesData={analyticsData?.basicAnalytics}
+          categoryBreakdown={analyticsData?.categoryBreakdown}
+          topCustomers={analyticsData?.topCustomers}
+          topSalespeople={analyticsData?.topSalespeople}
+          salesTrend={analyticsData?.salesTrend}
           insights={analyticsData?.insights}
           kpis={analyticsData?.kpis}
           loading={loading}

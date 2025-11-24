@@ -33,6 +33,28 @@ interface SalesData {
   totalSales: number;
   totalRevenue: number;
   averageOrderValue: number;
+  totalProfit?: number;
+  profitMargin?: number;
+}
+
+interface CategoryStat {
+  category: string;
+  revenue: number;
+  profit: number;
+  quantity: number;
+}
+
+interface TopEntity {
+  name: string;
+  total_spent?: number;
+  invoice_count?: number;
+  _sum?: {
+    totalAmount: number;
+  };
+  _count?: {
+    id: number;
+  };
+  salesperson?: string;
 }
 
 interface SalesInsight {
@@ -50,6 +72,10 @@ interface KPI {
 
 interface SalesChartsProps {
   salesData?: SalesData;
+  categoryBreakdown?: CategoryStat[];
+  topCustomers?: TopEntity[];
+  topSalespeople?: TopEntity[];
+  salesTrend?: any[];
   insights?: SalesInsight[];
   kpis?: KPI[];
   loading?: boolean;
@@ -64,23 +90,35 @@ const mockSalesData = [
   { month: 'Jun', sales: 6200, revenue: 124000, orders: 248 }
 ];
 
-const categoryData = [
-  { name: 'Tires', value: 45, color: '#3B82F6' },
-  { name: 'Service', value: 30, color: '#10B981' },
-  { name: 'Parts', value: 15, color: '#F59E0B' },
-  { name: 'Labor', value: 10, color: '#6366F1' }
-];
-
 export default function SalesCharts({
   salesData = {
-    totalSales: 50,
-    totalRevenue: 125000,
-    averageOrderValue: 2500,
+    totalSales: 0,
+    totalRevenue: 0,
+    averageOrderValue: 0,
+    totalProfit: 0,
+    profitMargin: 0
   },
+  categoryBreakdown = [],
+  topCustomers = [],
+  topSalespeople = [],
+  salesTrend = [],
   insights = [],
   kpis = [],
   loading = false
 }: SalesChartsProps) {
+  // Use provided salesTrend if available, otherwise fallback to mock data only if loading failed or empty
+  const chartData = salesTrend.length > 0 ? salesTrend : mockSalesData;
+  
+  // Process category data for chart
+  const categoryChartData = categoryBreakdown.map((cat, index) => ({
+    name: cat.category,
+    value: Number(cat.revenue),
+    color: ['#3B82F6', '#10B981', '#F59E0B', '#6366F1', '#EC4899'][index % 5]
+  }));
+
+  // Calculate total revenue for percentages
+  const totalRevenue = categoryChartData.reduce((sum, item) => sum + item.value, 0);
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -96,10 +134,10 @@ export default function SalesCharts({
   return (
     <div className="space-y-8">
       {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <MetricCard
           icon={<ShoppingCart className="w-6 h-6" />}
-          title="Total Sales"
+          title="Total Invoices"
           value={salesData.totalSales.toString()}
           change="+12.5%"
           changeType="increase"
@@ -109,7 +147,7 @@ export default function SalesCharts({
         <MetricCard
           icon={<DollarSign className="w-6 h-6" />}
           title="Total Revenue"
-          value={`$${salesData.totalRevenue.toLocaleString()}`}
+          value={`$${salesData.totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}`}
           change="+8.3%"
           changeType="increase"
           gradient="from-green-500 to-emerald-600"
@@ -123,6 +161,15 @@ export default function SalesCharts({
           changeType="increase"
           gradient="from-purple-500 to-purple-600"
           delay="0.2s"
+        />
+        <MetricCard
+          icon={<TrendingUp className="w-6 h-6" />}
+          title="Profit Margin"
+          value={`${(salesData.profitMargin || 0).toFixed(1)}%`}
+          change={salesData.profitMargin && salesData.profitMargin > 20 ? "Healthy" : "Low"}
+          changeType={salesData.profitMargin && salesData.profitMargin > 20 ? "increase" : "decrease"}
+          gradient="from-amber-500 to-orange-600"
+          delay="0.3s"
         />
       </div>
 
@@ -144,11 +191,15 @@ export default function SalesCharts({
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={mockSalesData}>
+              <AreaChart data={chartData}>
                 <defs>
-                  <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
                     <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
@@ -161,13 +212,23 @@ export default function SalesCharts({
                     borderRadius: '8px',
                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                   }}
+                  formatter={(value: number, name: string) => [`$${value.toLocaleString()}`, name === 'revenue' ? 'Revenue' : 'Profit']}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#3B82F6"
+                  strokeWidth={3}
+                  fill="url(#revenueGradient)"
+                  name="Revenue"
                 />
                 <Area
                   type="monotone"
                   dataKey="sales"
-                  stroke="#3B82F6"
+                  stroke="#10B981"
                   strokeWidth={3}
-                  fill="url(#salesGradient)"
+                  fill="url(#profitGradient)"
+                  name="Profit"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -185,7 +246,7 @@ export default function SalesCharts({
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                   <Pie
-                    data={categoryData}
+                    data={categoryChartData}
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
@@ -193,26 +254,89 @@ export default function SalesCharts({
                     paddingAngle={5}
                     dataKey="value"
                   >
-                    {categoryData.map((entry, index) => (
+                    {categoryChartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="grid grid-cols-2 gap-2 mt-4">
-                {categoryData.map((item) => (
+                {categoryChartData.map((item) => (
                   <div key={item.name} className="flex items-center">
                     <div
                       className="w-3 h-3 rounded-full mr-2"
                       style={{ backgroundColor: item.color }}
                     ></div>
                     <span className="text-sm text-slate-600">{item.name}</span>
-                    <span className="ml-auto text-sm font-medium text-slate-800">{item.value}%</span>
+                    <span className="ml-auto text-sm font-medium text-slate-800">
+                      {totalRevenue > 0 ? ((item.value / totalRevenue) * 100).toFixed(1) : 0}%
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Top Customers & Salespeople */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top Customers */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-200/50 p-6 card-hover animate-slide-up" style={{animationDelay: '0.3s'}}>
+          <h3 className="text-lg font-semibold text-slate-800 mb-6 flex items-center">
+            <Target className="w-5 h-5 mr-2 text-indigo-600" />
+            Top Customers
+          </h3>
+          <div className="space-y-4">
+            {topCustomers.map((customer, index) => (
+              <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold text-sm">
+                    {index + 1}
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-800">{customer.name}</p>
+                    <p className="text-xs text-slate-500">{customer.invoice_count || 0} Invoices</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-slate-800">${Number(customer.total_spent || 0).toLocaleString()}</p>
+                </div>
+              </div>
+            ))}
+            {topCustomers.length === 0 && (
+              <p className="text-center text-slate-500 py-4">No customer data available</p>
+            )}
+          </div>
+        </div>
+
+        {/* Top Salespeople */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-200/50 p-6 card-hover animate-slide-up" style={{animationDelay: '0.4s'}}>
+          <h3 className="text-lg font-semibold text-slate-800 mb-6 flex items-center">
+            <Target className="w-5 h-5 mr-2 text-pink-600" />
+            Top Salespeople
+          </h3>
+          <div className="space-y-4">
+            {topSalespeople.map((person, index) => (
+              <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center font-bold text-sm">
+                    {index + 1}
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-800">{person.salesperson || 'Unknown'}</p>
+                    <p className="text-xs text-slate-500">{person._count?.id || 0} Invoices</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-slate-800">${Number(person._sum?.totalAmount || 0).toLocaleString()}</p>
+                </div>
+              </div>
+            ))}
+            {topSalespeople.length === 0 && (
+              <p className="text-center text-slate-500 py-4">No sales data available</p>
+            )}
           </div>
         </div>
       </div>

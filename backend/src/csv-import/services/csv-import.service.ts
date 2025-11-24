@@ -1208,4 +1208,36 @@ export class CsvImportService {
       };
     }
   }
+
+  /**
+   * Clear all data from the database
+   * Used for testing and resetting the system
+   */
+  async clearDatabase(): Promise<void> {
+    this.logger.warn('🧹 Clearing database requested via API');
+
+    try {
+      // Delete in order of dependencies (child tables first)
+      
+      this.logger.log('Deleting InvoiceLineItems...');
+      await this.prisma.invoiceLineItem.deleteMany({});
+      
+      this.logger.log('Deleting Invoices...');
+      await this.prisma.invoice.deleteMany({});
+      
+      this.logger.log('Deleting InvoiceCustomers...');
+      await this.prisma.invoiceCustomer.deleteMany({});
+      
+      this.logger.log('Deleting ImportErrors...');
+      await this.prisma.importError.deleteMany({});
+      
+      this.logger.log('Deleting ImportBatches...');
+      await this.prisma.importBatch.deleteMany({});
+
+      this.logger.log('✅ Database cleared successfully');
+    } catch (error) {
+      this.logger.error('❌ Error clearing database:', error);
+      throw new InternalServerErrorException('Failed to clear database', error.message);
+    }
+  }
 }

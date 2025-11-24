@@ -285,4 +285,211 @@ export class InvoiceController {
       throw new BadRequestException(`Failed to retrieve statistics: ${error.message}`);
     }
   }
+
+  /**
+   * Get sales analytics summary
+   */
+  @Get('stats/sales')
+  async getAnalyticsSummary(@Query('period') period: string = '30') {
+    try {
+      const days = parseInt(period) || 30;
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+
+      // 1. Basic Aggregates
+      console.log('Step 1: Basic Aggregates');
+      const aggregates = await this.prisma.invoice.aggregate({
+        where: {
+          invoiceDate: {
+            gte: startDate
+          },
+          status: 'ACTIVE'
+        },
+        _sum: {
+          totalAmount: true,
+          grossProfit: true,
+          laborCost: true,
+          partsCost: true
+        },
+        _count: {
+          id: true
+        }
+      });
+
+      let totalRevenue = Number(aggregates._sum.totalAmount || 0);
+      let totalProfit = Number(aggregates._sum.grossProfit || 0);
+      const totalInvoices = aggregates._count.id || 0;
+      const averageOrderValue = totalInvoices > 0 ? totalRevenue / totalInvoices : 0;
+      let profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+
+      // 2. Category Breakdown (Revenue by Category)
+      console.log('Step 2: Category Breakdown');
+      // This requires joining with line items. Prisma doesn't support deep groupBy easily, 
+      // so we might need a raw query or separate queries.
+      // Let's use a raw query for performance on analytics.
+      
+      const categoryStats = await this.prisma.$queryRaw`
+        SELECT 
+          category,
+          SUM(line_total) as revenue,
+          SUM(ili.gross_profit) as profit,
+          SUM(quantity) as quantity
+        FROM invoice_line_items ili
+        JOIN invoices i ON i.id = ili.invoice_id
+        WHERE i.invoice_date >= ${startDate} AND i.status = 'ACTIVE'::"InvoiceStatus"
+        GROUP BY category
+      `;
+
+      // Recalculate profit if missing from invoice aggregate
+      if (totalProfit === 0 && Array.isArray(categoryStats) && categoryStats.length > 0) {
+        totalProfit = categoryStats.reduce((acc, curr: any) => {
+          return acc + (Number(curr.profit) || 0);
+        }, 0);
+        profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+      }
+
+      // 3. Top Salespeople
+      console.log('Step 3: Top Salespeople');
+      const topSalespeople = await this.prisma.invoice.groupBy({
+        by: ['salesperson'],
+        where: {
+          invoiceDate: {
+            gte: startDate
+          },
+          status: 'ACTIVE'
+        },
+        _sum: {
+          totalAmount: true
+        },
+        _count: {
+          id: true
+        },
+        orderBy: {
+          _sum: {
+            totalAmount: 'desc'
+          }
+        },
+        take: 5
+      });
+
+      // 4. Top Customers
+      console.log('Step 4: Top Customers');
+      // We need to join with customer table, so groupBy on invoice.customerId won't give us names directly.
+      // But we can fetch top IDs then fetch names, or use raw query. Raw query is cleaner here.
+      const topCustomers = await this.prisma.$queryRaw`
+        SELECT 
+          c.name,
+          COUNT(i.id)::int as invoice_count,
+          SUM(i.total_amount) as total_spent
+        FROM invoices i
+        JOIN invoice_customers c ON c.id = i.customer_id
+        WHERE i.invoice_date >= ${startDate} AND i.status = 'ACTIVE'::"InvoiceStatus"
+        GROUP BY c.id, c.name
+        ORDER BY total_spent DESC
+        LIMIT 5
+      `;
+
+      // 5. Sales Trend
+      console.log('Step 5: Sales Trend');
+      let salesTrend;
+      
+      if (days > 90) {
+        // Group by Month
+        salesTrend = await this.prisma.$queryRaw`
+          SELECT 
+            TO_CHAR(i.invoice_date, 'Mon') as month,
+            TO_CHAR(i.invoice_date, 'YYYY-MM') as sort_key,
+            SUM(ili.line_total) as revenue,
+            SUM(ili.gross_profit) as sales,
+            COUNT(DISTINCT i.id)::int as orders
+          FROM invoices i
+          JOIN invoice_line_items ili ON i.id = ili.invoice_id
+          WHERE i.invoice_date >= ${startDate} AND i.status = 'ACTIVE'::"InvoiceStatus"
+          GROUP BY TO_CHAR(i.invoice_date, 'Mon'), TO_CHAR(i.invoice_date, 'YYYY-MM')
+          ORDER BY sort_key
+        `;
+      } else {
+        // Group by Day
+        salesTrend = await this.prisma.$queryRaw`
+          SELECT 
+            TO_CHAR(i.invoice_date, 'Mon DD') as month,
+            TO_CHAR(i.invoice_date, 'YYYY-MM-DD') as sort_key,
+            SUM(ili.line_total) as revenue,
+            SUM(ili.gross_profit) as sales,
+            COUNT(DISTINCT i.id)::int as orders
+          FROM invoices i
+          JOIN invoice_line_items ili ON i.id = ili.invoice_id
+          WHERE i.invoice_date >= ${startDate} AND i.status = 'ACTIVE'::"InvoiceStatus"
+          GROUP BY TO_CHAR(i.invoice_date, 'Mon DD'), TO_CHAR(i.invoice_date, 'YYYY-MM-DD')
+          ORDER BY sort_key
+        `;
+      }
+
+      // 6. Generate Insights
+      console.log('Step 6: Insights');
+      const insights = [];
+      
+      // Margin Insight
+      if (profitMargin < 20) {
+        insights.push({
+          type: 'WARNING',
+          title: 'Low Profit Margins',
+          description: `Current profit margin is ${profitMargin.toFixed(1)}%, which is below the target of 20%. Check pricing on recent bulk orders.`,
+          impact: 'HIGH'
+        });
+      } else if (profitMargin > 35) {
+        insights.push({
+          type: 'OPPORTUNITY',
+          title: 'Strong Profitability',
+          description: `Margins are healthy at ${profitMargin.toFixed(1)}%. Consider reinvesting in marketing for high-margin categories.`,
+          impact: 'POSITIVE'
+        });
+      }
+
+      // Category Insight
+      const tireRevenue = (categoryStats as any[]).find(c => c.category === 'TIRES')?.revenue || 0;
+      const serviceRevenue = (categoryStats as any[]).find(c => c.category === 'SERVICES')?.revenue || 0;
+      
+      if (serviceRevenue > 0 && tireRevenue > 0) {
+        const serviceAttachRate = (serviceRevenue / tireRevenue) * 100;
+        if (serviceAttachRate < 50) {
+           insights.push({
+            type: 'OPPORTUNITY',
+            title: 'Increase Service Attachment',
+            description: `Service revenue is only ${serviceAttachRate.toFixed(1)}% of tire revenue. Focus on selling alignments and balancing with tire sets.`,
+            impact: 'MEDIUM'
+          });
+        }
+      }
+
+      return {
+        success: true,
+        data: {
+          basicAnalytics: {
+            totalSales: totalInvoices,
+            totalRevenue,
+            averageOrderValue,
+            totalProfit,
+            profitMargin
+          },
+          salesTrend,
+          categoryBreakdown: categoryStats,
+          topSalespeople,
+          topCustomers,
+          insights,
+          kpis: [
+            { name: 'Revenue', value: `$${totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}`, trend: 'neutral' },
+            { name: 'Profit Margin', value: `${profitMargin.toFixed(1)}%`, trend: profitMargin > 30 ? 'up' : 'down' },
+            { name: 'Avg Order', value: `$${averageOrderValue.toFixed(0)}`, trend: 'neutral' },
+            { name: 'Invoices', value: totalInvoices, trend: 'neutral' }
+          ]
+        }
+      };
+
+    } catch (error) {
+      console.error('ANALYTICS ERROR:', error);
+      this.logger.error('Failed to get analytics summary', error);
+      throw new BadRequestException('Failed to calculate analytics');
+    }
+  }
 }

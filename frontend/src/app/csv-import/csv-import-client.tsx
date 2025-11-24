@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileUp, Download, Eye, CheckCircle, AlertCircle, Upload, ChevronDown, ChevronRight } from 'lucide-react';
+import { FileUp, Download, Eye, CheckCircle, AlertCircle, Upload, ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
 
 interface ParsedInvoice {
   invoiceNumber: string;
@@ -29,6 +29,18 @@ interface ParsedInvoice {
   }>;
 }
 
+interface DashboardStats {
+  totalInvoices: number;
+  totalLineItems: number;
+  lastImported: string | null;
+  dateRange: {
+    earliest: string | null;
+    latest: string | null;
+  };
+  topSalesperson: string | null;
+  topSalespersonCount: number;
+}
+
 export default function CsvImportClientPage() {
   const [csvData, setCsvData] = useState<ParsedInvoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +48,7 @@ export default function CsvImportClientPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [parseResult, setParseResult] = useState<any>(null);
   const [dataStats, setDataStats] = useState<{totalInvoices: number, totalLineItems: number} | null>(null);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(20);
@@ -68,6 +81,27 @@ export default function CsvImportClientPage() {
       console.log('🔄 [UNMOUNT] Component unmounting');
     };
   }, []);
+
+  // Load dashboard statistics
+  useEffect(() => {
+    const loadStats = async () => {
+      if (typeof window === 'undefined' || !isMounted) return;
+      
+      try {
+        const response = await fetch('/api/v1/invoices/stats/summary');
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            setDashboardStats(result.data);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load dashboard stats:', err);
+      }
+    };
+    
+    loadStats();
+  }, [isMounted]);
 
   // Load actual invoice data from database API
   useEffect(() => {
@@ -111,7 +145,7 @@ export default function CsvImportClientPage() {
         } catch (parseError) {
           console.error('🚨 [ERROR] Failed to parse JSON:', parseError);
           console.error('🚨 [ERROR] Response text:', responseText);
-          throw new Error(`Invalid JSON response: ${parseError.message}`);
+          throw new Error(`Invalid JSON response: ${(parseError as Error).message}`);
         }
 
         console.log('🔍 [DEBUG] Parsed response:', {
@@ -150,11 +184,12 @@ export default function CsvImportClientPage() {
         setLoading(false);
 
       } catch (error) {
+        const err = error as Error;
         console.error('🚨 [ERROR] Complete error details:', {
-          message: error.message,
-          stack: error.stack,
-          name: error.name,
-          cause: error.cause,
+          message: err.message,
+          stack: err.stack,
+          name: err.name,
+          cause: (err as any).cause,
         });
 
         const detailedError = `Failed to load invoice data: ${error instanceof Error ? error.message : 'Unknown error'}.
@@ -340,7 +375,7 @@ Troubleshooting:
       }
     } catch (error) {
       console.error('🚨 [REFRESH] API test failed:', error);
-      setError(`Manual refresh failed: ${error.message}. API may be unavailable.`);
+      setError(`Manual refresh failed: ${(error as Error).message}. API may be unavailable.`);
       setLoading(false);
     }
   };
@@ -366,7 +401,7 @@ Troubleshooting:
       alert(`Direct backend test: ${response.ok ? 'SUCCESS' : 'FAILED'}\nStatus: ${response.status}\nData: ${JSON.stringify(data, null, 2)}`);
     } catch (error) {
       console.error('🧪 [TEST] Direct backend test failed:', error);
-      alert(`Direct backend test FAILED: ${error.message}`);
+      alert(`Direct backend test FAILED: ${(error as Error).message}`);
     }
   };
 
@@ -470,6 +505,37 @@ Troubleshooting:
     );
   }
 
+  const handleClearDatabase = async () => {
+    if (!confirm('Are you sure you want to clear all database data? This action cannot be undone.')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/v1/csv-import/database', {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Clear failed: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.message || 'Clear failed');
+      }
+
+      alert('Database cleared successfully');
+      window.location.reload();
+
+    } catch (error) {
+      console.error('Clear error:', error);
+      setError(`Clear failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
@@ -480,14 +546,15 @@ Troubleshooting:
         </p>
       </div>
 
-      {/* Test Results Summary */}
+      {/* Dashboard Statistics */}
+      {/* Dashboard Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
         <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 border-t-4 border-t-emerald-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-500">Test Status</p>
-              <p className="text-2xl font-bold text-emerald-600 mt-1">PASSED</p>
-              <p className="text-xs text-slate-400 mt-1">Complete capture</p>
+              <p className="text-sm font-medium text-slate-500">System Status</p>
+              <p className="text-2xl font-bold text-emerald-600 mt-1">ONLINE</p>
+              <p className="text-xs text-slate-400 mt-1">Ready for import</p>
             </div>
             <div className="p-3 bg-emerald-50 rounded-lg">
               <CheckCircle className="h-6 w-6 text-emerald-600" />
@@ -498,11 +565,11 @@ Troubleshooting:
         <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 border-t-4 border-t-blue-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-500">Sample File</p>
-              <p className="text-2xl font-bold text-slate-800 mt-1">178 lines</p>
-              <p className="text-xs text-slate-400 mt-1 truncate max-w-[120px]" title="tiremaster-sample-1.csv">
-                tiremaster-sample-1.csv
+              <p className="text-sm font-medium text-slate-500">Last Import</p>
+              <p className="text-xl font-bold text-slate-800 mt-1 truncate" title={dashboardStats?.lastImported ? new Date(dashboardStats.lastImported).toLocaleString() : 'Never'}>
+                {dashboardStats?.lastImported ? new Date(dashboardStats.lastImported).toLocaleDateString() : 'None'}
               </p>
+              <p className="text-xs text-slate-400 mt-1">Most recent activity</p>
             </div>
             <div className="p-3 bg-blue-50 rounded-lg">
               <FileUp className="h-6 w-6 text-blue-600" />
@@ -513,9 +580,9 @@ Troubleshooting:
         <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 border-t-4 border-t-indigo-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-500">Invoices</p>
-              <p className="text-2xl font-bold text-slate-800 mt-1">{csvData.length}</p>
-              <p className="text-xs text-slate-400 mt-1">of {dataStats?.totalInvoices || 0} detected</p>
+              <p className="text-sm font-medium text-slate-500">Total Invoices</p>
+              <p className="text-2xl font-bold text-slate-800 mt-1">{dashboardStats?.totalInvoices?.toLocaleString() || 0}</p>
+              <p className="text-xs text-slate-400 mt-1">in database</p>
             </div>
             <div className="p-3 bg-indigo-50 rounded-lg">
               <Eye className="h-6 w-6 text-indigo-600" />
@@ -526,9 +593,9 @@ Troubleshooting:
         <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 border-t-4 border-t-violet-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-500">Line Items</p>
+              <p className="text-sm font-medium text-slate-500">Total Line Items</p>
               <p className="text-2xl font-bold text-slate-800 mt-1">
-                {csvData.reduce((total, inv) => total + inv.lineItems.length, 0)}
+                {dashboardStats?.totalLineItems?.toLocaleString() || 0}
               </p>
               <p className="text-xs text-slate-400 mt-1">Product entries</p>
             </div>
@@ -541,9 +608,11 @@ Troubleshooting:
         <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 border-t-4 border-t-amber-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-500">Financial Data</p>
-              <p className="text-2xl font-bold text-slate-800 mt-1">11 Cols</p>
-              <p className="text-xs text-slate-400 mt-1">FET, GPM%, GP$</p>
+              <p className="text-sm font-medium text-slate-500">Top Salesperson</p>
+              <p className="text-lg font-bold text-slate-800 mt-1 truncate max-w-[140px]" title={dashboardStats?.topSalesperson || 'None'}>
+                {dashboardStats?.topSalesperson || 'None'}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">{dashboardStats?.topSalespersonCount || 0} invoices</p>
             </div>
             <div className="p-3 bg-amber-50 rounded-lg">
               <AlertCircle className="h-6 w-6 text-amber-600" />
@@ -577,6 +646,25 @@ Troubleshooting:
               </button>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Database Management Section */}
+      <div className="bg-white border border-red-200 rounded-lg p-6 mb-6">
+        <h2 className="text-xl font-semibold mb-4 text-red-800">Database Management</h2>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-600">
+            Clear all imported data from the database. This includes invoices, line items, customers, and import history.
+            Use this to reset the system for testing.
+          </p>
+          <button
+            onClick={handleClearDatabase}
+            disabled={loading}
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            {loading ? 'Clearing...' : 'Clear Database'}
+          </button>
         </div>
       </div>
 
@@ -855,25 +943,31 @@ Troubleshooting:
                   (page === currentPage - 2 && currentPage > 3) ||
                   (page === currentPage + 2 && currentPage < totalPages - 2);
 
-                if (showEllipsis) {
-                  return <span key={page} className="px-2 text-slate-400">...</span>;
+                if (showPage) {
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`px-3 py-1 text-sm font-medium rounded-lg transition-all focus:outline-none ${
+                        page === currentPage
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
                 }
 
-                if (!showPage) return <span key={page} style={{display: 'none'}}></span>;
+                if (showEllipsis) {
+                  return (
+                    <span key={page} className="px-3 py-1 text-sm text-slate-500">
+                      ...
+                    </span>
+                  );
+                }
 
-                return (
-                  <button
-                    key={page}
-                    onClick={() => handlePageChange(page)}
-                    className={`px-3 py-1 text-sm font-medium rounded-lg transition-all ${
-                      currentPage === page
-                        ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
-                        : 'text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                );
+                return null;
               })}
             </div>
 
@@ -884,43 +978,6 @@ Troubleshooting:
             >
               Next
             </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Summary Statistics */}
-      <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl p-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center">
-          <CheckCircle className="h-5 w-5 text-emerald-500 mr-2" />
-          Import Summary
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-          <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
-            <h4 className="font-semibold text-slate-900 mb-2">File Processing</h4>
-            <ul className="space-y-2 text-slate-600">
-              <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-2"></span>TireMaster format detected</li>
-              <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-2"></span>Invoice headers parsed</li>
-              <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-2"></span>Line items extracted</li>
-              <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-2"></span>Product categorization applied</li>
-            </ul>
-          </div>
-          <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
-            <h4 className="font-semibold text-slate-900 mb-2">Data Quality</h4>
-            <ul className="space-y-2 text-slate-600">
-              <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-2"></span>No parsing errors</li>
-              <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-2"></span>All 11 financial columns captured</li>
-              <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-2"></span>FET, Cost, GPM%, GP$ included</li>
-              <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-2"></span>Invoice totals & tax amounts</li>
-            </ul>
-          </div>
-          <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
-            <h4 className="font-semibold text-slate-900 mb-2">Ready for Import</h4>
-            <ul className="space-y-2 text-slate-600">
-              <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-2"></span>Invoice structure validated</li>
-              <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-2"></span>Product codes recognized</li>
-              <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-2"></span>Pricing data intact</li>
-              <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-2"></span>Database import completed</li>
-            </ul>
           </div>
         </div>
       </div>

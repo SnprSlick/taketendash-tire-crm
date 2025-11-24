@@ -526,4 +526,19 @@ export class CsvImportController {
       message: 'Retry batch created successfully'
     };
   }
+
+  /**
+   * Clear all database data
+   */
+  @Delete('database')
+  @ApiOperation({ summary: 'Clear all database data' })
+  @ApiResponse({ status: 200, description: 'Database cleared successfully' })
+  @ApiResponse({ status: 500, description: 'Failed to clear database' })
+  async clearDatabase() {
+    await this.csvImportService.clearDatabase();
+    return {
+      success: true,
+      message: 'Database cleared successfully'
+    };
+  }
 }
