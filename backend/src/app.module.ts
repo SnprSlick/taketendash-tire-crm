@@ -21,7 +21,7 @@ import { CsvImportModule } from './csv-import/csv-import.module';
 // import { LibrariesModule } from './libraries/libraries.module'; // Temporarily disabled
 import { AppController } from './app.controller';
 import { InvoiceController } from './controllers/invoice.controller';
-import { CsvImportController } from './csv-import/controllers/csv-import.controller';
+// import { CsvImportController } from './csv-import/controllers/csv-import.controller'; // Moved to CsvImportModule
 // import { HealthResolver } from './graphql/resolvers/health.resolver'; // Disabled with GraphQL
 
 @Module({
@@ -54,7 +54,7 @@ import { CsvImportController } from './csv-import/controllers/csv-import.control
     // CustomersModule, // Temporarily disabled due to schema mismatch
     // InvoicesModule, // Temporarily disabled due to schema mismatch
   ],
-  controllers: [AppController, InvoiceController, CsvImportController], // CSV import controller added
+  controllers: [AppController, InvoiceController], // CsvImportController moved to CsvImportModule
   providers: [], // DateScalar and HealthResolver removed with GraphQL
 })
 export class AppModule {}

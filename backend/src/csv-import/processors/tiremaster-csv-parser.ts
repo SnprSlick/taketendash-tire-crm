@@ -8,6 +8,7 @@ import {
   TireMasterLineItem,
   TireMasterRow
 } from '../mappers/tiremaster-column-mapper';
+import { TireMasterPatternDetector } from '../utils/pattern-detector';
 import {
   TireMasterDataTransformer,
   TransformedInvoiceData
@@ -33,6 +34,9 @@ export interface TireMasterParsingResult extends ProcessingResult {
   totalInvoices: number;
   totalLineItems: number;
   duplicateInvoices: string[];
+  skippedDuplicates: number;
+  updatedDuplicates: number;
+  renamedDuplicates: number;
 }
 
 export interface ParsedInvoice {
@@ -187,6 +191,9 @@ export class TireMasterCsvParser {
         totalInvoices: invoices.length,
         totalLineItems: invoices.reduce((sum, inv) => sum + inv.lineItems.length, 0),
         duplicateInvoices,
+        skippedDuplicates: 0,
+        updatedDuplicates: 0,
+        renamedDuplicates: 0
       };
 
       this.logger.log(
@@ -269,23 +276,13 @@ export class TireMasterCsvParser {
       }
 
       // Check if this row has line item data in columns 27+ (even if it also has invoice termination)
-      if (firstColumn.includes('Invoice Detail Report') && fields.length > 30) {
-        const potentialProductCode = (fields[27] || '').trim();
-        const potentialQty = (fields[30] || '').trim();
-
-        if (potentialProductCode.length > 0 &&
-            potentialQty.length > 0 &&
-            !potentialProductCode.includes('Invoice #') &&
-            !potentialProductCode.includes('Customer Name') &&
-            !potentialProductCode.includes('Total') &&
-            !potentialProductCode.includes('Report') &&
-            !potentialProductCode.includes('Totals for') &&
-            !potentialProductCode.includes('Site#') &&
-            !potentialProductCode.includes('Page ')) {
-
+      // Use the pattern detector to be consistent
+      if (firstColumn.includes('Invoice Detail Report')) {
+        const patternResult = TireMasterPatternDetector.detectLineItemPattern(fields);
+        if (patternResult.isLineItem && patternResult.confidence >= 60) {
           // Process the line item FIRST
           if (state.currentInvoice) {
-            const lineItemData = TireMasterColumnMapper.extractLineItemFromReport(fields);
+            const lineItemData = TireMasterColumnMapper.extractLineItem(fields);
             state.currentInvoice.lineItems.push(lineItemData);
             state.currentInvoice.rawLineItemLines.push(line);
             state.currentInvoice.lineItemRowNumbers.push(lineNumber);
@@ -372,7 +369,14 @@ export class TireMasterCsvParser {
 
     // Finalize previous invoice if exists
     if (state.currentInvoice) {
-      state.completedInvoices.push(state.currentInvoice);
+      // Skip invoices with no line items (cancelled/voided invoices)
+      if (state.currentInvoice.lineItems.length > 0) {
+        state.completedInvoices.push(state.currentInvoice);
+      } else {
+        this.logger.warn(
+          `Skipping invoice ${state.currentInvoice.header.invoiceNumber} - no line items found (possibly cancelled/voided)`
+        );
+      }
     }
 
     // Start new invoice
@@ -421,9 +425,20 @@ export class TireMasterCsvParser {
    */
   private finalizeParsing(state: TireMasterParsingState): void {
     if (state.currentInvoice) {
-      state.completedInvoices.push(state.currentInvoice);
+      this.logger.log(
+        `Finalizing invoice ${state.currentInvoice.header.invoiceNumber} with ${state.currentInvoice.lineItems.length} line items`
+      );
+      // Skip invoices with no line items (cancelled/voided invoices)
+      if (state.currentInvoice.lineItems.length > 0) {
+        state.completedInvoices.push(state.currentInvoice);
+      } else {
+        this.logger.warn(
+          `Skipping invoice ${state.currentInvoice.header.invoiceNumber} - no line items found (possibly cancelled/voided)`
+        );
+      }
       state.currentInvoice = null;
     }
+    this.logger.log(`Total completed invoices after parsing: ${state.completedInvoices.length}`);
   }
 
   /**
@@ -436,10 +451,15 @@ export class TireMasterCsvParser {
 
     for (const invoice of parsedInvoices) {
       try {
+        this.logger.debug(`Starting transformation for invoice ${invoice.header.invoiceNumber}`);
+        this.logger.debug(`Invoice header data:`, JSON.stringify(invoice.header, null, 2));
+
         const transformedData = TireMasterDataTransformer.transformInvoiceData(
           invoice.header,
           invoice.lineItems
         );
+
+        this.logger.debug(`Successfully transformed invoice ${invoice.header.invoiceNumber}`);
 
         // Validate transformed data
         const validation = TireMasterDataTransformer.validateTransformedData(transformedData);
@@ -458,10 +478,19 @@ export class TireMasterCsvParser {
         this.logger.error(
           `Failed to transform invoice ${invoice.header.invoiceNumber}: ${error.message}`
         );
+        this.logger.error(`Stack trace:`, error.stack);
+        this.logger.error(`Invoice header:`, JSON.stringify(invoice.header, null, 2));
+        this.logger.error(`Line items count: ${invoice.lineItems?.length || 0}`);
+        if (invoice.lineItems && invoice.lineItems.length > 0) {
+          this.logger.error(`First line item:`, JSON.stringify(invoice.lineItems[0], null, 2));
+        }
         // Skip invalid invoices but continue processing others
       }
     }
 
+    this.logger.log(
+      `Transformation complete: ${transformedInvoices.length} of ${parsedInvoices.length} invoices successfully transformed`
+    );
     return transformedInvoices;
   }
 

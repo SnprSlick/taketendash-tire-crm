@@ -190,7 +190,8 @@ export class CsvImportController {
         overwriteExisting: importDto.overwriteExisting,
         validateOnly: importDto.validateOnly,
         batchSize: importDto.batchSize,
-        strictMode: importDto.strictMode
+        strictMode: importDto.strictMode,
+        duplicateHandling: importDto.duplicateHandling
       });
 
       return {

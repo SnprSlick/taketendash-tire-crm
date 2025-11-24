@@ -6,7 +6,7 @@ import { TireMasterCsvParser, TireMasterParsingResult, TireMasterParsingOptions 
 import { CsvFileProcessor } from '../processors/csv-file-processor';
 import { CreateImportBatchInput } from '../entities/import-batch.entity';
 import { CreateImportErrorInput } from '../entities/import-error.entity';
-import { ImportStatus, ErrorType } from '../../shared/enums/import.enums';
+import { ImportStatus, ErrorType, DuplicateHandlingStrategy } from '../../shared/enums/import.enums';
 
 /**
  * CSV Import Orchestration Service
@@ -24,6 +24,7 @@ export interface CsvImportRequest {
   validateOnly?: boolean;
   batchSize?: number;
   strictMode?: boolean;
+  duplicateHandling?: string;
 }
 
 export interface CsvImportResult {
@@ -41,6 +42,11 @@ export interface CsvImportResult {
     estimatedRecords: number;
   };
   duplicateInvoices: string[];
+  skippedDuplicates: number;
+  updatedDuplicates: number;
+  renamedDuplicates: number;
+  mergedDuplicates: number;
+  failedDuplicates: number;
   isHistorical?: boolean;
   originalProcessingDate?: Date;
 }
@@ -83,7 +89,8 @@ export class CsvImportService {
       overwriteExisting = false,
       validateOnly = false,
       batchSize = 100,
-      strictMode = false
+      strictMode = false,
+      duplicateHandling = 'SKIP'
     } = request;
 
     try {
@@ -121,7 +128,12 @@ export class CsvImportService {
           processingTimeMs: Date.now() - startTime,
           successRate: 0,
           validationResult,
-          duplicateInvoices: []
+          duplicateInvoices: [],
+          skippedDuplicates: 0,
+          updatedDuplicates: 0,
+          renamedDuplicates: 0,
+          mergedDuplicates: 0,
+          failedDuplicates: 0
         };
       }
 
@@ -178,10 +190,16 @@ export class CsvImportService {
       }
 
       // Step 7: Process invoices and persist to database
-      const { successfulRecords, failedRecords, errorSummary } = await this.processInvoices(
+      const {
+        successfulRecords,
+        failedRecords,
+        errorSummary,
+        duplicateStatistics
+      } = await this.processInvoices(
         batch.id,
         parsingResult.invoices,
-        batchSize
+        batchSize,
+        duplicateHandling
       );
 
       // Step 8: Complete the batch
@@ -202,7 +220,12 @@ export class CsvImportService {
         successRate: completionResult.successRate,
         errorSummary,
         validationResult,
-        duplicateInvoices: parsingResult.duplicateInvoices
+        duplicateInvoices: parsingResult.duplicateInvoices,
+        skippedDuplicates: duplicateStatistics.skippedDuplicates,
+        updatedDuplicates: duplicateStatistics.updatedDuplicates,
+        renamedDuplicates: duplicateStatistics.renamedDuplicates,
+        mergedDuplicates: duplicateStatistics.mergedDuplicates,
+        failedDuplicates: duplicateStatistics.failedDuplicates
       };
 
       this.logger.log(
@@ -260,15 +283,32 @@ export class CsvImportService {
   private async processInvoices(
     batchId: string,
     invoices: any[],
-    batchSize: number
+    batchSize: number,
+    duplicateHandling: string = 'SKIP'
   ): Promise<{
     successfulRecords: number;
     failedRecords: number;
     errorSummary?: string;
+    duplicateStatistics: {
+      skippedDuplicates: number;
+      updatedDuplicates: number;
+      renamedDuplicates: number;
+      mergedDuplicates: number;
+      failedDuplicates: number;
+    };
   }> {
     let successfulRecords = 0;
     let failedRecords = 0;
     const errors: CreateImportErrorInput[] = [];
+
+    // Track duplicate statistics
+    const duplicateStatistics = {
+      skippedDuplicates: 0,
+      updatedDuplicates: 0,
+      renamedDuplicates: 0,
+      mergedDuplicates: 0,
+      failedDuplicates: 0,
+    };
 
     this.logger.log(`Processing ${invoices.length} invoices in batches of ${batchSize}`);
 
@@ -304,24 +344,76 @@ export class CsvImportService {
       // Process each invoice in the batch
       for (const invoice of batch) {
         try {
-          await this.persistInvoiceData(invoice, batchId);
-          successfulRecords++;
+          const duplicateResult = await this.handleDuplicateInvoice(invoice, batchId, duplicateHandling);
 
-          this.logger.debug(`Successfully processed invoice: ${invoice.header.invoiceNumber}`);
+          // Only count as successful if not failed
+          if (duplicateResult.action !== 'FAILED') {
+            successfulRecords++;
+          }
+
+          // Track duplicate statistics
+          switch (duplicateResult.action) {
+            case 'SKIPPED':
+              duplicateStatistics.skippedDuplicates++;
+              break;
+            case 'UPDATED':
+              if (duplicateHandling === 'MERGE') {
+                duplicateStatistics.mergedDuplicates++;
+              } else {
+                duplicateStatistics.updatedDuplicates++;
+              }
+              break;
+            case 'RENAMED':
+              duplicateStatistics.renamedDuplicates++;
+              break;
+            case 'FAILED':
+              duplicateStatistics.failedDuplicates++;
+              failedRecords++;
+
+              // Record the error for this failed duplicate
+              const errorInput = {
+                importBatchId: batchId,
+                rowNumber: invoice.headerRowNumber,
+                errorType: 'DUPLICATE' as any,
+                errorMessage: `Duplicate handling failed: ${duplicateResult.error}`,
+                originalData: invoice.rawHeaderLine,
+              };
+              errors.push(errorInput);
+              break;
+          }
+
+          this.logger.debug(`Successfully processed invoice: ${invoice.header.invoiceNumber} - Action: ${duplicateResult.action}`);
 
         } catch (error) {
           failedRecords++;
 
+          // This catch block should only handle unexpected errors since
+          // duplicate handling is now done in the main flow above
+          let errorType = 'BUSINESS_RULE' as any;
+          let errorCode = 'UNEXPECTED_ERROR';
+
+          if (error.message.includes('validation')) {
+            errorType = 'VALIDATION' as any;
+            errorCode = 'VALIDATION_FAILED';
+          } else if (error.message.includes('Missing data') || error.message.includes('required')) {
+            errorType = 'MISSING_DATA' as any;
+            errorCode = 'MISSING_REQUIRED_FIELD';
+          } else if (error.message.includes('Invalid format')) {
+            errorType = 'FORMAT' as any;
+            errorCode = 'INVALID_DATA_FORMAT';
+          }
+
           errors.push({
             importBatchId: batchId,
             rowNumber: invoice.headerRowNumber,
-            errorType: ErrorType.BUSINESS_RULE,
-            errorMessage: `Invoice persistence failed: ${error.message}`,
+            errorType,
+            errorMessage: `[${errorCode}] Unexpected invoice processing error: ${error.message}`,
             originalData: invoice.rawHeaderLine,
           });
 
-          this.logger.warn(
-            `Failed to process invoice ${invoice.header.invoiceNumber}: ${error.message}`
+          this.logger.error(
+            `Unexpected error processing invoice ${invoice.header.invoiceNumber}: [${errorCode}] ${error.message}`,
+            error.stack
           );
         }
       }
@@ -333,11 +425,32 @@ export class CsvImportService {
       }
     }
 
-    const errorSummary = failedRecords > 0
-      ? `${failedRecords} invoices failed to process. Check error details for specifics.`
-      : undefined;
+    // Enhanced error summary with statistics
+    let errorSummary: string | undefined;
+    if (failedRecords > 0) {
+      const duplicatesSummary = Object.entries(duplicateStatistics)
+        .filter(([_, count]) => count > 0)
+        .map(([action, count]) => `${action}: ${count}`)
+        .join(', ');
 
-    return { successfulRecords, failedRecords, errorSummary };
+      errorSummary = `${failedRecords} invoices failed to process. ` +
+        (duplicatesSummary ? `Duplicates handled: ${duplicatesSummary}. ` : '') +
+        'Check error details for specifics.';
+    } else if (Object.values(duplicateStatistics).some(count => count > 0)) {
+      // Show duplicate statistics even when no failures occurred
+      const duplicatesSummary = Object.entries(duplicateStatistics)
+        .filter(([_, count]) => count > 0)
+        .map(([action, count]) => `${action}: ${count}`)
+        .join(', ');
+      errorSummary = `Duplicates handled: ${duplicatesSummary}`;
+    }
+
+    return {
+      successfulRecords,
+      failedRecords,
+      errorSummary,
+      duplicateStatistics
+    };
   }
 
   /**
@@ -451,8 +564,29 @@ export class CsvImportService {
       });
 
     } catch (error) {
+      // Handle P2002 unique constraint violations (race conditions)
+      if (error.code === 'P2002' && error.meta?.target?.includes('invoiceNumber')) {
+        this.logger.warn(`Race condition detected for invoice ${header.invoiceNumber}, attempting fallback handling`);
+
+        // Use the configured duplicate handling strategy
+        const duplicateResult = await this.handleDuplicateInvoice(
+          { header, lineItems, transformedData },
+          importBatchId,
+          'SKIP' // Default to skip for race conditions
+        );
+
+        if (duplicateResult.action === 'SKIPPED') {
+          this.logger.log(`Skipped duplicate invoice due to race condition: ${header.invoiceNumber}`);
+          return; // Exit gracefully
+        } else {
+          this.logger.error(`Failed to handle duplicate invoice race condition: ${header.invoiceNumber}`);
+          throw new Error(`Duplicate invoice number: ${header.invoiceNumber}`);
+        }
+      }
+
       this.logger.error(`Failed to persist invoice ${header.invoiceNumber}:`, {
         message: error.message,
+        code: error.code,
         stack: error.stack,
         invoiceData: {
           invoiceNumber: header.invoiceNumber,
@@ -464,6 +598,245 @@ export class CsvImportService {
       });
       throw error;
     }
+  }
+
+  /**
+   * Handle duplicate invoice detection and resolution
+   */
+  private async handleDuplicateInvoice(
+    invoice: any,
+    importBatchId: string,
+    strategy: string
+  ): Promise<{
+    action: 'PROCESSED' | 'SKIPPED' | 'UPDATED' | 'RENAMED' | 'FAILED';
+    newInvoiceNumber?: string;
+    error?: string;
+  }> {
+    const invoiceNumber = invoice.header.invoiceNumber?.trim();
+
+    if (!invoiceNumber) {
+      // If no invoice number, let normal processing handle it
+      await this.persistInvoiceData(invoice, importBatchId);
+      return { action: 'PROCESSED' };
+    }
+
+    // Check if invoice already exists
+    const existingInvoice = await this.prisma.invoice.findUnique({
+      where: { invoiceNumber },
+      include: {
+        lineItems: true,
+        customer: true
+      }
+    });
+
+    if (!existingInvoice) {
+      // No duplicate, process normally
+      await this.persistInvoiceData(invoice, importBatchId);
+      return { action: 'PROCESSED' };
+    }
+
+    // Handle duplicate based on strategy
+    switch (strategy) {
+      case 'SKIP':
+        this.logger.log(`Skipping duplicate invoice: ${invoiceNumber}`);
+        return { action: 'SKIPPED' };
+
+      case 'UPDATE':
+        try {
+          await this.updateExistingInvoice(existingInvoice, invoice, importBatchId);
+          return { action: 'UPDATED' };
+        } catch (error) {
+          return { action: 'FAILED', error: `Update failed: ${error.message}` };
+        }
+
+      case 'RENAME':
+        try {
+          const newInvoiceNumber = await this.generateUniqueInvoiceNumber(invoiceNumber);
+          invoice.header.invoiceNumber = newInvoiceNumber;
+          await this.persistInvoiceData(invoice, importBatchId);
+          return { action: 'RENAMED', newInvoiceNumber };
+        } catch (error) {
+          return { action: 'FAILED', error: `Rename failed: ${error.message}` };
+        }
+
+      case 'MERGE':
+        try {
+          await this.mergeInvoiceLineItems(existingInvoice, invoice, importBatchId);
+          return { action: 'UPDATED' };
+        } catch (error) {
+          return { action: 'FAILED', error: `Merge failed: ${error.message}` };
+        }
+
+      case 'FAIL':
+      default:
+        return {
+          action: 'FAILED',
+          error: `Duplicate invoice number: ${invoiceNumber}`
+        };
+    }
+  }
+
+  /**
+   * Update an existing invoice with new data
+   */
+  private async updateExistingInvoice(
+    existingInvoice: any,
+    newInvoice: any,
+    importBatchId: string
+  ): Promise<void> {
+    const { header, lineItems, transformedData } = newInvoice;
+
+    await this.prisma.$transaction(async (tx) => {
+      // Update invoice data
+      await tx.invoice.update({
+        where: { id: existingInvoice.id },
+        data: {
+          invoiceDate: header.invoiceDate ? new Date(header.invoiceDate) : existingInvoice.invoiceDate,
+          salesperson: header.salesperson?.trim() || existingInvoice.salesperson,
+          vehicleInfo: header.vehicleInfo?.trim() || existingInvoice.vehicleInfo,
+          mileage: header.mileage?.trim() || existingInvoice.mileage,
+          subtotal: this.parseDecimal(transformedData?.invoice?.subtotal || header.totalAmount || existingInvoice.subtotal),
+          taxAmount: this.parseDecimal(transformedData?.invoice?.taxAmount || header.taxAmount || existingInvoice.taxAmount),
+          totalAmount: this.parseDecimal(transformedData?.invoice?.totalAmount || header.totalAmount || existingInvoice.totalAmount),
+          laborCost: this.parseDecimal(transformedData?.invoice?.laborCost || existingInvoice.laborCost),
+          partsCost: this.parseDecimal(transformedData?.invoice?.partsCost || existingInvoice.partsCost),
+          fetTotal: this.parseDecimal(transformedData?.invoice?.fetTotal || existingInvoice.fetTotal),
+          environmentalFee: this.parseDecimal(transformedData?.invoice?.environmentalFee || existingInvoice.environmentalFee),
+          totalCost: this.parseDecimal(transformedData?.invoice?.totalCost || existingInvoice.totalCost),
+          grossProfit: this.parseDecimal(transformedData?.invoice?.grossProfit || existingInvoice.grossProfit),
+          importBatch: { connect: { id: importBatchId } }
+        }
+      });
+
+      // Delete existing line items
+      await tx.invoiceLineItem.deleteMany({
+        where: { invoiceId: existingInvoice.id }
+      });
+
+      // Add new line items
+      for (let i = 0; i < lineItems.length; i++) {
+        const lineItem = lineItems[i];
+        const transformedLineItem = transformedData?.lineItems?.[i];
+
+        await tx.invoiceLineItem.create({
+          data: {
+            invoiceId: existingInvoice.id,
+            lineNumber: lineItem.lineNumber || i + 1,
+            productCode: (lineItem.productCode?.trim() || 'UNKNOWN').substring(0, 100),
+            description: (lineItem.description?.trim() || 'No description').substring(0, 500),
+            adjustment: lineItem.adjustment?.trim() || null,
+            quantity: this.parseDecimal(transformedLineItem?.quantity || lineItem.quantity || 0),
+            partsCost: this.parseDecimal(transformedLineItem?.partsCost || lineItem.partsCost || 0),
+            laborCost: this.parseDecimal(transformedLineItem?.laborCost || lineItem.laborCost || 0),
+            fet: this.parseDecimal(transformedLineItem?.fet || lineItem.fet || 0),
+            lineTotal: this.parseDecimal(transformedLineItem?.lineTotal || lineItem.lineTotal || 0),
+            costPrice: this.parseDecimal(transformedLineItem?.costPrice || lineItem.cost || 0),
+            grossProfitMargin: this.parseDecimal(transformedLineItem?.grossProfitMargin || lineItem.grossProfitMargin || 0),
+            grossProfit: this.parseDecimal(transformedLineItem?.grossProfit || lineItem.grossProfit || 0),
+            category: this.categorizeProduct(lineItem.description || lineItem.productCode || 'OTHER')
+          }
+        });
+      }
+    });
+
+    this.logger.log(`Updated existing invoice: ${header.invoiceNumber}`);
+  }
+
+  /**
+   * Merge line items from new invoice into existing invoice
+   */
+  private async mergeInvoiceLineItems(
+    existingInvoice: any,
+    newInvoice: any,
+    importBatchId: string
+  ): Promise<void> {
+    const { lineItems, transformedData } = newInvoice;
+
+    await this.prisma.$transaction(async (tx) => {
+      // Find the highest line number in existing invoice
+      const maxLineNumber = existingInvoice.lineItems.length > 0
+        ? Math.max(...existingInvoice.lineItems.map((li: any) => li.lineNumber))
+        : 0;
+
+      // Add new line items with incremented line numbers
+      for (let i = 0; i < lineItems.length; i++) {
+        const lineItem = lineItems[i];
+        const transformedLineItem = transformedData?.lineItems?.[i];
+
+        await tx.invoiceLineItem.create({
+          data: {
+            invoiceId: existingInvoice.id,
+            lineNumber: maxLineNumber + i + 1,
+            productCode: (lineItem.productCode?.trim() || 'UNKNOWN').substring(0, 100),
+            description: (lineItem.description?.trim() || 'No description').substring(0, 500),
+            adjustment: lineItem.adjustment?.trim() || null,
+            quantity: this.parseDecimal(transformedLineItem?.quantity || lineItem.quantity || 0),
+            partsCost: this.parseDecimal(transformedLineItem?.partsCost || lineItem.partsCost || 0),
+            laborCost: this.parseDecimal(transformedLineItem?.laborCost || lineItem.laborCost || 0),
+            fet: this.parseDecimal(transformedLineItem?.fet || lineItem.fet || 0),
+            lineTotal: this.parseDecimal(transformedLineItem?.lineTotal || lineItem.lineTotal || 0),
+            costPrice: this.parseDecimal(transformedLineItem?.costPrice || lineItem.cost || 0),
+            grossProfitMargin: this.parseDecimal(transformedLineItem?.grossProfitMargin || lineItem.grossProfitMargin || 0),
+            grossProfit: this.parseDecimal(transformedLineItem?.grossProfit || lineItem.grossProfit || 0),
+            category: this.categorizeProduct(lineItem.description || lineItem.productCode || 'OTHER')
+          }
+        });
+      }
+
+      // Recalculate invoice totals
+      const allLineItems = await tx.invoiceLineItem.findMany({
+        where: { invoiceId: existingInvoice.id }
+      });
+
+      const newSubtotal = allLineItems.reduce((sum, li) => sum + Number(li.lineTotal), 0);
+      const newLaborCost = allLineItems.reduce((sum, li) => sum + Number(li.laborCost), 0);
+      const newPartsCost = allLineItems.reduce((sum, li) => sum + Number(li.partsCost), 0);
+      const newFetTotal = allLineItems.reduce((sum, li) => sum + Number(li.fet), 0);
+      const newTotalCost = allLineItems.reduce((sum, li) => sum + Number(li.costPrice), 0);
+      const newGrossProfit = allLineItems.reduce((sum, li) => sum + Number(li.grossProfit), 0);
+
+      // Update invoice totals
+      await tx.invoice.update({
+        where: { id: existingInvoice.id },
+        data: {
+          subtotal: this.parseDecimal(newSubtotal),
+          laborCost: this.parseDecimal(newLaborCost),
+          partsCost: this.parseDecimal(newPartsCost),
+          fetTotal: this.parseDecimal(newFetTotal),
+          totalCost: this.parseDecimal(newTotalCost),
+          grossProfit: this.parseDecimal(newGrossProfit),
+          totalAmount: this.parseDecimal(newSubtotal + existingInvoice.taxAmount),
+          importBatch: { connect: { id: importBatchId } }
+        }
+      });
+    });
+
+    this.logger.log(`Merged line items into existing invoice: ${existingInvoice.invoiceNumber}`);
+  }
+
+  /**
+   * Generate a unique invoice number by adding suffix
+   */
+  private async generateUniqueInvoiceNumber(baseNumber: string): Promise<string> {
+    let suffix = 1;
+    let candidate = `${baseNumber}-DUP${suffix}`;
+
+    while (await this.invoiceNumberExists(candidate)) {
+      suffix++;
+      candidate = `${baseNumber}-DUP${suffix}`;
+    }
+
+    return candidate;
+  }
+
+  /**
+   * Check if an invoice number already exists
+   */
+  private async invoiceNumberExists(invoiceNumber: string): Promise<boolean> {
+    const existing = await this.prisma.invoice.findUnique({
+      where: { invoiceNumber }
+    });
+    return !!existing;
   }
 
   /**
@@ -577,7 +950,12 @@ export class CsvImportService {
       successRate: 0,
       errorSummary: `Parsing failed: ${parsingResult.errors.length} errors found`,
       validationResult,
-      duplicateInvoices: parsingResult.duplicateInvoices || []
+      duplicateInvoices: parsingResult.duplicateInvoices || [],
+      skippedDuplicates: parsingResult.skippedDuplicates || 0,
+      updatedDuplicates: parsingResult.updatedDuplicates || 0,
+      renamedDuplicates: parsingResult.renamedDuplicates || 0,
+      mergedDuplicates: 0,
+      failedDuplicates: 0
     };
   }
 
@@ -614,6 +992,11 @@ export class CsvImportService {
         estimatedRecords: batch.totalRecords
       },
       duplicateInvoices: [],
+      skippedDuplicates: 0,
+      updatedDuplicates: 0,
+      renamedDuplicates: 0,
+      mergedDuplicates: 0,
+      failedDuplicates: 0,
       isHistorical: true,
       originalProcessingDate: batch.startedAt
     };

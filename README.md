@@ -82,8 +82,9 @@ A comprehensive Customer Relationship Management (CRM) application designed spec
 
 ### Access the Application
 - **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:4000
-- **GraphQL Playground**: http://localhost:4000/graphql
+- **Backend API**: http://localhost:3001
+- **API Health Check**: http://localhost:3001/health
+- **CSV Import API**: http://localhost:3001/api/v1/csv-import
 
 ## 📁 Project Structure
 
@@ -184,6 +185,141 @@ DATABASE_URL="postgresql://user:password@localhost:5432/tire_crm"
 JWT_SECRET="your-jwt-secret"
 REDIS_URL="redis://localhost:6379"
 ```
+
+## 📚 API Documentation
+
+### Base URL
+All API endpoints are prefixed with `/api/v1/`
+- **Development**: `http://localhost:3001/api/v1/`
+- **Production**: `https://your-domain.com/api/v1/`
+
+### CSV Import API
+
+#### File Upload & Import
+```http
+POST /api/v1/csv-import/upload
+Content-Type: multipart/form-data
+
+Body:
+- file: CSV file (TireMaster format)
+- duplicateHandling: "SKIP" | "UPDATE" | "RENAME" | "MERGE" | "FAIL" (optional, default: SKIP)
+- strictMode: boolean (optional, default: false)
+- batchSize: number (optional, default: 100)
+```
+
+#### Server File Import
+```http
+POST /api/v1/csv-import/import
+Content-Type: application/json
+
+{
+  "filePath": "/path/to/file.csv",
+  "duplicateHandling": "SKIP",
+  "strictMode": false,
+  "batchSize": 100
+}
+```
+
+#### File Validation Only
+```http
+POST /api/v1/csv-import/validate
+Content-Type: application/json
+
+{
+  "filePath": "/path/to/file.csv"
+}
+```
+
+#### Get Import Batches
+```http
+GET /api/v1/csv-import/batches
+Query Parameters:
+- page: number (optional, default: 1)
+- limit: number (optional, default: 20)
+- status: "STARTED" | "IN_PROGRESS" | "COMPLETED" | "FAILED" | "ROLLED_BACK" (optional)
+- startDate: ISO date string (optional)
+- endDate: ISO date string (optional)
+```
+
+#### Get Import Progress
+```http
+GET /api/v1/csv-import/progress/{batchId}
+```
+
+#### Get Batch Errors
+```http
+GET /api/v1/csv-import/batches/{batchId}/errors
+Query Parameters:
+- page: number (optional, default: 1)
+- limit: number (optional, default: 50)
+```
+
+#### Rollback Import Batch
+```http
+POST /api/v1/csv-import/batches/{batchId}/rollback
+```
+
+### Invoice API
+
+#### Get Invoices
+```http
+GET /api/v1/invoices
+Query Parameters:
+- page: number (optional, default: 1)
+- limit: number (optional, default: 20)
+- search: string (optional, search by invoice number or customer)
+- startDate: ISO date string (optional)
+- endDate: ISO date string (optional)
+```
+
+#### Get Invoice by Number
+```http
+GET /api/v1/invoices/{invoiceNumber}
+```
+
+#### Get Invoice Statistics
+```http
+GET /api/v1/invoices/stats/summary
+Query Parameters:
+- startDate: ISO date string (optional)
+- endDate: ISO date string (optional)
+```
+
+### Response Format
+
+#### Success Response
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Operation completed successfully"
+}
+```
+
+#### Error Response
+```json
+{
+  "success": false,
+  "error": "Error description",
+  "details": { ... }
+}
+```
+
+### Duplicate Handling Strategies
+
+- **SKIP**: Skip duplicate records without error
+- **UPDATE**: Update existing records with new data
+- **RENAME**: Create new record with modified invoice number
+- **MERGE**: Merge line items into existing invoice
+- **FAIL**: Fail import when duplicates are found
+
+### Error Codes
+
+- **P2002**: Unique constraint violation (duplicate record)
+- **VALIDATION**: Data validation failed
+- **FORMAT**: Invalid file format
+- **BUSINESS_RULE**: Business logic violation
+- **MISSING_DATA**: Required field missing
 
 ## 🤝 Contributing
 

@@ -27,3 +27,4 @@ TypeScript 5.1.3 with Node.js 20 LTS: Follow standard conventions
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
+- create a memory.md file and update it as we progress. when starting a new converrsation, reference the memory file to check for progress and potential issues

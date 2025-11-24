@@ -188,20 +188,16 @@ export class TireMasterDataTransformer {
   }
 
   /**
-   * Normalize invoice numbers to consistent format
+   * Normalize invoice numbers - very permissive, accept any format
+   * Since it comes from "Invoice #" detection, trust it's valid
    */
   private static normalizeInvoiceNumber(invoiceNumber: string): string {
-    if (!invoiceNumber) throw new Error('Invoice number is required');
-
-    // Remove extra whitespace and normalize format
-    let normalized = invoiceNumber.trim();
-
-    // Ensure format consistency (e.g., "3-327551" stays as is)
-    if (!normalized.match(/^\d+-\w*\d+/)) {
-      throw new Error(`Invalid invoice number format: ${invoiceNumber}`);
+    if (!invoiceNumber) {
+      throw new Error('Invoice number is required');
     }
 
-    return normalized;
+    // Just trim whitespace - accept any format: "3-NA-328035", "INV-123", "ABC-DEF-GHI", etc.
+    return invoiceNumber.trim();
   }
 
   /**
@@ -218,7 +214,9 @@ export class TireMasterDataTransformer {
    * Normalize product codes
    */
   private static normalizeProductCode(productCode: string): string {
-    if (!productCode) throw new Error('Product code is required');
+    if (!productCode || productCode.trim().length === 0) {
+      return 'NO-CODE'; // Default value for empty line items
+    }
 
     return productCode.trim().toUpperCase();
   }
@@ -294,7 +292,10 @@ export class TireMasterDataTransformer {
     for (let i = 0; i < data.lineItems.length; i++) {
       const item = data.lineItems[i];
 
-      if (!item.productCode || item.productCode.trim().length === 0) {
+      // Accept empty product codes since they get normalized to 'NO-CODE'
+      // Only reject if the normalized product code would be invalid
+      const normalizedProductCode = this.normalizeProductCode(item.productCode);
+      if (!normalizedProductCode || normalizedProductCode.trim().length === 0) {
         errors.push(`Line item ${i + 1}: Product code is required`);
       }
 

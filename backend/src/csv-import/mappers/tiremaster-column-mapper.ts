@@ -1,4 +1,6 @@
 import { ProductCategory } from '../../shared/enums/import.enums';
+import { TireMasterPatternDetector } from '../utils/pattern-detector';
+import { FinancialValidator, LineItemData } from '../utils/financial-validator';
 
 /**
  * TireMaster Column Mapper
@@ -43,16 +45,12 @@ export interface TireMasterRow {
 export class TireMasterColumnMapper {
 
   /**
-   * Identify the type of row based on content patterns
+   * Identify the type of row based on content patterns using intelligent detection
    *
-   * Updated based on user feedback:
-   * - Customer name comes first, then invoice number appears a couple rows down
-   * - Each time Column A is NOT "Invoice Detail Report" = new invoice starts
-   * - "Totals for Invoice" marks the end of each invoice
-   *
-   * CRITICAL FIX: Check for line items in "Invoice Detail Report" rows
-   * - Line items can appear in columns 27-37 even in rows marked "Invoice Detail Report"
-   * - This handles the case where the last line item and "Totals for Invoice #" are on the same row
+   * Updated to use pattern detection for improved accuracy:
+   * - Uses TireMasterPatternDetector for intelligent line item detection
+   * - Handles both standard format (columns 0-10) and report format (columns 11-21)
+   * - Maintains existing invoice header and customer detection logic
    */
   public static identifyRowType(row: string[]): 'customer_start' | 'invoice_header' | 'invoice_end' | 'lineitem' | 'lineitem_in_report' | 'ignore' {
     if (!row || row.length === 0) return 'ignore';
@@ -86,9 +84,20 @@ export class TireMasterColumnMapper {
       }
     }
 
-    // STEP 3: Ignore report headers
-    if (trimmedFirstColumn.includes('Invoice Detail Report') ||
-        trimmedFirstColumn.includes('Report') ||
+    // STEP 3: Handle Report Headers and Embedded Line Items
+    
+    // Special handling for "Invoice Detail Report" which may contain line items
+    if (trimmedFirstColumn.includes('Invoice Detail Report')) {
+      // Check if this report row actually contains a line item (usually at offset 26)
+      const patternResult = TireMasterPatternDetector.detectLineItemPattern(row);
+      if (patternResult.isLineItem && patternResult.confidence >= 60) {
+        return 'lineitem_in_report';
+      }
+      return 'ignore';
+    }
+
+    // Ignore other report headers
+    if (trimmedFirstColumn.includes('Report') ||
         trimmedFirstColumn.includes('Page ') ||
         trimmedFirstColumn.includes('Site#') ||
         trimmedFirstColumn.includes('Total #') ||
@@ -108,24 +117,12 @@ export class TireMasterColumnMapper {
       return 'customer_start';
     }
 
-    // STEP 5: Check for line item - product code in first column with numeric data following
-    // For CSV like "OP789,TIRE 225/60R16 MICHELIN,BALANCE,4,160.00,30.00,12.00,812.00"
-    if (trimmedFirstColumn.length > 0) {
-      // Must have at least product code and numeric values in subsequent columns
-      if (row.length >= 4) {
-        const quantityCol = (row[3] || '').trim();
-        // Check if we have a product code and some numeric data (quantity)
-        if (!isNaN(parseFloat(quantityCol)) && quantityCol.length > 0) {
-          // Additional validation: ensure this isn't a header or summary row
-          if (!trimmedFirstColumn.includes('Total') &&
-              !trimmedFirstColumn.includes('Summary') &&
-              !trimmedFirstColumn.includes('Invoice') &&
-              !trimmedFirstColumn.includes('Customer') &&
-              !trimmedFirstColumn.includes('Date')) {
-            return 'lineitem';
-          }
-        }
-      }
+    // STEP 5: Use intelligent pattern detection for line items
+    // This handles both standard format and report format with column offsets
+    const patternResult = TireMasterPatternDetector.detectLineItemPattern(row);
+    if (patternResult.isLineItem && patternResult.confidence >= 60) { // Increased threshold to reduce false positives
+      console.log(`[DEBUG] Line item detected with confidence ${patternResult.confidence}% using ${patternResult.detectedFormat} format`);
+      return patternResult.detectedFormat === 'standard' ? 'lineitem' : 'lineitem_in_report';
     }
 
     return 'ignore';
@@ -163,36 +160,47 @@ export class TireMasterColumnMapper {
   }
 
   /**
-   * Extract line item information from product/service row
-   * Based on Excel header: Product Code | Size & Desc. | Adjustment | QTY | Parts | Labor | FET | Total | Cost | GPM% | GP$
+   * Extract line item information using intelligent pattern detection
+   * Automatically detects column positions and validates financial data
    */
   public static extractLineItem(row: string[]): TireMasterLineItem {
     try {
-      const productCode = row[0]?.trim() || '';                    // Column A: Product Code
-      const description = row[1]?.trim() || '';                    // Column B: Size & Desc.
-      const adjustment = row[2]?.trim() || '';                     // Column C: Adjustment
-      const quantity = parseFloat(row[3]) || 0;                    // Column D: QTY
-      const partsCost = parseFloat(row[4]) || 0;                   // Column E: Parts
-      const laborCost = parseFloat(row[5]) || 0;                   // Column F: Labor
-      const fet = parseFloat(row[6]) || 0;                         // Column G: FET (Federal Excise Tax)
-      const lineTotal = parseFloat(row[7]) || 0;                   // Column H: Total
-      const cost = parseFloat(row[8]) || 0;                        // Column I: Cost
-      const grossProfitMargin = parseFloat(row[9]) || 0;           // Column J: GPM% (Gross Profit Margin %)
-      const grossProfit = parseFloat(row[10]) || 0;                // Column K: GP$ (Gross Profit $)
+      // Use pattern detection to identify column positions
+      const patternResult = TireMasterPatternDetector.detectLineItemPattern(row);
+
+      if (!patternResult.isLineItem || !patternResult.pattern) {
+        throw new Error('Row does not contain valid line item data');
+      }
+
+      // Extract data using detected pattern
+      const extractedData = TireMasterPatternDetector.extractLineItemData(row, patternResult.pattern);
+
+      // Validate financial consistency
+      const validation = FinancialValidator.validateLineItem(extractedData as LineItemData);
+
+      if (!validation.isValid && validation.confidence < 60) { // Increased threshold to match pattern detector
+        console.warn(`[WARNING] Line item validation failed (confidence: ${validation.confidence}%):`, validation.errors);
+        // Attempt auto-correction
+        const correctedData = FinancialValidator.attemptCorrection(extractedData as LineItemData);
+        Object.assign(extractedData, correctedData);
+        console.log(`[INFO] Applied auto-correction to financial data`);
+      } else if (validation.warnings.length > 0) {
+        console.warn(`[WARNING] Line item validation warnings:`, validation.warnings);
+      }
 
       return {
-        productCode,
-        description,
-        adjustment: adjustment || undefined,
-        quantity,
-        partsCost,
-        laborCost,
-        fet,
-        lineTotal,
-        cost,
-        grossProfitMargin,
-        grossProfit,
-        category: TireMasterColumnMapper.determineProductCategory(productCode),
+        productCode: extractedData.productCode,
+        description: extractedData.description,
+        adjustment: extractedData.adjustment || undefined,
+        quantity: extractedData.quantity,
+        partsCost: extractedData.partsCost,
+        laborCost: extractedData.laborCost,
+        fet: extractedData.fet,
+        lineTotal: extractedData.lineTotal,
+        cost: extractedData.cost,
+        grossProfitMargin: extractedData.grossProfitMargin,
+        grossProfit: extractedData.grossProfit,
+        category: TireMasterColumnMapper.determineProductCategory(extractedData.productCode),
       };
     } catch (error) {
       throw new Error(`Failed to extract line item from row: ${error.message}`);
@@ -200,40 +208,12 @@ export class TireMasterColumnMapper {
   }
 
   /**
-   * Extract line item information from "Invoice Detail Report" row (columns 27-37)
-   * CRITICAL FIX: Line items can appear in columns 27-37 even in rows marked "Invoice Detail Report"
+   * Extract line item information from "Invoice Detail Report" row using intelligent detection
+   * This method now uses the same intelligent pattern detection as extractLineItem
    */
   public static extractLineItemFromReport(row: string[]): TireMasterLineItem {
-    try {
-      const productCode = (row[27] || '').trim();                  // Column 27: Product Code
-      const description = (row[28] || '').trim();                  // Column 28: Size & Desc.
-      const adjustment = (row[29] || '').trim();                   // Column 29: Adjustment
-      const quantity = parseFloat(row[30]) || 0;                   // Column 30: QTY
-      const partsCost = parseFloat(row[31]) || 0;                  // Column 31: Parts
-      const laborCost = parseFloat(row[32]) || 0;                  // Column 32: Labor
-      const fet = parseFloat(row[33]) || 0;                        // Column 33: FET (Federal Excise Tax)
-      const lineTotal = parseFloat(row[34]) || 0;                  // Column 34: Total
-      const cost = parseFloat(row[35]) || 0;                       // Column 35: Cost
-      const grossProfitMargin = parseFloat(row[36]) || 0;          // Column 36: GPM% (Gross Profit Margin %)
-      const grossProfit = parseFloat(row[37]) || 0;                // Column 37: GP$ (Gross Profit $)
-
-      return {
-        productCode,
-        description,
-        adjustment: adjustment || undefined,
-        quantity,
-        partsCost,
-        laborCost,
-        fet,
-        lineTotal,
-        cost,
-        grossProfitMargin,
-        grossProfit,
-        category: TireMasterColumnMapper.determineProductCategory(productCode),
-      };
-    } catch (error) {
-      throw new Error(`Failed to extract line item from report row: ${error.message}`);
-    }
+    // Use the same intelligent extraction method
+    return TireMasterColumnMapper.extractLineItem(row);
   }
 
   /**
@@ -269,7 +249,7 @@ export class TireMasterColumnMapper {
       case 'lineitem_in_report':
         return {
           type: 'lineitem_in_report',
-          data: TireMasterColumnMapper.extractLineItemFromReport(row),
+          data: TireMasterColumnMapper.extractLineItem(row), // Now uses intelligent detection
         };
 
       default:
@@ -280,8 +260,12 @@ export class TireMasterColumnMapper {
   // Private helper methods for field extraction
 
   private static extractInvoiceNumber(value: string): string {
-    // "Invoice #   3-327551" → "3-327551"
-    return value.replace(/^Invoice #\s+/, '').trim();
+    // Very permissive extraction: "Invoice # 3-NA-328035" → "3-NA-328035"
+    // Accept any format after "Invoice #" - no validation
+    const result = value.replace(/^.*Invoice #\s*/, '').trim();
+
+    // If result contains comma, take the first part (handles "Invoice # 3-327551,Customer Name...")
+    return result.split(',')[0].trim();
   }
 
   private static extractVehicleInfo(value: string): string {
@@ -428,26 +412,6 @@ export class TireMasterColumnMapper {
     return false;
   }
 
-  /**
-   * Check if a string looks like an invoice number
-   * Invoice numbers typically have specific patterns like "3-327551"
-   */
-  private static looksLikeInvoiceNumber(value: string): boolean {
-    const trimmed = value.trim();
-
-    // Skip if empty
-    if (trimmed.length === 0) return false;
-
-    // Look for invoice number patterns
-    // Format like "3-327551", "INV-12345", etc.
-    if (/^\d+-\d+$/.test(trimmed) ||        // "3-327551"
-        /^INV-?\d+$/i.test(trimmed) ||      // "INV-12345" or "INV12345"
-        /^\d{5,}$/.test(trimmed)) {         // "327551" (pure numbers, 5+ digits)
-      return true;
-    }
-
-    return false;
-  }
 
   /**
    * Extract customer name from a customer row
@@ -533,9 +497,8 @@ export class TireMasterColumnMapper {
         const cell = row[colIndex] || '';
         const trimmedCell = cell.trim();
 
-        // Check if this looks like an invoice number
-        if (TireMasterColumnMapper.looksLikeInvoiceNumber(trimmedCell) ||
-            trimmedCell.includes('Invoice #')) {
+        // Check if this contains "Invoice #" - trust any format after that
+        if (trimmedCell.includes('Invoice #')) {
 
           const invoiceNumber = TireMasterColumnMapper.extractInvoiceNumber(trimmedCell);
 
@@ -757,6 +720,16 @@ export class TireMasterColumnMapper {
       }
       if (!row[0]?.trim()) {
         errors.push('Product code is required for line items');
+      }
+
+      // Additional validation for production data
+      try {
+        const patternResult = TireMasterPatternDetector.detectLineItemPattern(row);
+        if (!patternResult.isLineItem) {
+          errors.push('Row does not match expected line item pattern');
+        }
+      } catch (error) {
+        errors.push(`Pattern detection failed: ${error.message}`);
       }
     }
 

@@ -13,7 +13,7 @@ import {
   IsInt
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
-import { ImportStatus } from '../../shared/enums/import.enums';
+import { ImportStatus, DuplicateHandlingStrategy } from '../../shared/enums/import.enums';
 
 /**
  * Data Transfer Objects for CSV Import API
@@ -80,6 +80,16 @@ export class ImportCsvDto {
   @IsOptional()
   @IsBoolean()
   strictMode?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Strategy for handling duplicate invoice numbers',
+    enum: DuplicateHandlingStrategy,
+    default: DuplicateHandlingStrategy.SKIP,
+    example: DuplicateHandlingStrategy.SKIP
+  })
+  @IsOptional()
+  @IsEnum(DuplicateHandlingStrategy)
+  duplicateHandling?: DuplicateHandlingStrategy;
 }
 
 export class ValidateFileDto {

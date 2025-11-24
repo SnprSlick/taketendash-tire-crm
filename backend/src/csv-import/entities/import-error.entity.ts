@@ -191,11 +191,18 @@ export class ImportErrorEntity {
     const orderField = options?.orderBy || 'rowNumber';
     orderBy[orderField] = 'asc';
 
-    const errors = await this.prisma.importError.findMany({
+    // Build query with conditional take parameter to avoid Prisma validation error
+    const queryConfig: any = {
       where: whereClause,
       orderBy,
-      take: options?.limit,
-    });
+    };
+
+    // Only add take if limit is provided and valid
+    if (options?.limit && options.limit > 0) {
+      queryConfig.take = options.limit;
+    }
+
+    const errors = await this.prisma.importError.findMany(queryConfig);
 
     return errors.map(error => this.mapToEntity(error));
   }

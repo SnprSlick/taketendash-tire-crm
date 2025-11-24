@@ -177,6 +177,7 @@ export class CsvFormatValidator {
       const header = TireMasterColumnMapper.extractInvoiceHeader(row);
 
       // Validate invoice number format
+      // UPDATED: Removed restrictive format validation per user requirements
       if (!header.invoiceNumber || header.invoiceNumber.trim().length === 0) {
         errors.push({
           rowNumber,
@@ -184,13 +185,9 @@ export class CsvFormatValidator {
           message: 'Invoice number is required',
           field: 'invoiceNumber',
         });
-      } else if (!header.invoiceNumber.match(/^\d+-[\w\-]*\d+$/)) {
-        warnings.push({
-          rowNumber,
-          message: `Unusual invoice number format: ${header.invoiceNumber}`,
-          field: 'invoiceNumber',
-        });
       }
+      // Accept any invoice number format from TireMaster (e.g., "3-327551", "3-NA-328035", "3-TR-328074")
+      // Since this comes from the "Invoice #" field, we trust it's valid
 
       // Validate customer name
       if (!header.customerName || header.customerName.trim().length === 0) {
