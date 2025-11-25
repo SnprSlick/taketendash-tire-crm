@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { CustomerRepository, CustomerEntity } from './customer.repository';
 import { CreateCustomerInput, UpdateCustomerInput } from '../../graphql/inputs/customer.input';
 import { PaginationOptions, PaginationResult } from '../../common/base.repository';
+import { CustomerStatus, AccountType, CommunicationMethod } from '@prisma/client';
 
 @Injectable()
 export class CustomerService {
@@ -24,9 +25,19 @@ export class CustomerService {
       }
     }
 
+    const { communicationPreference, ...rest } = input;
+    let preferredCommunication: CommunicationMethod = CommunicationMethod.EMAIL;
+    
+    if (communicationPreference && Object.values(CommunicationMethod).includes(communicationPreference as CommunicationMethod)) {
+      preferredCommunication = communicationPreference as CommunicationMethod;
+    }
+
     return this.customerRepository.create({
-      ...input,
-      isActive: true,
+      ...rest,
+      phone: input.phone || '',
+      status: CustomerStatus.ACTIVE,
+      accountType: AccountType.INDIVIDUAL,
+      preferredCommunication,
     });
   }
 
@@ -52,7 +63,18 @@ export class CustomerService {
       }
     }
 
-    return this.customerRepository.update(id, input);
+    const { isActive, communicationPreference, ...updateData } = input;
+    const data: any = { ...updateData };
+    
+    if (isActive !== undefined) {
+      data.status = isActive ? CustomerStatus.ACTIVE : CustomerStatus.INACTIVE;
+    }
+
+    if (communicationPreference && Object.values(CommunicationMethod).includes(communicationPreference as CommunicationMethod)) {
+      data.preferredCommunication = communicationPreference as CommunicationMethod;
+    }
+
+    return this.customerRepository.update(id, data);
   }
 
   async getCustomer(id: string): Promise<CustomerEntity> {
@@ -67,7 +89,7 @@ export class CustomerService {
     return this.customerRepository.findWithPagination(
       paginationOptions || {},
       {
-        where: { isActive: true },
+        where: { status: CustomerStatus.ACTIVE },
         orderBy: { lastName: 'asc' },
       },
     );
@@ -79,12 +101,12 @@ export class CustomerService {
 
   async deactivateCustomer(id: string): Promise<CustomerEntity> {
     const customer = await this.getCustomer(id);
-    return this.customerRepository.update(id, { isActive: false });
+    return this.customerRepository.update(id, { status: CustomerStatus.INACTIVE });
   }
 
   async activateCustomer(id: string): Promise<CustomerEntity> {
     const customer = await this.getCustomer(id);
-    return this.customerRepository.update(id, { isActive: true });
+    return this.customerRepository.update(id, { status: CustomerStatus.ACTIVE });
   }
 
   async getCustomerStats(): Promise<{

@@ -212,6 +212,24 @@ export class InventoryService {
       GROUP BY ili."tire_master_product_id", i."store_id"
     `;
 
+    // Fetch daily sales history for the last 365 days
+    const historyStartDate = new Date();
+    historyStartDate.setDate(historyStartDate.getDate() - 365);
+
+    const dailySalesHistory: Array<{ productId: string; storeId: string; date: Date; quantity: number }> = await this.prisma.$queryRaw`
+      SELECT 
+        ili."tire_master_product_id" as "productId", 
+        i."store_id" as "storeId",
+        DATE(i."invoice_date") as "date",
+        SUM(ili.quantity) as "quantity"
+      FROM "invoice_line_items" ili
+      JOIN "invoices" i ON ili."invoice_id" = i.id
+      WHERE i."invoice_date" >= ${historyStartDate}
+      AND ili."tire_master_product_id" IN (${Prisma.join(productIds)})
+      GROUP BY ili."tire_master_product_id", i."store_id", DATE(i."invoice_date")
+      ORDER BY DATE(i."invoice_date") ASC
+    `;
+
     // Fetch all locations and stores for mapping
     const allLocations = await this.prisma.tireMasterLocation.findMany({ 
       where: { 
@@ -223,12 +241,14 @@ export class InventoryService {
     const allStores = await this.prisma.$queryRaw<Array<{ id: string, code: string, name: string }>>`SELECT id, code, name FROM stores`;
     const locationStoreMap = new Map<string, string>(); // LocationID -> StoreID
     const locationNameMap = new Map<string, string>(); // LocationID -> Store Name
+    const storeIdToNameMap = new Map<string, string>(); // StoreID -> Store Name
     
     for (const loc of allLocations) {
       const store = allStores.find(s => s.code === loc.tireMasterCode);
       if (store) {
         locationStoreMap.set(loc.id, store.id);
         locationNameMap.set(loc.id, store.name);
+        storeIdToNameMap.set(store.id, store.name);
       } else {
         locationNameMap.set(loc.id, loc.name);
       }
@@ -298,7 +318,15 @@ export class InventoryService {
       });
 
       // Sum up the actual restock needed from all locations
-      const totalSuggestedRestock = inventoryBreakdown.reduce((sum, item) => sum + item.suggestedRestock, 0);
+      const totalRestockNeeded = inventoryBreakdown.reduce((sum, loc) => sum + loc.suggestedRestock, 0);
+
+      const productHistory = dailySalesHistory
+        .filter(h => h.productId === product.id)
+        .map(h => ({
+          date: h.date instanceof Date ? h.date.toISOString().split('T')[0] : h.date,
+          storeName: storeIdToNameMap.get(h.storeId) || 'Unknown',
+          quantity: Number(h.quantity)
+        }));
 
       return {
         productId: product.id,
@@ -307,11 +335,12 @@ export class InventoryService {
         size: product.size,
         brand: product.brand,
         totalSold,
-        dailyVelocity: Number(dailyVelocity.toFixed(2)),
+        dailyVelocity,
         currentStock: totalStock,
-        daysOfSupply: Number(daysOfSupply.toFixed(1)),
-        suggestedRestock: totalSuggestedRestock,
-        inventoryBreakdown
+        daysOfSupply,
+        suggestedRestock: totalRestockNeeded,
+        inventoryBreakdown,
+        salesHistory: productHistory
       };
     });
 

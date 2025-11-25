@@ -1,20 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { BaseRepository, BaseEntity } from '../../common/base.repository';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CustomerStatus, CommunicationMethod, AccountType } from '@prisma/client';
 
 export interface CustomerEntity extends BaseEntity {
   firstName: string;
   lastName: string;
   email?: string;
-  phone?: string;
+  phone: string;
   address?: string;
   city?: string;
   state?: string;
   zipCode?: string;
-  notes?: string;
-  isActive: boolean;
-  tirePreferenceBrand?: string;
-  communicationPreference?: string;
+  accountType: AccountType;
+  status: CustomerStatus;
+  preferredCommunication: CommunicationMethod;
 }
 
 @Injectable()
@@ -41,7 +41,7 @@ export class CustomerRepository extends BaseRepository<CustomerEntity> {
 
   async findActiveCustomers(): Promise<CustomerEntity[]> {
     return this.findMany({
-      where: { isActive: true },
+      where: { status: CustomerStatus.ACTIVE },
       orderBy: { lastName: 'asc' },
     });
   }
@@ -53,7 +53,7 @@ export class CustomerRepository extends BaseRepository<CustomerEntity> {
   }> {
     const [total, active] = await Promise.all([
       this.count(),
-      this.count({ isActive: true }),
+      this.count({ status: CustomerStatus.ACTIVE }),
     ]);
 
     return {

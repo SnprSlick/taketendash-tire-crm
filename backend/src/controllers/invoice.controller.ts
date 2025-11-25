@@ -129,30 +129,40 @@ export class InvoiceController {
       ]);
 
       // Transform data to match frontend format
-      const transformedInvoices = invoices.map(invoice => {
-        const calculatedGrossProfit = invoice.lineItems.reduce((sum, item) => sum + Number(item.grossProfit || 0), 0);
+      const transformedInvoices = invoices.map((invoice: any) => {
+        const calculatedGrossProfit = invoice.lineItems.reduce((sum: any, item: any) => sum + Number(item.grossProfit || 0), 0);
+        const totalAmount = Number(invoice.totalAmount);
+        
+        // Calculate profit margin safely
+        let profitMargin = 0;
+        if (totalAmount > 0) {
+          profitMargin = (calculatedGrossProfit / totalAmount) * 100;
+        }
         
         // Calculate recon difference
         const isGS = invoice.invoiceNumber.toUpperCase().includes('GS');
         let reconDifference = 0;
         
         if (!isGS) {
-          reconDifference = invoice.reconciliationRecords.reduce((sum, r) => sum + Number(r.difference || 0), 0);
+          reconDifference = invoice.reconciliationRecords.reduce((sum: any, r: any) => sum + Number(r.difference || 0), 0);
         }
 
         return {
+          id: invoice.id, // Include ID for navigation
           invoiceNumber: invoice.invoiceNumber,
           customerName: invoice.customer.name,
+          customerId: invoice.customer.id, // Include Customer ID for navigation
           vehicleInfo: invoice.vehicleInfo || '',
           mileage: invoice.mileage || '0 / 0',
-          invoiceDate: invoice.invoiceDate.toLocaleDateString('en-US'),
+          invoiceDate: invoice.invoiceDate.toISOString(), // Use ISO string for consistent parsing
           salesperson: invoice.salesperson,
           taxAmount: Number(invoice.taxAmount),
-          totalAmount: Number(invoice.totalAmount),
+          totalAmount: totalAmount,
           grossProfit: calculatedGrossProfit,
+          profitMargin: profitMargin, // Add profit margin
           reconDifference,
           lineItemsCount: invoice.lineItems.length,
-          lineItems: invoice.lineItems.map(item => ({
+          lineItems: invoice.lineItems.map((item: any) => ({
             line: item.lineNumber || 0,
             productCode: item.productCode,
             description: item.description,
@@ -699,7 +709,8 @@ export class InvoiceController {
             WHEN SUM(ili.line_total) > 0 THEN (SUM(ili.gross_profit) / SUM(ili.line_total) * 100)
             ELSE 0 
           END as profit_margin,
-          SUM(ili.line_total) / COUNT(DISTINCT i.id) as avg_ticket
+          SUM(ili.line_total) / COUNT(DISTINCT i.id) as avg_ticket,
+          MAX(i.invoice_date) as last_purchase_date
         FROM invoice_customers c
         JOIN invoices i ON c.id = i.customer_id
         JOIN invoice_line_items ili ON i.id = ili.invoice_id
