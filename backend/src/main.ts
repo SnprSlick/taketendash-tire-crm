@@ -3,6 +3,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
 import { PrismaService } from './prisma/prisma.service';
+import { json, urlencoded } from 'express';
 
 async function bootstrap() {
   console.log('🔧 Starting TakeTenDash backend...');
@@ -10,6 +11,10 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug'],
   });
+
+  // Increase payload size limit to 500MB
+  app.use(json({ limit: '500mb' }));
+  app.use(urlencoded({ extended: true, limit: '500mb' }));
 
   console.log('✅ NestJS application created');
 

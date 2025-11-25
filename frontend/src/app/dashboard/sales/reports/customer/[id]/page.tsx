@@ -25,10 +25,12 @@ import {
   Pie,
   Cell
 } from 'recharts';
+import { useStore } from '@/contexts/store-context';
 
 export default function CustomerDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { selectedStoreId } = useStore();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [year, setYear] = useState(new Date().getFullYear().toString());
@@ -37,13 +39,14 @@ export default function CustomerDetailPage() {
     if (params?.id) {
       fetchCustomerDetails();
     }
-  }, [params?.id, year]);
+  }, [params?.id, year, selectedStoreId]);
 
   const fetchCustomerDetails = async () => {
     if (!params?.id) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/v1/invoices/reports/customers/${params.id}?year=${year}`);
+      const storeParam = selectedStoreId ? `&storeId=${selectedStoreId}` : '';
+      const res = await fetch(`/api/v1/invoices/reports/customers/${params.id}?year=${year}${storeParam}`);
       const result = await res.json();
       if (result.success) {
         setData(result.data);

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import DashboardLayout from '../../../../../../components/dashboard/dashboard-layout';
+import { useStore } from '../../../../../../contexts/store-context';
 import { 
   User, 
   Calendar, 
@@ -28,6 +29,7 @@ import {
 export default function SalespersonDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { selectedStoreId } = useStore();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [year, setYear] = useState(new Date().getFullYear().toString());
@@ -36,7 +38,7 @@ export default function SalespersonDetailPage() {
     if (params?.name) {
       fetchSalespersonDetails();
     }
-  }, [params?.name, year]);
+  }, [params?.name, year, selectedStoreId]);
 
   const fetchSalespersonDetails = async () => {
     if (!params?.name) return;
@@ -44,7 +46,8 @@ export default function SalespersonDetailPage() {
     try {
       // Decode the name for the URL
       const encodedName = encodeURIComponent(params.name as string);
-      const res = await fetch(`/api/v1/invoices/reports/salespeople/${encodedName}?year=${year}`);
+      const storeParam = selectedStoreId ? `&storeId=${selectedStoreId}` : '';
+      const res = await fetch(`/api/v1/invoices/reports/salespeople/${encodedName}?year=${year}${storeParam}`);
       const result = await res.json();
       
       if (result.salesperson) {

@@ -15,6 +15,7 @@ import {
   Database,
   ClipboardCheck
 } from 'lucide-react';
+import { useStore } from '../../contexts/store-context';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -23,6 +24,7 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children, title = 'Tire CRM Dashboard' }: DashboardLayoutProps) {
   const pathname = usePathname();
+  const { stores, selectedStoreId, setSelectedStoreId, loading } = useStore();
 
   const isActive = (href: string) => {
     if (href === '/dashboard/sales') {
@@ -51,6 +53,21 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <div className="hidden md:block">
+                <select
+                  value={selectedStoreId || ''}
+                  onChange={(e) => setSelectedStoreId(e.target.value || null)}
+                  className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={loading}
+                >
+                  <option value="">All Stores</option>
+                  {stores.map(store => (
+                    <option key={store.id} value={store.id}>
+                      {store.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <button className="relative p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200">
                 <Bell className="w-5 h-5" />
                 <span className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-pulse"></span>

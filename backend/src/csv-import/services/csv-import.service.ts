@@ -652,10 +652,39 @@ export class CsvImportService {
           this.logger.debug(`Created new customer: ${customerName}`);
         }
 
+        // 1.5 Check/Create Store
+        let storeId = null;
+        if (invoiceNumber && invoiceNumber.includes('-')) {
+          let storeCode = invoiceNumber.split('-')[0];
+
+          // Special logic for Store 5:
+          // - Pre-2026: Kansas City (Code '5')
+          // - 2026 onwards: Stillwater (Code '5-SW')
+          if (storeCode === '5') {
+            const invoiceYear = new Date(invoiceDate).getFullYear();
+            if (invoiceYear >= 2026) {
+              storeCode = '5-SW';
+            }
+          }
+          
+          let store = await tx.store.findUnique({ where: { code: storeCode } });
+          if (!store) {
+            store = await tx.store.create({
+              data: {
+                code: storeCode,
+                name: this.getStoreName(storeCode)
+              }
+            });
+            this.logger.debug(`Created new store: ${store.name} (${storeCode})`);
+          }
+          storeId = store.id;
+        }
+
         // 2. Create invoice record with proper type conversions and validation
         const invoiceData = {
           invoiceNumber: invoiceNumber,
           customer: { connect: { id: customer.id } },
+          store: storeId ? { connect: { id: storeId } } : undefined,
           invoiceDate: invoiceDate,
           salesperson: header.salesperson?.trim() || 'Unknown',
           vehicleInfo: header.vehicleInfo?.trim() || null,
@@ -835,12 +864,30 @@ export class CsvImportService {
     importBatchId: string
   ): Promise<void> {
     const { header, lineItems, transformedData } = newInvoice;
+    const invoiceNumber = header.invoiceNumber?.trim() || existingInvoice.invoiceNumber;
 
     await this.prisma.$transaction(async (tx) => {
+      // Check/Create Store
+      let storeId = undefined;
+      if (invoiceNumber && invoiceNumber.includes('-')) {
+        const storeCode = invoiceNumber.split('-')[0];
+        let store = await tx.store.findUnique({ where: { code: storeCode } });
+        if (!store) {
+          store = await tx.store.create({
+            data: {
+              code: storeCode,
+              name: this.getStoreName(storeCode)
+            }
+          });
+        }
+        storeId = store.id;
+      }
+
       // Update invoice data
       await tx.invoice.update({
         where: { id: existingInvoice.id },
         data: {
+          store: storeId ? { connect: { id: storeId } } : undefined,
           invoiceDate: header.invoiceDate ? new Date(header.invoiceDate) : existingInvoice.invoiceDate,
           salesperson: header.salesperson?.trim() || existingInvoice.salesperson,
           vehicleInfo: header.vehicleInfo?.trim() || existingInvoice.vehicleInfo,
@@ -1239,5 +1286,21 @@ export class CsvImportService {
       this.logger.error('❌ Error clearing database:', error);
       throw new InternalServerErrorException('Failed to clear database', error.message);
     }
+  }
+
+  /**
+   * Get store name from code
+   */
+  private getStoreName(code: string): string {
+    const storeMap: Record<string, string> = {
+      '2': 'Ponca City',
+      '3': 'Tulsa West',
+      '4': 'OKC',
+      '5': 'Kansas City',
+      '5-SW': 'Stillwater',
+      '6': 'Tulsa East',
+      '7': 'Fort Smith'
+    };
+    return storeMap[code] || `Store ${code}`;
   }
 }

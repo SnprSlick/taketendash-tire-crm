@@ -43,6 +43,7 @@ export class InvoiceController {
     @Query('limit') limit: number = 20,
     @Query('search') search?: string,
     @Query('salesperson') salesperson?: string,
+    @Query('storeId') storeId?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('sortBy') sortBy: string = 'invoiceDate',
@@ -81,6 +82,10 @@ export class InvoiceController {
           contains: salesperson,
           mode: 'insensitive'
         };
+      }
+
+      if (storeId) {
+        where.storeId = storeId;
       }
 
       if (startDate || endDate) {
@@ -339,21 +344,30 @@ export class InvoiceController {
    * Get sales analytics summary
    */
   @Get('stats/sales')
-  async getAnalyticsSummary(@Query('period') period: string = '30') {
+  async getAnalyticsSummary(
+    @Query('period') period: string = '30',
+    @Query('storeId') storeId?: string
+  ) {
     try {
       const days = parseInt(period) || 30;
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
 
+      const where: any = {
+        invoiceDate: {
+          gte: startDate
+        },
+        status: 'ACTIVE'
+      };
+
+      if (storeId) {
+        where.storeId = storeId;
+      }
+
       // 1. Basic Aggregates
       console.log('Step 1: Basic Aggregates');
       const aggregates = await this.prisma.invoice.aggregate({
-        where: {
-          invoiceDate: {
-            gte: startDate
-          },
-          status: 'ACTIVE'
-        },
+        where,
         _sum: {
           totalAmount: true,
           grossProfit: true,
@@ -377,17 +391,35 @@ export class InvoiceController {
       // so we might need a raw query or separate queries.
       // Let's use a raw query for performance on analytics.
       
-      const categoryStats = await this.prisma.$queryRaw`
-        SELECT 
-          category,
-          SUM(line_total) as revenue,
-          SUM(ili.gross_profit) as profit,
-          SUM(quantity) as quantity
-        FROM invoice_line_items ili
-        JOIN invoices i ON i.id = ili.invoice_id
-        WHERE i.invoice_date >= ${startDate} AND i.status = 'ACTIVE'::"InvoiceStatus"
-        GROUP BY category
-      `;
+      let categoryStats;
+      if (storeId) {
+        categoryStats = await this.prisma.$queryRaw`
+          SELECT 
+            category,
+            SUM(line_total) as revenue,
+            SUM(ili.gross_profit) as profit,
+            SUM(quantity) as quantity
+          FROM invoice_line_items ili
+          JOIN invoices i ON i.id = ili.invoice_id
+          WHERE i.invoice_date >= ${startDate} 
+            AND i.status = 'ACTIVE'::"InvoiceStatus"
+            AND i.store_id = ${storeId}
+          GROUP BY category
+        `;
+      } else {
+        categoryStats = await this.prisma.$queryRaw`
+          SELECT 
+            category,
+            SUM(line_total) as revenue,
+            SUM(ili.gross_profit) as profit,
+            SUM(quantity) as quantity
+          FROM invoice_line_items ili
+          JOIN invoices i ON i.id = ili.invoice_id
+          WHERE i.invoice_date >= ${startDate} 
+            AND i.status = 'ACTIVE'::"InvoiceStatus"
+          GROUP BY category
+        `;
+      }
 
       // Recalculate profit if missing from invoice aggregate
       if (totalProfit === 0 && Array.isArray(categoryStats) && categoryStats.length > 0) {
@@ -550,6 +582,7 @@ export class InvoiceController {
     @Query('startDate') startDateStr?: string, 
     @Query('endDate') endDateStr?: string,
     @Query('search') search?: string,
+    @Query('storeId') storeId?: string,
     @Query('sortBy') sortBy: string = 'total_revenue',
     @Query('sortOrder') sortOrder: string = 'desc'
   ) {
@@ -566,6 +599,12 @@ export class InvoiceController {
       let searchCondition = Prisma.sql``;
       if (search) {
         searchCondition = Prisma.sql`AND (i.salesperson ILIKE ${`%${search}%`} OR i.invoice_number ILIKE ${`%${search}%`})`;
+      }
+
+      // Build store condition
+      let storeCondition = Prisma.sql``;
+      if (storeId) {
+        storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
       }
 
       const report = await this.prisma.$queryRaw`
@@ -585,6 +624,7 @@ export class InvoiceController {
           AND i.invoice_date <= ${endDate} 
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${searchCondition}
+          ${storeCondition}
         GROUP BY i.salesperson
         ORDER BY ${Prisma.raw(sortColumn)} ${Prisma.raw(orderDirection)}
       `;
@@ -599,38 +639,59 @@ export class InvoiceController {
   /**
    * Get detailed customer performance report
    */
-  @Get('reports/customers')
+    @Get('reports/customers')
   async getCustomerReport(
     @Query('startDate') startDateStr?: string, 
     @Query('endDate') endDateStr?: string,
-    @Query('limit') limit: string = '100',
-    @Query('offset') offset: string = '0',
     @Query('search') search?: string,
+    @Query('storeId') storeId?: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 20,
     @Query('sortBy') sortBy: string = 'total_revenue',
     @Query('sortOrder') sortOrder: string = 'desc'
   ) {
     try {
       const startDate = startDateStr ? new Date(startDateStr) : new Date(new Date().setFullYear(new Date().getFullYear() - 1));
       const endDate = endDateStr ? new Date(endDateStr) : new Date();
-      const limitNum = parseInt(limit) || 100;
-      const offsetNum = parseInt(offset) || 0;
+      const pageNum = Math.max(1, Number(page) || 1);
+      const limitNum = Math.min(100, Math.max(1, Number(limit) || 20));
+      const offset = (pageNum - 1) * limitNum;
 
       // Whitelist sort columns
-      const allowedSorts = ['customer_name', 'invoice_count', 'total_revenue', 'total_profit', 'profit_margin', 'last_purchase_date'];
+      const allowedSorts = ['customer_name', 'invoice_count', 'total_revenue', 'total_profit', 'profit_margin', 'avg_ticket'];
       const sortColumn = allowedSorts.includes(sortBy) ? sortBy : 'total_revenue';
       const orderDirection = sortOrder.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
       // Build search condition
       let searchCondition = Prisma.sql``;
       if (search) {
-        searchCondition = Prisma.sql`AND (c.name ILIKE ${`%${search}%`} OR c."customerCode" ILIKE ${`%${search}%`} OR i.invoice_number ILIKE ${`%${search}%`})`;
+        searchCondition = Prisma.sql`AND (c.name ILIKE ${`%${search}%`} OR c.customer_code ILIKE ${`%${search}%`})`;
       }
+
+      // Build store condition
+      let storeCondition = Prisma.sql``;
+      if (storeId) {
+        storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
+      }
+
+      // Get total count for pagination
+      const countResult = await this.prisma.$queryRaw`
+        SELECT COUNT(DISTINCT c.id)::int as count
+        FROM invoice_customers c
+        JOIN invoices i ON c.id = i.customer_id
+        WHERE i.invoice_date >= ${startDate} 
+          AND i.invoice_date <= ${endDate} 
+          AND i.status = 'ACTIVE'::"InvoiceStatus"
+          ${searchCondition}
+          ${storeCondition}
+      `;
+
+      const totalCount = countResult[0]?.count || 0;
 
       const report = await this.prisma.$queryRaw`
         SELECT 
           c.id as customer_id,
           c.name as customer_name,
-          c."customerCode" as customer_code,
           COUNT(DISTINCT i.id)::int as invoice_count,
           SUM(ili.line_total) as total_revenue,
           SUM(ili.gross_profit) as total_profit,
@@ -638,48 +699,49 @@ export class InvoiceController {
             WHEN SUM(ili.line_total) > 0 THEN (SUM(ili.gross_profit) / SUM(ili.line_total) * 100)
             ELSE 0 
           END as profit_margin,
-          MAX(i.invoice_date) as last_purchase_date
-        FROM invoices i
-        JOIN invoice_customers c ON c.id = i.customer_id
+          SUM(ili.line_total) / COUNT(DISTINCT i.id) as avg_ticket
+        FROM invoice_customers c
+        JOIN invoices i ON c.id = i.customer_id
         JOIN invoice_line_items ili ON i.id = ili.invoice_id
         WHERE i.invoice_date >= ${startDate} 
           AND i.invoice_date <= ${endDate} 
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${searchCondition}
-        GROUP BY c.id, c.name, c."customerCode"
+          ${storeCondition}
+        GROUP BY c.id, c.name
         ORDER BY ${Prisma.raw(sortColumn)} ${Prisma.raw(orderDirection)}
-        LIMIT ${limitNum} OFFSET ${offsetNum}
+        LIMIT ${limitNum} OFFSET ${offset}
       `;
-      
-      // Get total count for pagination
-      const countResult: any[] = await this.prisma.$queryRaw`
-        SELECT COUNT(DISTINCT c.id)::int as total
-        FROM invoices i
-        JOIN invoice_customers c ON c.id = i.customer_id
-        WHERE i.invoice_date >= ${startDate} 
-          AND i.invoice_date <= ${endDate} 
-          AND i.status = 'ACTIVE'::"InvoiceStatus"
-          ${searchCondition}
-      `;
-      
-      const total = countResult[0]?.total || 0;
 
-      return { success: true, data: report, meta: { total, limit: limitNum, offset: offsetNum } };
+      return {
+        success: true,
+        data: report,
+        meta: {
+          total: totalCount,
+          page: pageNum,
+          limit: limitNum,
+          totalPages: Math.ceil(totalCount / limitNum)
+        }
+      };
     } catch (error) {
       this.logger.error('Failed to get customer report', error);
-      throw new BadRequestException(`Failed to generate customer report: ${error.message}`);
+      throw new BadRequestException('Failed to generate customer report');
     }
   }
-
-  /**
-   * Get monthly detailed report
-   */
   @Get('reports/monthly')
-  async getMonthlyReport(@Query('year') yearStr?: string) {
+  async getMonthlyReport(
+    @Query('year') yearStr?: string,
+    @Query('storeId') storeId?: string
+  ) {
     try {
       const year = parseInt(yearStr) || new Date().getFullYear();
       const startDate = new Date(year, 0, 1);
       const endDate = new Date(year, 11, 31, 23, 59, 59);
+
+      let storeCondition = Prisma.sql``;
+      if (storeId) {
+        storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
+      }
 
       const report = await this.prisma.$queryRaw`
         SELECT 
@@ -695,6 +757,7 @@ export class InvoiceController {
         FROM invoices i
         JOIN invoice_line_items ili ON i.id = ili.invoice_id
         WHERE i.invoice_date >= ${startDate} AND i.invoice_date <= ${endDate} AND i.status = 'ACTIVE'::"InvoiceStatus"
+        ${storeCondition}
         GROUP BY TO_CHAR(i.invoice_date, 'YYYY-MM'), TO_CHAR(i.invoice_date, 'Month')
         ORDER BY month_key
       `;
@@ -712,12 +775,18 @@ export class InvoiceController {
   @Get('reports/customers/:id')
   async getCustomerDetails(
     @Param('id') id: string,
-    @Query('year') yearStr?: string
+    @Query('year') yearStr?: string,
+    @Query('storeId') storeId?: string
   ) {
     try {
       const year = parseInt(yearStr) || new Date().getFullYear();
       const startDate = new Date(year, 0, 1);
       const endDate = new Date(year, 11, 31, 23, 59, 59);
+
+      let storeCondition = Prisma.sql``;
+      if (storeId) {
+        storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
+      }
 
       // 1. Customer Info & Totals
       const customerInfo = await this.prisma.invoiceCustomer.findUnique({
@@ -751,6 +820,7 @@ export class InvoiceController {
           AND i.invoice_date >= ${startDate} 
           AND i.invoice_date <= ${endDate} 
           AND i.status = 'ACTIVE'::"InvoiceStatus"
+          ${storeCondition}
         GROUP BY TO_CHAR(i.invoice_date, 'YYYY-MM'), TO_CHAR(i.invoice_date, 'Month')
         ORDER BY month_key
       `;
@@ -767,7 +837,9 @@ export class InvoiceController {
           i.vehicle_info as "vehicleInfo"
         FROM invoices i
         LEFT JOIN invoice_line_items ili ON i.id = ili.invoice_id
-        WHERE i.customer_id = ${id} AND i.status = 'ACTIVE'::"InvoiceStatus"
+        WHERE i.customer_id = ${id} 
+          AND i.status = 'ACTIVE'::"InvoiceStatus"
+          ${storeCondition}
         GROUP BY i.id
         ORDER BY i.invoice_date DESC
         LIMIT 20
@@ -781,7 +853,9 @@ export class InvoiceController {
           SUM(ili.quantity) as total_quantity
         FROM invoices i
         JOIN invoice_line_items ili ON i.id = ili.invoice_id
-        WHERE i.customer_id = ${id} AND i.status = 'ACTIVE'::"InvoiceStatus"
+        WHERE i.customer_id = ${id} 
+          AND i.status = 'ACTIVE'::"InvoiceStatus"
+          ${storeCondition}
         GROUP BY ili.category
         ORDER BY total_revenue DESC
         LIMIT 5
@@ -808,13 +882,19 @@ export class InvoiceController {
   @Get('reports/salespeople/:name')
   async getSalespersonDetails(
     @Param('name') name: string,
-    @Query('year') yearStr?: string
+    @Query('year') yearStr?: string,
+    @Query('storeId') storeId?: string
   ) {
     try {
       const decodedName = decodeURIComponent(name);
       const year = parseInt(yearStr) || new Date().getFullYear();
       const startDate = new Date(year, 0, 1);
       const endDate = new Date(year, 11, 31, 23, 59, 59);
+
+      let storeCondition = Prisma.sql``;
+      if (storeId) {
+        storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
+      }
 
       // 1. Monthly Stats
       const monthlyStats = await this.prisma.$queryRaw`
@@ -834,6 +914,7 @@ export class InvoiceController {
           AND i.invoice_date >= ${startDate} 
           AND i.invoice_date <= ${endDate} 
           AND i.status = 'ACTIVE'::"InvoiceStatus"
+          ${storeCondition}
         GROUP BY TO_CHAR(i.invoice_date, 'YYYY-MM'), TO_CHAR(i.invoice_date, 'Month')
         ORDER BY month_key
       `;
@@ -853,7 +934,9 @@ export class InvoiceController {
         FROM invoices i
         LEFT JOIN invoice_line_items ili ON i.id = ili.invoice_id
         LEFT JOIN invoice_customers c ON i.customer_id = c.id
-        WHERE i.salesperson = ${decodedName} AND i.status = 'ACTIVE'::"InvoiceStatus"
+        WHERE i.salesperson = ${decodedName} 
+          AND i.status = 'ACTIVE'::"InvoiceStatus"
+          ${storeCondition}
         GROUP BY i.id, c.name
         ORDER BY i.invoice_date DESC
         LIMIT 20
@@ -873,7 +956,9 @@ export class InvoiceController {
           SUM(i.total_amount) as total_revenue
         FROM invoices i
         JOIN invoice_customers c ON c.id = i.customer_id
-        WHERE i.salesperson = ${decodedName} AND i.status = 'ACTIVE'::"InvoiceStatus"
+        WHERE i.salesperson = ${decodedName} 
+          AND i.status = 'ACTIVE'::"InvoiceStatus"
+          ${storeCondition}
         GROUP BY c.id, c.name
         ORDER BY total_revenue DESC
         LIMIT 10
@@ -888,6 +973,7 @@ export class InvoiceController {
           AND i.invoice_date >= ${startDate}
           AND i.invoice_date <= ${endDate}
           AND i.status = 'ACTIVE'::"InvoiceStatus"
+          ${storeCondition}
       `;
       const totalCommission = commissionStats[0]?.total_commission || 0;
 
@@ -912,7 +998,8 @@ export class InvoiceController {
     @Param('name') name: string,
     @Query('year') yearStr?: string,
     @Query('page') pageStr?: string,
-    @Query('limit') limitStr?: string
+    @Query('limit') limitStr?: string,
+    @Query('storeId') storeId?: string
   ) {
     try {
       const decodedName = decodeURIComponent(name);
@@ -924,78 +1011,59 @@ export class InvoiceController {
       const startDate = new Date(year, 0, 1);
       const endDate = new Date(year, 11, 31, 23, 59, 59);
 
-      // Get invoices with commission > 0
-      const invoicesRaw: any[] = await this.prisma.$queryRaw`
+      let storeCondition = Prisma.sql``;
+      if (storeId) {
+        storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
+      }
+
+      const commissions: any[] = await this.prisma.$queryRaw`
         SELECT 
-          i.id,
+          rr.id,
+          rr.commission,
+          rr."invoiceDate",
+          rr.difference as "reconDifference",
           i.invoice_number as "invoiceNumber",
-          i.invoice_date as "invoiceDate",
           i.total_amount as "totalAmount",
-          COALESCE(SUM(ili.gross_profit), 0) as "grossProfit",
-          i.salesperson,
-          c.name as "customerName",
-          (SELECT SUM(commission) FROM reconciliation_records WHERE "matchedInvoiceId" = i.id) as "commission",
-          (SELECT SUM(difference) FROM reconciliation_records WHERE "matchedInvoiceId" = i.id) as "difference"
-        FROM invoices i
-        LEFT JOIN invoice_line_items ili ON i.id = ili.invoice_id
+          i.gross_profit as "grossProfit",
+          c.name as "customerName"
+        FROM reconciliation_records rr
+        JOIN invoices i ON rr."matchedInvoiceId" = i.id
         LEFT JOIN invoice_customers c ON i.customer_id = c.id
-        WHERE i.salesperson = ${decodedName} 
-          AND i.invoice_date >= ${startDate} 
-          AND i.invoice_date <= ${endDate}
-          AND i.status = 'ACTIVE'::"InvoiceStatus"
-          AND EXISTS (SELECT 1 FROM reconciliation_records rr WHERE rr."matchedInvoiceId" = i.id AND rr.commission > 0)
-        GROUP BY i.id, c.name
-        ORDER BY i.invoice_date DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `;
-
-      // Get total count for pagination
-      const countResult: any[] = await this.prisma.$queryRaw`
-        SELECT COUNT(DISTINCT i.id)::int as total
-        FROM invoices i
-        WHERE i.salesperson = ${decodedName} 
-          AND i.invoice_date >= ${startDate} 
-          AND i.invoice_date <= ${endDate}
-          AND i.status = 'ACTIVE'::"InvoiceStatus"
-          AND EXISTS (SELECT 1 FROM reconciliation_records rr WHERE rr."matchedInvoiceId" = i.id AND rr.commission > 0)
-      `;
-
-      // Get total commission for the period
-      const totalCommissionResult: any[] = await this.prisma.$queryRaw`
-        SELECT SUM(rr.commission) as total_commission
-        FROM invoices i
-        JOIN reconciliation_records rr ON i.id = rr."matchedInvoiceId"
         WHERE i.salesperson = ${decodedName}
           AND i.invoice_date >= ${startDate}
           AND i.invoice_date <= ${endDate}
           AND i.status = 'ACTIVE'::"InvoiceStatus"
+          ${storeCondition}
+        ORDER BY rr."invoiceDate" DESC
+        LIMIT ${limit} OFFSET ${offset}
       `;
 
-      const total = countResult[0]?.total || 0;
-      const totalCommission = totalCommissionResult[0]?.total_commission || 0;
+      const totalCount: any[] = await this.prisma.$queryRaw`
+        SELECT COUNT(rr.id)::int as count
+        FROM reconciliation_records rr
+        JOIN invoices i ON rr."matchedInvoiceId" = i.id
+        WHERE i.salesperson = ${decodedName}
+          AND i.invoice_date >= ${startDate}
+          AND i.invoice_date <= ${endDate}
+          AND i.status = 'ACTIVE'::"InvoiceStatus"
+          ${storeCondition}
+      `;
+
+      const mappedCommissions = commissions.map(c => ({
+        ...c,
+        customer: { name: c.customerName },
+        totalWithRecon: Number(c.totalAmount) + Number(c.reconDifference),
+        adjustedProfit: Number(c.grossProfit) + Number(c.reconDifference)
+      }));
 
       return {
         salesperson: decodedName,
-        data: invoicesRaw.map(inv => {
-          // Calculate recon difference logic
-          // If Invoice # has GS, we do not include the difference
-          const isGS = inv.invoiceNumber && inv.invoiceNumber.toUpperCase().includes('GS');
-          const reconDifference = isGS ? 0 : (Number(inv.difference) || 0);
-          
-          return {
-            ...inv,
-            customer: { name: inv.customerName },
-            reconDifference,
-            totalWithRecon: Number(inv.totalAmount) + reconDifference,
-            adjustedProfit: Number(inv.grossProfit) + reconDifference
-          };
-        }),
+        data: mappedCommissions,
         meta: {
-          total,
-          totalCommission,
+          total: totalCount[0]?.count || 0,
           page,
           limit,
-          totalPages: Math.ceil(total / limit)
+          totalPages: Math.ceil((totalCount[0]?.count || 0) / limit)
         }
       };
     } catch (error) {

@@ -89,9 +89,9 @@ export class CsvImportController {
       throw new BadRequestException('Only CSV files are allowed');
     }
 
-    // Validate file size (100MB max)
-    if (file.size > 100 * 1024 * 1024) {
-      throw new BadRequestException('File size cannot exceed 100MB');
+    // Validate file size (500MB max)
+    if (file.size > 500 * 1024 * 1024) {
+      throw new BadRequestException('File size cannot exceed 500MB');
     }
 
     this.logger.log(`=== UPDATED CODE: Processing uploaded file: ${file.originalname} ===`);

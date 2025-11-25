@@ -62,7 +62,7 @@ export class CsvFileProcessor {
       batchSize = 100,
       skipEmptyLines = true,
       encoding = 'utf8',
-      maxFileSize = 100 * 1024 * 1024, // 100MB default
+      maxFileSize = 500 * 1024 * 1024, // 500MB default
       progressCallback
     } = options;
 
@@ -239,20 +239,20 @@ export class CsvFileProcessor {
     return new Promise((resolve, reject) => {
       let lineCount = 0;
       const stream = createReadStream(filePath);
-      const readline = createInterface({
-        input: stream,
-        crlfDelay: Infinity,
+      
+      stream.on('data', (chunk: Buffer) => {
+        for (let i = 0; i < chunk.length; i++) {
+          if (chunk[i] === 10) { // 10 is ASCII for \n
+            lineCount++;
+          }
+        }
       });
 
-      readline.on('line', () => {
-        lineCount++;
-      });
-
-      readline.on('close', () => {
+      stream.on('end', () => {
         resolve(lineCount);
       });
 
-      readline.on('error', (error) => {
+      stream.on('error', (error) => {
         reject(error);
       });
     });

@@ -61,7 +61,7 @@ import { TireMasterDataTransformer } from './mappers/tiremaster-data-transformer
         }
       }),
       limits: {
-        fileSize: 100 * 1024 * 1024, // 100MB
+        fileSize: 500 * 1024 * 1024, // 500MB
         files: 1
       }
     })

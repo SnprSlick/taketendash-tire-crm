@@ -362,6 +362,8 @@ model Invoice {
   importBatchId   String        @map("import_batch_id")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
+  storeId         String?       @map("store_id")
+  store           Store?        @relation(fields: [storeId], references: [id])
 
   // Relationships
   customer     InvoiceCustomer   @relation(fields: [customerId], references: [id])
@@ -374,7 +376,20 @@ model Invoice {
   @@index([customerId])
   @@index([importBatchId])
   @@index([salesperson])
+  @@index([storeId])
   @@map("invoices")
+}
+
+model Store {
+  id          String    @id @default(cuid())
+  code        String    @unique @db.VarChar(10)
+  name        String    @db.VarChar(100)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  invoices    Invoice[]
+
+  @@map("stores")
 }
 
 model InvoiceLineItem {

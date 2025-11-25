@@ -1,4 +1,5 @@
 import './globals.css';
+import { StoreProvider } from '../contexts/store-context';
 
 export const metadata = {
   title: 'Tire CRM Dashboard',
@@ -12,7 +13,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="light">
-      <body className="min-h-screen bg-background font-sans antialiased">{children}</body>
+      <body className="min-h-screen bg-background font-sans antialiased">
+        <StoreProvider>
+          {children}
+        </StoreProvider>
+      </body>
     </html>
   );
 }

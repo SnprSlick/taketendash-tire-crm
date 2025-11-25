@@ -112,3 +112,10 @@ build/
 # Temporary files
 tmp/
 temp/
+
+# Backend specific
+backend/backups/
+backend/uploads/
+backend/data/*.csv
+backend/backend/
+backend/temp_xlsx/

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import DashboardLayout from '../../../components/dashboard/dashboard-layout';
 import SalesCharts from '../../../components/analytics/sales-charts';
+import { useStore } from '../../../contexts/store-context';
 import { RefreshCw, Calendar, Filter, Download, TrendingUp, FileText } from 'lucide-react';
 
 interface SalesData {
@@ -36,6 +37,7 @@ interface AnalyticsResponse {
 }
 
 export default function SalesDashboardPage() {
+  const { selectedStoreId } = useStore();
   const [analyticsData, setAnalyticsData] = useState<AnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,14 +45,15 @@ export default function SalesDashboardPage() {
 
   useEffect(() => {
     fetchAnalyticsData();
-  }, [selectedPeriod]);
+  }, [selectedPeriod, selectedStoreId]);
 
   const fetchAnalyticsData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/v1/invoices/stats/sales?period=${selectedPeriod}`);
+      const storeParam = selectedStoreId ? `&storeId=${selectedStoreId}` : '';
+      const response = await fetch(`/api/v1/invoices/stats/sales?period=${selectedPeriod}${storeParam}`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

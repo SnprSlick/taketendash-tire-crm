@@ -9,10 +9,12 @@ import {
   Download,
   Filter
 } from 'lucide-react';
+import { useStore } from '@/contexts/store-context';
 
 export default function SalespersonCommissionsPage() {
   const params = useParams();
   const router = useRouter();
+  const { selectedStoreId } = useStore();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [year, setYear] = useState(new Date().getFullYear().toString());
@@ -23,14 +25,15 @@ export default function SalespersonCommissionsPage() {
     if (params?.name) {
       fetchCommissions();
     }
-  }, [params?.name, year, page]);
+  }, [params?.name, year, page, selectedStoreId]);
 
   const fetchCommissions = async () => {
     if (!params?.name) return;
     setLoading(true);
     try {
       const encodedName = encodeURIComponent(params.name as string);
-      const res = await fetch(`/api/v1/invoices/reports/salespeople/${encodedName}/commissions?year=${year}&page=${page}&limit=${limit}`);
+      const storeParam = selectedStoreId ? `&storeId=${selectedStoreId}` : '';
+      const res = await fetch(`/api/v1/invoices/reports/salespeople/${encodedName}/commissions?year=${year}&page=${page}&limit=${limit}${storeParam}`);
       const result = await res.json();
       setData(result);
     } catch (error) {
@@ -70,11 +73,11 @@ export default function SalespersonCommissionsPage() {
     );
   }
 
-  const { salesperson, data: invoices, meta } = data;
+  const { salesperson, data: invoices = [], meta } = data || {};
   const totalCommission = meta?.totalCommission || 0;
 
   return (
-    <DashboardLayout title={`Reconciliation Report: ${salesperson}`}>
+    <DashboardLayout title={`Reconciliation Report: ${salesperson || 'Unknown'}`}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -105,7 +108,7 @@ export default function SalespersonCommissionsPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-slate-800">Reconciliation Summary</h2>
-              <p className="text-slate-500 text-sm mt-1">Showing {invoices.length} invoices with reconciliation</p>
+              <p className="text-slate-500 text-sm mt-1">Showing {invoices?.length || 0} invoices with reconciliation</p>
             </div>
             <div className="text-right">
               <div className="text-sm text-slate-500 uppercase font-medium">Reconciliation (Year)</div>

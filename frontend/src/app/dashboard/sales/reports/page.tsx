@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '../../../../components/dashboard/dashboard-layout';
+import { useStore } from '../../../../contexts/store-context';
 import { 
   Users, 
   User, 
@@ -49,6 +50,7 @@ interface MonthlyReport {
 
 export default function SalesReportsPage() {
   const router = useRouter();
+  const { selectedStoreId } = useStore();
   const [activeTab, setActiveTab] = useState('salespeople');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any[]>([]);
@@ -76,7 +78,7 @@ export default function SalesReportsPage() {
 
   useEffect(() => {
     fetchReport();
-  }, [activeTab, period, page, debouncedSearch, sortField, sortDirection]);
+  }, [activeTab, period, page, debouncedSearch, sortField, sortDirection, selectedStoreId]);
 
   const fetchReport = async () => {
     setLoading(true);
@@ -89,16 +91,17 @@ export default function SalesReportsPage() {
       const dateParams = `startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
       const sortParams = `sortBy=${sortField}&sortOrder=${sortDirection}`;
       const searchParams = debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}` : '';
+      const storeParam = selectedStoreId ? `&storeId=${selectedStoreId}` : '';
 
       if (activeTab === 'salespeople') {
-        url = `/api/v1/invoices/reports/salespeople?${dateParams}&${sortParams}${searchParams}`;
+        url = `/api/v1/invoices/reports/salespeople?${dateParams}&${sortParams}${searchParams}${storeParam}`;
       } else if (activeTab === 'customers') {
         const offset = (page - 1) * limit;
-        url = `/api/v1/invoices/reports/customers?${dateParams}&limit=${limit}&offset=${offset}&${sortParams}${searchParams}`;
+        url = `/api/v1/invoices/reports/customers?${dateParams}&limit=${limit}&offset=${offset}&${sortParams}${searchParams}${storeParam}`;
       } else if (activeTab === 'invoices') {
-        url = `/api/v1/invoices?${dateParams}&limit=${limit}&page=${page}&${sortParams}${searchParams}`;
+        url = `/api/v1/invoices?${dateParams}&limit=${limit}&page=${page}&${sortParams}${searchParams}${storeParam}`;
       } else if (activeTab === 'monthly') {
-        url = `/api/v1/invoices/reports/monthly?year=${new Date().getFullYear()}`;
+        url = `/api/v1/invoices/reports/monthly?year=${new Date().getFullYear()}${storeParam}`;
       }
 
       const res = await fetch(url);

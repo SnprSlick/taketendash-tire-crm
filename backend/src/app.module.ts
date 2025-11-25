@@ -22,6 +22,7 @@ import { ReconciliationModule } from './modules/reconciliation/reconciliation.mo
 // import { LibrariesModule } from './libraries/libraries.module'; // Temporarily disabled
 import { AppController } from './app.controller';
 import { InvoiceController } from './controllers/invoice.controller';
+import { StoreController } from './controllers/store.controller';
 // import { CsvImportController } from './csv-import/controllers/csv-import.controller'; // Moved to CsvImportModule
 // import { HealthResolver } from './graphql/resolvers/health.resolver'; // Disabled with GraphQL
 
@@ -56,7 +57,7 @@ import { InvoiceController } from './controllers/invoice.controller';
     // CustomersModule, // Temporarily disabled due to schema mismatch
     // InvoicesModule, // Temporarily disabled due to schema mismatch
   ],
-  controllers: [AppController, InvoiceController], // CsvImportController moved to CsvImportModule
+  controllers: [AppController, InvoiceController, StoreController], // CsvImportController moved to CsvImportModule
   providers: [], // DateScalar and HealthResolver removed with GraphQL
 })
 export class AppModule {}
