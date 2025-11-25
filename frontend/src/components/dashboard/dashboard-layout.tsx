@@ -16,7 +16,8 @@ import {
   ClipboardCheck,
   Package,
   FileText,
-  BarChart3
+  BarChart3,
+  Tag
 } from 'lucide-react';
 import { useStore } from '../../contexts/store-context';
 
@@ -150,6 +151,12 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
               icon={<TrendingUp className="w-4 h-4" />}
               label="Restock & Analytics"
               active={isActive('/dashboard/inventory/analytics')}
+            />
+            <NavItem
+              href="/brands"
+              icon={<Tag className="w-4 h-4" />}
+              label="Brands"
+              active={isActive('/brands')}
             />
             <NavItem
               href="/tire-master"
