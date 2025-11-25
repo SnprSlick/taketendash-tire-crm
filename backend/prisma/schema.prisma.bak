@@ -362,34 +362,18 @@ model Invoice {
   importBatchId   String        @map("import_batch_id")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
-  storeId         String?       @map("store_id")
-  store           Store?        @relation(fields: [storeId], references: [id])
 
   // Relationships
   customer     InvoiceCustomer   @relation(fields: [customerId], references: [id])
   lineItems    InvoiceLineItem[]
   importBatch  ImportBatch       @relation(fields: [importBatchId], references: [id])
   salesData    SalesData[]
-  reconciliationRecords ReconciliationRecord[]
 
   @@index([invoiceDate])
   @@index([customerId])
   @@index([importBatchId])
   @@index([salesperson])
-  @@index([storeId])
   @@map("invoices")
-}
-
-model Store {
-  id          String    @id @default(cuid())
-  code        String    @unique @db.VarChar(10)
-  name        String    @db.VarChar(100)
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-
-  invoices    Invoice[]
-
-  @@map("stores")
 }
 
 model InvoiceLineItem {
@@ -408,17 +392,14 @@ model InvoiceLineItem {
   grossProfitMargin   Decimal         @map("gross_profit_margin") @db.Decimal(5, 2)
   grossProfit         Decimal         @map("gross_profit") @db.Decimal(10, 2)
   category            ProductCategory
-  tireMasterProductId String?         @map("tire_master_product_id")
   createdAt           DateTime        @default(now()) @map("created_at")
 
   // Relationships
-  invoice           Invoice            @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  tireMasterProduct TireMasterProduct? @relation(fields: [tireMasterProductId], references: [id])
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId])
   @@index([productCode])
   @@index([category])
-  @@index([tireMasterProductId])
   @@map("invoice_line_items")
 }
 
@@ -559,8 +540,6 @@ model TireMasterProduct {
   season           TireSeason
   description      String?                      @db.Text
   weight           Decimal?                     @db.Decimal(8, 2)
-  laborPrice       Decimal?                     @map("labor_price") @db.Decimal(10, 2)
-  fetAmount        Decimal?                     @map("fet_amount") @db.Decimal(10, 2)
   specifications   Json?
   warrantyInfo     String?                      @db.Text
   features         String[]
@@ -574,7 +553,6 @@ model TireMasterProduct {
   prices           TireMasterPrice[]
   orderItems       TireMasterSalesOrderItem[]
   mappings         TireMasterProductMapping[]
-  invoiceLineItems InvoiceLineItem[]
 
   @@index([brand])
   @@index([size])
@@ -798,53 +776,3 @@ model TireMasterSyncHistory {
   @@index([startTime])
   @@map("tire_master_sync_history")
 }
-// National Account Reconciliation Models
-
-model ReconciliationBatch {
-  id          String   @id @default(cuid())
-  filename    String
-  uploadDate  DateTime @default(now())
-  status      String   // PENDING, PROCESSED, COMPLETED
-  totalRecords Int     @default(0)
-  matchedCount Int     @default(0)
-  unmatchedCount Int   @default(0)
-  
-  records     ReconciliationRecord[]
-  
-  @@map("reconciliation_batches")
-}
-
-model ReconciliationRecord {
-  id              String   @id @default(cuid())
-  batchId         String
-  
-  // Fields from CSV
-  invoiceNumber   String   // The raw invoice number from CSV
-  accountName     String?  // "Account Name"
-  invoiceDate     DateTime?
-  invoiceAmount   Decimal  @db.Decimal(10, 2) // "Invoice Amt"
-  creditAmount    Decimal  @db.Decimal(10, 2) // "CR Amount"
-  commission      Decimal  @db.Decimal(10, 2) // "CR Comm"
-  difference      Decimal  @db.Decimal(10, 2) // "Difference"
-  
-  // Categorization
-  category        String?  // "Government Support", "Other Adjustments", etc.
-  subCategory     String?  // "Bridgestone", "Firestone", etc.
-  
-  // Matching
-  status          String   // MATCHED, UNMATCHED, PARTIAL, OVERPAID
-  matchedInvoiceId String?
-  
-  // Relationships
-  batch           ReconciliationBatch @relation(fields: [batchId], references: [id])
-  matchedInvoice  Invoice?            @relation(fields: [matchedInvoiceId], references: [id])
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  @@index([batchId])
-  @@index([invoiceNumber])
-  @@index([status])
-  @@map("reconciliation_records")
-}
-
