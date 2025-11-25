@@ -162,7 +162,10 @@ export default function SalespersonDetailPage() {
             <div className="text-2xl font-bold text-slate-800">{formatCurrency(totalProfit)}</div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <div 
+            className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 cursor-pointer hover:border-indigo-300 transition-colors"
+            onClick={() => router.push(`/dashboard/sales/reports/salesperson/${encodeURIComponent(salesperson)}/commissions`)}
+          >
             <div className="flex items-center justify-between mb-4">
               <div className="p-2 bg-indigo-50 rounded-lg">
                 <DollarSign className="w-6 h-6 text-indigo-600" />

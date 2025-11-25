@@ -874,4 +874,93 @@ export class InvoiceController {
       throw new BadRequestException('Failed to get salesperson details');
     }
   }
+
+  /**
+   * Get salesperson commission details
+   */
+  @Get('reports/salespeople/:name/commissions')
+  async getSalespersonCommissions(
+    @Param('name') name: string,
+    @Query('year') yearStr?: string,
+    @Query('page') pageStr?: string,
+    @Query('limit') limitStr?: string
+  ) {
+    try {
+      const decodedName = decodeURIComponent(name);
+      const year = parseInt(yearStr) || new Date().getFullYear();
+      const page = parseInt(pageStr) || 1;
+      const limit = parseInt(limitStr) || 50;
+      const offset = (page - 1) * limit;
+      
+      const startDate = new Date(year, 0, 1);
+      const endDate = new Date(year, 11, 31, 23, 59, 59);
+
+      // Get invoices with commission > 0
+      const invoicesRaw: any[] = await this.prisma.$queryRaw`
+        SELECT 
+          i.id,
+          i.invoice_number as "invoiceNumber",
+          i.invoice_date as "invoiceDate",
+          i.total_amount as "totalAmount",
+          COALESCE(SUM(ili.gross_profit), 0) as "grossProfit",
+          i.salesperson,
+          c.name as "customerName",
+          (SELECT SUM(commission) FROM reconciliation_records WHERE "matchedInvoiceId" = i.id) as "commission"
+        FROM invoices i
+        LEFT JOIN invoice_line_items ili ON i.id = ili.invoice_id
+        LEFT JOIN invoice_customers c ON i.customer_id = c.id
+        WHERE i.salesperson = ${decodedName} 
+          AND i.invoice_date >= ${startDate} 
+          AND i.invoice_date <= ${endDate}
+          AND i.status = 'ACTIVE'::"InvoiceStatus"
+          AND EXISTS (SELECT 1 FROM reconciliation_records rr WHERE rr."matchedInvoiceId" = i.id AND rr.commission > 0)
+        GROUP BY i.id, c.name
+        ORDER BY i.invoice_date DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+
+      // Get total count for pagination
+      const countResult: any[] = await this.prisma.$queryRaw`
+        SELECT COUNT(DISTINCT i.id)::int as total
+        FROM invoices i
+        WHERE i.salesperson = ${decodedName} 
+          AND i.invoice_date >= ${startDate} 
+          AND i.invoice_date <= ${endDate}
+          AND i.status = 'ACTIVE'::"InvoiceStatus"
+          AND EXISTS (SELECT 1 FROM reconciliation_records rr WHERE rr."matchedInvoiceId" = i.id AND rr.commission > 0)
+      `;
+
+      // Get total commission for the period
+      const totalCommissionResult: any[] = await this.prisma.$queryRaw`
+        SELECT SUM(rr.commission) as total_commission
+        FROM invoices i
+        JOIN reconciliation_records rr ON i.id = rr."matchedInvoiceId"
+        WHERE i.salesperson = ${decodedName}
+          AND i.invoice_date >= ${startDate}
+          AND i.invoice_date <= ${endDate}
+          AND i.status = 'ACTIVE'::"InvoiceStatus"
+      `;
+
+      const total = countResult[0]?.total || 0;
+      const totalCommission = totalCommissionResult[0]?.total_commission || 0;
+
+      return {
+        salesperson: decodedName,
+        data: invoicesRaw.map(inv => ({
+          ...inv,
+          customer: { name: inv.customerName }
+        })),
+        meta: {
+          total,
+          totalCommission,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get commissions for salesperson ${name}`, error);
+      throw new BadRequestException('Failed to get salesperson commissions');
+    }
+  }
 }
