@@ -564,6 +564,7 @@ model TireMasterProduct {
   specifications   Json?
   warrantyInfo     String?                      @db.Text
   features         String[]
+  manufacturerCode String?                      @map("manufacturer_code") @db.VarChar(50)
   isActive         Boolean                      @default(true)
   lastSyncedAt     DateTime?
   createdAt        DateTime                     @default(now())

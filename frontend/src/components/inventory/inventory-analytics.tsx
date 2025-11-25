@@ -12,6 +12,19 @@ import {
   RefreshCw,
   Download
 } from 'lucide-react';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+  Legend
+} from 'recharts';
+
+const COLORS = ['#2563eb', '#dc2626', '#16a34a', '#d97706', '#9333ea', '#0891b2', '#be123c', '#4f46e5'];
 
 interface InventoryItem {
   productId: string;
@@ -30,6 +43,7 @@ interface InventoryItem {
     velocity: number;
     suggestedRestock: number;
   }>;
+  salesHistory?: Array<{ date: string; quantity: number; storeName: string }>;
 }
 
 interface Location {
@@ -61,8 +75,112 @@ export default function InventoryAnalytics() {
   const [limit, setLimit] = useState(25);
   const [hasMore, setHasMore] = useState(true); // Simple check if we got full page
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+  const [graphOutlook, setGraphOutlook] = useState<number>(365);
+  const [smoothingWindow, setSmoothingWindow] = useState<number>(30);
+  const [hoveredStore, setHoveredStore] = useState<string | null>(null);
+  const [selectedStore, setSelectedStore] = useState<string | null>(null);
 
-  const fetchLocations = async () => {
+  // Create a stable color map for stores
+  const storeColorMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    // Sort locations by name to ensure consistent order
+    const sortedLocs = [...locations].sort((a, b) => a.name.localeCompare(b.name));
+    sortedLocs.forEach((loc, idx) => {
+      map.set(loc.name, COLORS[idx % COLORS.length]);
+    });
+    return map;
+  }, [locations]);
+
+  const getStoreColor = (storeName: string) => {
+    return storeColorMap.get(storeName) || '#9ca3af'; // Default gray if not found
+  };
+
+  const generateProjectionData = (currentStock: number, velocity: number, days: number) => {
+    const data = [];
+    // Generate points from 'days' ago up to 0 (today)
+    // We want the graph to go from Left (Old/Past) to Right (Today)
+    const step = Math.max(1, Math.floor(days / 10));
+    
+    for (let i = days; i >= 0; i -= step) {
+      // i represents "days ago"
+      // Stock i days ago = Current + (Velocity * i)
+      const historicalStock = currentStock + (velocity * i);
+      
+      data.push({
+        day: i === 0 ? 'Today' : `${i} Days Ago`,
+        rawDay: -i, // Use this for XAxis if we want numeric scale, or just use categorical
+        stock: Math.round(historicalStock)
+      });
+    }
+    
+    // Ensure 0/Today is included exactly if step skipped it
+    if (data[data.length - 1].day !== 'Today') {
+       data.push({
+        day: 'Today',
+        rawDay: 0,
+        stock: Math.round(currentStock)
+      });
+    }
+    
+    // Sort by rawDay ascending (-365 -> 0)
+    return data.sort((a, b) => a.rawDay - b.rawDay);
+  };
+
+  const processSalesHistory = (history: { date: string; quantity: number; storeName: string }[] | undefined, days: number, windowSize: number) => {
+    if (!history) return { data: [], stores: [] };
+    
+    const today = new Date();
+    const utcToday = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+    
+    // 1. Organize raw data by Date -> Store -> Quantity
+    const rawDataMap = new Map<string, Map<string, number>>();
+    const allStores = new Set<string>();
+
+    history.forEach(h => {
+      if (!rawDataMap.has(h.date)) {
+        rawDataMap.set(h.date, new Map());
+      }
+      rawDataMap.get(h.date)!.set(h.storeName, h.quantity);
+      allStores.add(h.storeName);
+    });
+
+    const sortedStores = Array.from(allStores).sort();
+    const data = [];
+    
+    for (let i = days; i >= 0; i--) {
+      const d = new Date(utcToday);
+      d.setUTCDate(utcToday.getUTCDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      
+      const dayData: any = {
+        date: `${d.getUTCMonth() + 1}/${d.getUTCDate()}`,
+        fullDate: dateStr
+      };
+
+      // Calculate Moving Average for each store
+      sortedStores.forEach(store => {
+        let sum = 0;
+        let count = 0;
+        
+        // Look back 'windowSize' days from current 'd'
+        for (let w = 0; w < windowSize; w++) {
+            const lookbackDate = new Date(d);
+            lookbackDate.setUTCDate(d.getUTCDate() - w);
+            const lookbackDateStr = lookbackDate.toISOString().split('T')[0];
+            
+            const qty = rawDataMap.get(lookbackDateStr)?.get(store) || 0;
+            sum += qty;
+            count++;
+        }
+        
+        // Simple Moving Average
+        dayData[store] = count > 0 ? Number((sum / count).toFixed(2)) : 0;
+      });
+
+      data.push(dayData);
+    }
+    return { data, stores: sortedStores };
+  };  const fetchLocations = async () => {
     try {
       const res = await fetch('/api/v1/inventory/locations');
       if (res.ok) {
@@ -346,23 +464,152 @@ export default function InventoryAnalytics() {
                       <tr className="bg-gray-50">
                         <td colSpan={9} className="px-6 py-4">
                           <div className="bg-white rounded-lg border shadow-sm p-4">
-                            <h4 className="text-sm font-semibold text-gray-900 mb-3">Store Breakdown</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                              {item.inventoryBreakdown.map((loc, idx) => (
-                                <div key={idx} className="flex flex-col p-3 bg-gray-50 rounded border">
-                                  <span className="font-medium text-gray-900 mb-2">{loc.location}</span>
-                                  <div className="grid grid-cols-2 gap-2 text-sm">
-                                    <div className="text-gray-500">Stock:</div>
-                                    <div className="text-right font-medium">{loc.quantity}</div>
-                                    <div className="text-gray-500">Velocity:</div>
-                                    <div className="text-right">{loc.velocity?.toFixed(2) || '0.00'}</div>
-                                    <div className="text-gray-500">Restock:</div>
-                                    <div className={`text-right font-bold ${loc.suggestedRestock > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                      {loc.suggestedRestock || 0}
+                            <div className="flex flex-col lg:flex-row gap-6">
+                              {/* Left Column: Store Breakdown Table */}
+                              <div className="w-full lg:w-1/2">
+                                <div className="mb-4">
+                                  <h4 className="text-sm font-semibold text-gray-900">Store Breakdown</h4>
+                                </div>
+                                <div className="w-full overflow-hidden border rounded-lg">
+                                  <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-50">
+                                      <tr>
+                                        <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                                        <th scope="col" className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                                        <th scope="col" className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Velocity</th>
+                                        <th scope="col" className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Restock</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                      {item.inventoryBreakdown.map((loc, idx) => {
+                                        const isHighlighted = (hoveredStore === loc.location) || (selectedStore === loc.location);
+                                        const isDimmed = (hoveredStore || selectedStore) && !isHighlighted;
+                                        
+                                        return (
+                                          <tr 
+                                            key={idx} 
+                                            className={`transition-all duration-300 ease-in-out cursor-pointer ${isHighlighted ? 'bg-gray-100' : 'hover:bg-gray-50'} ${isDimmed ? 'opacity-20' : 'opacity-100'}`}
+                                            onMouseEnter={() => setHoveredStore(loc.location)}
+                                            onMouseLeave={() => setHoveredStore(null)}
+                                            onClick={() => setSelectedStore(selectedStore === loc.location ? null : loc.location)}
+                                          >
+                                            <td className={`px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900 border-l-4 ${isHighlighted ? 'font-bold' : ''}`} style={{ borderLeftColor: getStoreColor(loc.location) }}>
+                                              {loc.location}
+                                            </td>
+                                            <td className={`px-4 py-2 whitespace-nowrap text-sm text-right text-gray-900 font-medium ${isHighlighted ? 'font-bold' : ''}`}>
+                                              {loc.quantity}
+                                            </td>
+                                            <td className={`px-4 py-2 whitespace-nowrap text-sm text-right text-gray-400 ${isHighlighted ? 'font-bold text-gray-900' : ''}`}>
+                                              {loc.velocity?.toFixed(2) || '0.00'}
+                                            </td>
+                                            <td className={`px-4 py-2 whitespace-nowrap text-sm text-right font-bold ${loc.suggestedRestock > 0 ? 'text-red-600' : 'text-green-600'} ${isHighlighted ? 'text-base' : ''}`}>
+                                              {loc.suggestedRestock || 0}
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+
+                              {/* Right Column: Sales Graph */}
+                              <div className="w-full lg:w-1/2">
+                                <div className="flex flex-col gap-4 mb-4">
+                                  <div className="flex justify-between items-center">
+                                    <h4 className="text-sm font-semibold text-gray-900">Sales Velocity History</h4>
+                                    <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
+                                      {[90, 180, 365].map(d => (
+                                        <button
+                                          key={d}
+                                          onClick={() => setGraphOutlook(d)}
+                                          className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                                            graphOutlook === d ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                                          }`}
+                                        >
+                                          {d} Days
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Smoothing Control */}
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-500">Smoothing:</span>
+                                    <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
+                                      {[1, 7, 15, 30].map(w => (
+                                        <button
+                                          key={w}
+                                          onClick={() => setSmoothingWindow(w)}
+                                          className={`px-2 py-0.5 text-xs font-medium rounded-md transition-colors ${
+                                            smoothingWindow === w ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                                          }`}
+                                        >
+                                          {w}d Avg
+                                        </button>
+                                      ))}
                                     </div>
                                   </div>
                                 </div>
-                              ))}
+
+                                <div className="h-64 w-full border rounded-lg p-4 bg-white relative">
+                                  <style>{`
+                                    .recharts-line-curve {
+                                      transition: stroke-width 0.3s ease, stroke-opacity 0.3s ease;
+                                    }
+                                  `}</style>
+                                  <ResponsiveContainer width="100%" height="100%">
+                                    {(() => {
+                                      const { data, stores } = processSalesHistory(item.salesHistory, graphOutlook, smoothingWindow);
+                                      
+                                      // Calculate max value for dynamic scaling
+                                      const maxValue = data.reduce((max, point) => {
+                                        const pointMax = stores.reduce((m, store) => Math.max(m, Number(point[store] || 0)), 0);
+                                        return Math.max(max, pointMax);
+                                      }, 0);
+                                      
+                                      // Start with 0-1 scale, otherwise max + 0.25
+                                      const yDomainMax = Math.max(1, maxValue + 0.25);
+
+                                      return (
+                                        <LineChart data={data}>
+                                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                          <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" minTickGap={30} />
+                                          <YAxis 
+                                            tick={{ fontSize: 10 }} 
+                                            domain={[0, yDomainMax]}
+                                            allowDecimals={true}
+                                            tickFormatter={(val) => val.toFixed(2)}
+                                          />
+                                          <Tooltip 
+                                            contentStyle={{ fontSize: '12px', padding: '8px 12px' }}
+                                            formatter={(value: number) => [value.toFixed(2), '']}
+                                          />
+                                          <Legend wrapperStyle={{ fontSize: '10px' }} />
+                                          {stores.map((store, idx) => {
+                                            const isHighlighted = (hoveredStore === store) || (selectedStore === store);
+                                            const isDimmed = (hoveredStore || selectedStore) && !isHighlighted;
+                                            
+                                            return (
+                                              <Line 
+                                                key={store}
+                                                type="monotone" 
+                                                dataKey={store} 
+                                                stroke={getStoreColor(store)} 
+                                                strokeWidth={isHighlighted ? 4 : 2} 
+                                                strokeOpacity={isDimmed ? 0.1 : 1}
+                                                dot={false} 
+                                                activeDot={{ r: isHighlighted ? 6 : 4 }}
+                                                name={store}
+                                              />
+                                            );
+                                          })}
+                                        </LineChart>
+                                      );
+                                    })()}
+                                  </ResponsiveContainer>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </td>

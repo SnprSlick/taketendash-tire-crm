@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/dashboard/dashboard-layout';
 import { useStore } from '../../contexts/store-context';
 import { 
-  User, 
+  Users, 
   Download, 
   ArrowUp, 
   ArrowDown,
@@ -13,21 +13,19 @@ import {
   ChevronRight
 } from 'lucide-react';
 
-interface CustomerReport {
-  customer_id: string;
-  customer_name: string;
-  customer_code: string;
+interface SalespersonReport {
+  salesperson: string;
   invoice_count: number;
   total_revenue: number;
   total_profit: number;
   profit_margin: number;
-  last_purchase_date: string;
+  avg_ticket: number;
 }
 
-export default function CustomersPage() {
+export default function SalespeoplePage() {
   const { selectedStoreId } = useStore();
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<CustomerReport[]>([]);
+  const [data, setData] = useState<SalespersonReport[]>([]);
   const [period, setPeriod] = useState('365'); // Default to last year
   
   // Search & Sort
@@ -36,23 +34,17 @@ export default function CustomersPage() {
   const [sortField, setSortField] = useState('total_revenue');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
-  // Pagination
-  const [page, setPage] = useState(1);
-  const [limit] = useState(50);
-  const [totalRecords, setTotalRecords] = useState(0);
-
   // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
-      setPage(1); // Reset page on search
     }, 500);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
   useEffect(() => {
     fetchReport();
-  }, [period, page, debouncedSearch, sortField, sortDirection, selectedStoreId]);
+  }, [period, debouncedSearch, sortField, sortDirection, selectedStoreId]);
 
   const fetchReport = async () => {
     setLoading(true);
@@ -66,17 +58,13 @@ export default function CustomersPage() {
       const searchParams = debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}` : '';
       const storeParam = selectedStoreId ? `&storeId=${selectedStoreId}` : '';
 
-      const offset = (page - 1) * limit;
-      const url = `/api/v1/invoices/reports/customers?${dateParams}&limit=${limit}&offset=${offset}&${sortParams}${searchParams}${storeParam}`;
+      const url = `/api/v1/invoices/reports/salespeople?${dateParams}&${sortParams}${searchParams}${storeParam}`;
 
       const res = await fetch(url);
       const result = await res.json();
 
       if (result.success) {
         setData(result.data);
-        if (result.meta) {
-          setTotalRecords(result.meta.total);
-        }
       }
     } catch (error) {
       console.error('Failed to fetch report', error);
@@ -119,17 +107,15 @@ export default function CustomersPage() {
     return `${Number(val).toFixed(1)}%`;
   };
 
-  const totalPages = Math.ceil(totalRecords / limit);
-
   return (
-    <DashboardLayout title="Customers">
+    <DashboardLayout title="Salespeople Stats">
       <div className="space-y-6">
         {/* Header & Controls */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-slate-800">Customers</h1>
-              <p className="text-slate-500">Customer performance and history</p>
+              <h1 className="text-2xl font-bold text-slate-800">Salespeople Stats</h1>
+              <p className="text-slate-500">Performance metrics by salesperson</p>
             </div>
             
             <div className="flex items-center gap-3">
@@ -137,7 +123,7 @@ export default function CustomersPage() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Search customers..."
+                  placeholder="Search salespeople..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
@@ -170,80 +156,47 @@ export default function CustomersPage() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
           ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-200">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <SortableHeader field="salesperson" label="Salesperson" />
+                    <SortableHeader field="invoice_count" label="Invoices" align="right" />
+                    <SortableHeader field="total_revenue" label="Revenue" align="right" />
+                    <SortableHeader field="total_profit" label="Gross Profit" align="right" />
+                    <SortableHeader field="profit_margin" label="Margin" align="right" />
+                    <SortableHeader field="avg_ticket" label="Avg Ticket" align="right" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {data.length === 0 ? (
                     <tr>
-                      <SortableHeader field="customer_name" label="Customer" />
-                      <SortableHeader field="invoice_count" label="Invoices" align="right" />
-                      <SortableHeader field="total_revenue" label="Revenue" align="right" />
-                      <SortableHeader field="total_profit" label="Gross Profit" align="right" />
-                      <SortableHeader field="profit_margin" label="Margin" align="right" />
-                      <SortableHeader field="last_purchase_date" label="Last Purchase" align="right" />
+                      <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                        No salespeople found for the selected period.
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {data.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
-                          No customers found for the selected period.
-                        </td>
-                      </tr>
-                    ) : (
-                      data.map((row, index) => (
-                        <tr key={index} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4 font-medium text-slate-900">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                                <User className="w-4 h-4" />
-                              </div>
-                              <div>
-                                <div>{row.customer_name}</div>
-                                <div className="text-xs text-slate-500">{row.customer_code}</div>
-                              </div>
+                  ) : (
+                    data.map((row, index) => (
+                      <tr key={index} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 font-medium text-slate-900">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                              <Users className="w-4 h-4" />
                             </div>
-                          </td>
-                          <td className="px-6 py-4 text-right text-slate-600">{row.invoice_count}</td>
-                          <td className="px-6 py-4 text-right font-medium text-slate-900">{formatCurrency(row.total_revenue)}</td>
-                          <td className="px-6 py-4 text-right text-green-600">{formatCurrency(row.total_profit)}</td>
-                          <td className="px-6 py-4 text-right text-slate-600">{formatPercent(row.profit_margin)}</td>
-                          <td className="px-6 py-4 text-right text-slate-600">
-                            {new Date(row.last_purchase_date).toLocaleDateString()}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pagination */}
-              <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
-                <div className="text-sm text-slate-500">
-                  Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, totalRecords)} of {totalRecords} results
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <span className="text-sm font-medium text-slate-700">
-                    Page {page} of {totalPages || 1}
-                  </span>
-                  <button
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                    disabled={page >= totalPages}
-                    className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </>
+                            <div>{row.salesperson}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right text-slate-600">{row.invoice_count}</td>
+                        <td className="px-6 py-4 text-right font-medium text-slate-900">{formatCurrency(row.total_revenue)}</td>
+                        <td className="px-6 py-4 text-right text-green-600">{formatCurrency(row.total_profit)}</td>
+                        <td className="px-6 py-4 text-right text-slate-600">{formatPercent(row.profit_margin)}</td>
+                        <td className="px-6 py-4 text-right text-slate-600">{formatCurrency(row.avg_ticket)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>

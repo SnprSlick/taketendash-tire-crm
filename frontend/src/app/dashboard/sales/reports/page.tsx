@@ -366,7 +366,7 @@ export default function SalesReportsPage() {
                       )}
                       {activeTab === 'invoices' && (
                         <>
-                          <td className="px-6 py-4 text-slate-600">{row.invoiceDate}</td>
+                          <td className="px-6 py-4 text-slate-600">{new Date(row.invoiceDate).toLocaleDateString()}</td>
                           <td className="px-6 py-4 font-medium text-blue-600">{row.invoiceNumber}</td>
                           <td className="px-6 py-4 text-slate-900">{row.customerName}</td>
                           <td className="px-6 py-4 text-slate-600">{row.salesperson}</td>

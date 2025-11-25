@@ -14,7 +14,9 @@ import {
   Gauge,
   Database,
   ClipboardCheck,
-  Package
+  Package,
+  FileText,
+  BarChart3
 } from 'lucide-react';
 import { useStore } from '../../contexts/store-context';
 
@@ -30,6 +32,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
 
   const isActive = (href: string) => {
     if (href === '/dashboard/sales') {
+      // Exact match for sales dashboard to avoid highlighting on sub-routes like reports
       return pathname === '/' || pathname === '/dashboard/sales';
     }
     return pathname === href || pathname.startsWith(href);
@@ -97,8 +100,14 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
             <NavItem
               href="/dashboard/sales"
               icon={<TrendingUp className="w-4 h-4" />}
-              label="Sales Analytics"
+              label="Analytics"
               active={isActive('/dashboard/sales')}
+            />
+            <NavItem
+              href="/dashboard/sales/reports"
+              icon={<FileText className="w-4 h-4" />}
+              label="Detailed Reports"
+              active={isActive('/dashboard/sales/reports')}
             />
             <NavItem
               href="/service/reminders"
@@ -106,7 +115,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
               label="Service Reminders"
               active={isActive('/service/reminders')}
             />
-            <NavItem
+            {/* <NavItem
               href="/appointments"
               icon={<Calendar className="w-4 h-4" />}
               label="Appointments"
@@ -123,7 +132,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
               icon={<Building2 className="w-4 h-4" />}
               label="Large Accounts"
               active={isActive('/accounts/large-accounts')}
-            />
+            /> */}
             <NavItem
               href="/dashboard/reconciliation"
               icon={<ClipboardCheck className="w-4 h-4" />}
