@@ -18,6 +18,7 @@ import { TireMasterModule } from './modules/tire-master/tire-master.module';
 import { CsvImportModule } from './csv-import/csv-import.module';
 import { ReconciliationModule } from './modules/reconciliation/reconciliation.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
+import { BrandsModule } from './modules/brands/brands.module';
 // Note: CustomersModule and InvoicesModule moved to _disabled folder to resolve schema conflicts
 // import { DateScalar } from './graphql/scalars/date.scalar'; // Disabled with GraphQL
 // import { LibrariesModule } from './libraries/libraries.module'; // Temporarily disabled
@@ -56,6 +57,7 @@ import { StoreController } from './controllers/store.controller';
     CsvImportModule,
     ReconciliationModule,
     InventoryModule,
+    BrandsModule,
     // AuthModule, // Temporarily disabled for debugging
   ],
   controllers: [AppController, InvoiceController, StoreController], // CsvImportController moved to CsvImportModule
