@@ -13,16 +13,18 @@ import {
   User,
   Gauge,
   Database,
-  ClipboardCheck
+  ClipboardCheck,
+  Package
 } from 'lucide-react';
 import { useStore } from '../../contexts/store-context';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
   title?: string;
+  fullWidth?: boolean;
 }
 
-export default function DashboardLayout({ children, title = 'Tire CRM Dashboard' }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, title = 'Tire CRM Dashboard', fullWidth = false }: DashboardLayoutProps) {
   const pathname = usePathname();
   const { stores, selectedStoreId, setSelectedStoreId, loading } = useStore();
 
@@ -33,11 +35,13 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
     return pathname === href || pathname.startsWith(href);
   };
 
+  const containerClass = fullWidth ? "max-w-[98%]" : "max-w-7xl";
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
       {/* Header */}
       <header className="bg-white/95 backdrop-blur-sm shadow-lg border-b border-slate-200/50 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className={`${containerClass} mx-auto px-4 sm:px-6 lg:px-8`}>
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
@@ -88,7 +92,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
 
       {/* Navigation */}
       <nav className="bg-white/90 backdrop-blur-sm border-b border-slate-200/50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className={`${containerClass} mx-auto px-4 sm:px-6 lg:px-8`}>
           <div className="flex space-x-1">
             <NavItem
               href="/dashboard/sales"
@@ -127,6 +131,18 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
               active={isActive('/dashboard/reconciliation')}
             />
             <NavItem
+              href="/dashboard/inventory"
+              icon={<Package className="w-4 h-4" />}
+              label="Inventory"
+              active={isActive('/dashboard/inventory') && !isActive('/dashboard/inventory/analytics')}
+            />
+            <NavItem
+              href="/dashboard/inventory/analytics"
+              icon={<TrendingUp className="w-4 h-4" />}
+              label="Restock & Analytics"
+              active={isActive('/dashboard/inventory/analytics')}
+            />
+            <NavItem
               href="/tire-master"
               icon={<Database className="w-4 h-4" />}
               label="Tire Master"
@@ -137,7 +153,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <main className={`${containerClass} mx-auto py-8 px-4 sm:px-6 lg:px-8`}>
         <div className="animate-fade-in">
           {children}
         </div>

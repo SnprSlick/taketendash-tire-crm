@@ -17,6 +17,8 @@ export class InventoryController {
     @Query('search') search?: string,
     @Query('locationId') locationId?: string,
     @Query('type') type?: string,
+    @Query('size') size?: string,
+    @Query('inStock') inStock?: string,
   ) {
     return this.inventoryService.getInventory({
       page: page ? Number(page) : 1,
@@ -24,11 +26,40 @@ export class InventoryController {
       search,
       locationId,
       type,
+      size,
+      inStock: inStock === 'true',
     });
   }
 
   @Get('locations')
   async getLocations() {
     return this.inventoryService.getLocations();
+  }
+
+  @Get('analytics')
+  async getAnalytics(
+    @Query('days') days?: number,
+    @Query('storeId') storeId?: string,
+    @Query('minVelocity') minVelocity?: number,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
+    @Query('search') search?: string,
+    @Query('size') size?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('outlook') outlook?: number,
+  ) {
+    return this.inventoryService.getSalesAnalytics({
+      days: days ? Number(days) : 30,
+      storeId,
+      minVelocity: minVelocity ? Number(minVelocity) : 0,
+      sortBy,
+      sortOrder,
+      search,
+      size,
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : undefined,
+      outlook: outlook ? Number(outlook) : 30,
+    });
   }
 }
