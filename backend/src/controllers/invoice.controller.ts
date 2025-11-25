@@ -905,7 +905,8 @@ export class InvoiceController {
           COALESCE(SUM(ili.gross_profit), 0) as "grossProfit",
           i.salesperson,
           c.name as "customerName",
-          (SELECT SUM(commission) FROM reconciliation_records WHERE "matchedInvoiceId" = i.id) as "commission"
+          (SELECT SUM(commission) FROM reconciliation_records WHERE "matchedInvoiceId" = i.id) as "commission",
+          (SELECT SUM(difference) FROM reconciliation_records WHERE "matchedInvoiceId" = i.id) as "difference"
         FROM invoices i
         LEFT JOIN invoice_line_items ili ON i.id = ili.invoice_id
         LEFT JOIN invoice_customers c ON i.customer_id = c.id
@@ -946,10 +947,20 @@ export class InvoiceController {
 
       return {
         salesperson: decodedName,
-        data: invoicesRaw.map(inv => ({
-          ...inv,
-          customer: { name: inv.customerName }
-        })),
+        data: invoicesRaw.map(inv => {
+          // Calculate recon difference logic
+          // If Invoice # has GS, we do not include the difference
+          const isGS = inv.invoiceNumber && inv.invoiceNumber.toUpperCase().includes('GS');
+          const reconDifference = isGS ? 0 : (Number(inv.difference) || 0);
+          
+          return {
+            ...inv,
+            customer: { name: inv.customerName },
+            reconDifference,
+            totalWithRecon: Number(inv.totalAmount) + reconDifference,
+            adjustedProfit: Number(inv.grossProfit) + reconDifference
+          };
+        }),
         meta: {
           total,
           totalCommission,

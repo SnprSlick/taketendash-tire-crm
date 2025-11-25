@@ -145,10 +145,25 @@ export default function SalespersonCommissionsPage() {
                       {invoice.customer?.name || '-'}
                     </td>
                     <td className="px-6 py-4 text-right font-medium text-slate-900">
-                      {formatCurrency(invoice.totalAmount)}
+                      <div>{formatCurrency(invoice.totalAmount)}</div>
+                      {invoice.reconDifference !== 0 && (
+                        <>
+                          <div className={`text-xs mt-1 ${invoice.reconDifference > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            Diff: {formatCurrency(invoice.reconDifference)}
+                          </div>
+                          <div className="text-xs font-bold text-slate-700 mt-1 border-t border-slate-200 pt-1">
+                            Total: {formatCurrency(invoice.totalWithRecon)}
+                          </div>
+                        </>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-right text-green-600">
-                      {formatCurrency(invoice.grossProfit)}
+                      <div>{formatCurrency(invoice.grossProfit)}</div>
+                      {invoice.reconDifference !== 0 && (
+                        <div className="text-xs font-bold text-emerald-700 mt-1" title="Adjusted Profit (Profit + Recon Difference)">
+                          Adj: {formatCurrency(invoice.adjustedProfit)}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-right text-indigo-600 font-bold">
                       {formatCurrency(invoice.commission || 0)}
