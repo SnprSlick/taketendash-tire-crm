@@ -17,6 +17,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { TireMasterModule } from './modules/tire-master/tire-master.module';
 import { CsvImportModule } from './csv-import/csv-import.module';
 import { ReconciliationModule } from './modules/reconciliation/reconciliation.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
 // Note: CustomersModule and InvoicesModule moved to _disabled folder to resolve schema conflicts
 // import { DateScalar } from './graphql/scalars/date.scalar'; // Disabled with GraphQL
 // import { LibrariesModule } from './libraries/libraries.module'; // Temporarily disabled
@@ -52,10 +53,10 @@ import { StoreController } from './controllers/store.controller';
     // NotificationsModule, // Temporarily disabled for debugging
     // AuditModule, // Temporarily disabled for debugging
     // TireMasterModule, // Temporarily disabled for debugging
-    CsvImportModule, // Re-enabled for CSV import functionality
+    CsvImportModule,
     ReconciliationModule,
-    // CustomersModule, // Temporarily disabled due to schema mismatch
-    // InvoicesModule, // Temporarily disabled due to schema mismatch
+    InventoryModule,
+    // AuthModule, // Temporarily disabled for debugging
   ],
   controllers: [AppController, InvoiceController, StoreController], // CsvImportController moved to CsvImportModule
   providers: [], // DateScalar and HealthResolver removed with GraphQL
