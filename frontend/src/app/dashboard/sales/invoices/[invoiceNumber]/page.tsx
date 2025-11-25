@@ -203,18 +203,33 @@ export default function InvoiceDetailPage() {
                   <span>Tax</span>
                   <span>{formatCurrency(invoice.taxAmount)}</span>
                 </div>
-                <div className="pt-3 border-t border-slate-200 flex justify-between text-lg font-bold text-slate-900">
-                  <span>Total</span>
-                  <span>{formatCurrency(invoice.totalAmount)}</span>
+                <div className="pt-3 border-t border-slate-200">
+                  <div className="flex justify-between text-lg font-bold text-slate-900">
+                    <span>Total</span>
+                    <span>{formatCurrency(invoice.totalAmount)}</span>
+                  </div>
                 </div>
                 
-                <div className="pt-6 mt-6 border-t border-dashed border-slate-300">
+                <div className="pt-6 mt-6 border-t border-dashed border-slate-300 space-y-2">
                   <div className="flex justify-between text-sm font-medium text-green-700">
                     <span>Total Profit</span>
                     <span>
                       {formatCurrency(invoice.lineItems.reduce((sum: number, item: any) => sum + item.grossProfit, 0))}
                     </span>
                   </div>
+                  
+                  {invoice.reconDifference !== 0 && invoice.reconDifference !== undefined && (
+                    <>
+                      <div className={`flex justify-between text-sm font-medium ${invoice.reconDifference > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        <span>Recon Difference</span>
+                        <span>{formatCurrency(invoice.reconDifference)}</span>
+                      </div>
+                      <div className="flex justify-between text-base font-bold text-emerald-800 pt-2 border-t border-slate-200">
+                        <span>Adjusted Profit</span>
+                        <span>{formatCurrency(invoice.adjustedProfit)}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

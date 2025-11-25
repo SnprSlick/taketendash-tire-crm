@@ -195,19 +195,38 @@ export class InvoiceController {
   // @ApiResponse({ status: 404, description: 'Invoice not found' })
   async getInvoiceByNumber(@Param('invoiceNumber') invoiceNumber: string) {
     try {
-      const invoice = await this.prisma.invoice.findUnique({
+      const invoice: any = await this.prisma.invoice.findUnique({
         where: { invoiceNumber },
         include: {
           customer: true,
           lineItems: {
             orderBy: { lineNumber: 'asc' }
-          }
+          },
+          reconciliationRecords: true
         }
       });
 
       if (!invoice) {
         throw new NotFoundException(`Invoice ${invoiceNumber} not found`);
       }
+
+      // Calculate recon totals
+      const reconCommission = invoice.reconciliationRecords.reduce((sum, r) => sum + Number(r.commission || 0), 0);
+      
+      // Logic for GS invoices
+      const isGS = invoice.invoiceNumber.toUpperCase().includes('GS');
+      let reconDifference = 0;
+
+      if (isGS) {
+        // For GS accounts: GS Recon Adjustment = Total CR + CR Comm
+        const totalCR = invoice.reconciliationRecords.reduce((sum, r) => sum + Number(r.creditAmount || 0), 0);
+        reconDifference = totalCR + reconCommission;
+      } else {
+        // For other accounts: Use the difference column
+        reconDifference = invoice.reconciliationRecords.reduce((sum, r) => sum + Number(r.difference || 0), 0);
+      }
+
+      const calculatedGrossProfit = invoice.lineItems.reduce((sum, item) => sum + Number(item.grossProfit || 0), 0);
 
       // Transform to frontend format
       const transformedInvoice = {
@@ -219,6 +238,10 @@ export class InvoiceController {
         salesperson: invoice.salesperson,
         taxAmount: Number(invoice.taxAmount),
         totalAmount: Number(invoice.totalAmount),
+        reconCommission,
+        reconDifference,
+        // totalWithRecon removed as requested - recon only affects profit
+        adjustedProfit: calculatedGrossProfit + reconDifference,
         lineItemsCount: invoice.lineItems.length,
         lineItems: invoice.lineItems.map(item => ({
           line: item.lineNumber || 0,
