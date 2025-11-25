@@ -170,7 +170,7 @@ export default function SalespersonDetailPage() {
               <div className="p-2 bg-indigo-50 rounded-lg">
                 <DollarSign className="w-6 h-6 text-indigo-600" />
               </div>
-              <span className="text-xs font-medium text-slate-500 uppercase">Total Commission</span>
+              <span className="text-xs font-medium text-slate-500 uppercase">Total Reconciliation</span>
             </div>
             <div className="text-2xl font-bold text-slate-800">{formatCurrency(totalCommission || 0)}</div>
           </div>
@@ -272,7 +272,7 @@ export default function SalespersonDetailPage() {
                   <th className="px-6 py-4">Customer</th>
                   <th className="px-6 py-4 text-right">Amount</th>
                   <th className="px-6 py-4 text-right">Profit</th>
-                  <th className="px-6 py-4 text-right">Commission</th>
+                  <th className="px-6 py-4 text-right">Reconciliation</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">

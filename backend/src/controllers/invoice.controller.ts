@@ -115,7 +115,8 @@ export class InvoiceController {
             customer: true,
             lineItems: {
               orderBy: { lineNumber: 'asc' }
-            }
+            },
+            reconciliationRecords: true
           },
           orderBy
         }),
@@ -126,6 +127,14 @@ export class InvoiceController {
       const transformedInvoices = invoices.map(invoice => {
         const calculatedGrossProfit = invoice.lineItems.reduce((sum, item) => sum + Number(item.grossProfit || 0), 0);
         
+        // Calculate recon difference
+        const isGS = invoice.invoiceNumber.toUpperCase().includes('GS');
+        let reconDifference = 0;
+        
+        if (!isGS) {
+          reconDifference = invoice.reconciliationRecords.reduce((sum, r) => sum + Number(r.difference || 0), 0);
+        }
+
         return {
           invoiceNumber: invoice.invoiceNumber,
           customerName: invoice.customer.name,
@@ -136,6 +145,7 @@ export class InvoiceController {
           taxAmount: Number(invoice.taxAmount),
           totalAmount: Number(invoice.totalAmount),
           grossProfit: calculatedGrossProfit,
+          reconDifference,
           lineItemsCount: invoice.lineItems.length,
           lineItems: invoice.lineItems.map(item => ({
             line: item.lineNumber || 0,
@@ -217,11 +227,7 @@ export class InvoiceController {
       const isGS = invoice.invoiceNumber.toUpperCase().includes('GS');
       let reconDifference = 0;
 
-      if (isGS) {
-        // For GS accounts: GS Recon Adjustment = Total CR + CR Comm
-        const totalCR = invoice.reconciliationRecords.reduce((sum, r) => sum + Number(r.creditAmount || 0), 0);
-        reconDifference = totalCR + reconCommission;
-      } else {
+      if (!isGS) {
         // For other accounts: Use the difference column
         reconDifference = invoice.reconciliationRecords.reduce((sum, r) => sum + Number(r.difference || 0), 0);
       }

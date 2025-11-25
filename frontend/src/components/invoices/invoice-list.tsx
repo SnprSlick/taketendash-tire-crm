@@ -23,6 +23,7 @@ interface Invoice {
   invoiceDate: string;
   salesperson?: string;
   totalAmount: number;
+  reconDifference?: number;
   status: 'PENDING' | 'PAID' | 'VOIDED' | 'OVERDUE';
   lineItemCount: number;
   createdAt: string;
@@ -414,6 +415,9 @@ export default function InvoiceList({
                       </div>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Recon Diff
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -463,6 +467,14 @@ export default function InvoiceList({
                           <div className="text-sm font-medium text-gray-900">
                             {formatCurrency(invoice.totalAmount)}
                           </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className={`text-sm font-medium ${
+                          (invoice.reconDifference || 0) > 0 ? 'text-green-600' : 
+                          (invoice.reconDifference || 0) < 0 ? 'text-red-600' : 'text-gray-400'
+                        }`}>
+                          {formatCurrency(invoice.reconDifference || 0)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

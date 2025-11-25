@@ -46,7 +46,7 @@ export default function SalespersonCommissionsPage() {
 
   if (loading && !data) {
     return (
-      <DashboardLayout title="Commission Report">
+      <DashboardLayout title="Reconciliation Report">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -56,7 +56,7 @@ export default function SalespersonCommissionsPage() {
 
   if (!data) {
     return (
-      <DashboardLayout title="Commission Report">
+      <DashboardLayout title="Reconciliation Report">
         <div className="text-center py-12">
           <h2 className="text-xl font-semibold text-slate-700">No data found</h2>
           <button 
@@ -74,7 +74,7 @@ export default function SalespersonCommissionsPage() {
   const totalCommission = meta?.totalCommission || 0;
 
   return (
-    <DashboardLayout title={`Commission Report: ${salesperson}`}>
+    <DashboardLayout title={`Reconciliation Report: ${salesperson}`}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -104,11 +104,11 @@ export default function SalespersonCommissionsPage() {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-slate-800">Commission Summary</h2>
-              <p className="text-slate-500 text-sm mt-1">Showing {invoices.length} invoices with commission</p>
+              <h2 className="text-lg font-semibold text-slate-800">Reconciliation Summary</h2>
+              <p className="text-slate-500 text-sm mt-1">Showing {invoices.length} invoices with reconciliation</p>
             </div>
             <div className="text-right">
-              <div className="text-sm text-slate-500 uppercase font-medium">Reconciliation Commission (Year)</div>
+              <div className="text-sm text-slate-500 uppercase font-medium">Reconciliation (Year)</div>
               <div className="text-3xl font-bold text-indigo-600">{formatCurrency(totalCommission)}</div>
             </div>
           </div>
@@ -125,7 +125,7 @@ export default function SalespersonCommissionsPage() {
                   <th className="px-6 py-4">Customer</th>
                   <th className="px-6 py-4 text-right">Amount</th>
                   <th className="px-6 py-4 text-right">Profit</th>
-                  <th className="px-6 py-4 text-right">Reconciliation Commission</th>
+                  <th className="px-6 py-4 text-right">Reconciliation</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -173,7 +173,7 @@ export default function SalespersonCommissionsPage() {
                 {invoices.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
-                      No commission records found for this period.
+                      No reconciliation records found for this period.
                     </td>
                   </tr>
                 )}
