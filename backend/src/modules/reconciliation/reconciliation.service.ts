@@ -194,21 +194,45 @@ export class ReconciliationService {
     // Matching Logic
     const matchResult = await this.findMatchingInvoice(rawInvoiceNumber, invoiceAmount);
     
-    // Save Record
-    await this.prisma.reconciliationRecord.create({
-      data: {
-        batchId,
-        invoiceNumber: rawInvoiceNumber,
-        accountName: accountName || null,
-        invoiceDate,
-        invoiceAmount,
-        creditAmount,
-        commission,
-        difference,
-        status: matchResult.status as any,
-        matchedInvoiceId: matchResult.matchedInvoiceId
-      }
+    // Check for existing record to prevent duplicates
+    const existingRecord = await this.prisma.reconciliationRecord.findFirst({
+      where: { invoiceNumber: rawInvoiceNumber }
     });
+
+    if (existingRecord) {
+      // Update existing record with new data (or same data)
+      // This handles the "update if new, ignore if same" requirement by overwriting
+      await this.prisma.reconciliationRecord.update({
+        where: { id: existingRecord.id },
+        data: {
+          batchId, // Move to current batch
+          accountName: accountName || null,
+          invoiceDate,
+          invoiceAmount,
+          creditAmount,
+          commission,
+          difference,
+          status: matchResult.status as any,
+          matchedInvoiceId: matchResult.matchedInvoiceId
+        }
+      });
+    } else {
+      // Create New Record
+      await this.prisma.reconciliationRecord.create({
+        data: {
+          batchId,
+          invoiceNumber: rawInvoiceNumber,
+          accountName: accountName || null,
+          invoiceDate,
+          invoiceAmount,
+          creditAmount,
+          commission,
+          difference,
+          status: matchResult.status as any,
+          matchedInvoiceId: matchResult.matchedInvoiceId
+        }
+      });
+    }
   }
 
   private async findMatchingInvoice(rawInvoiceNumber: string, invoiceAmount: number) {
