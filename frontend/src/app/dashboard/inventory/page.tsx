@@ -30,13 +30,26 @@ export default function InventoryPage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<{
+    search: string;
+    locationId: string;
+    size: string;
+    inStock: boolean;
+    page: number;
+    limit: number;
+    isTire?: boolean;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }>({
     search: '',
     locationId: '',
     size: '',
     inStock: false,
     page: 1,
-    limit: 50
+    limit: 50,
+    isTire: undefined,
+    sortBy: 'tireMasterSku',
+    sortOrder: 'asc'
   });
   const [meta, setMeta] = useState({ total: 0, totalPages: 0 });
 
@@ -77,6 +90,9 @@ export default function InventoryPage() {
         ...(filters.locationId && { locationId: filters.locationId }),
         ...(filters.size && { size: filters.size }),
         ...(filters.inStock && { inStock: 'true' }),
+        ...(filters.isTire !== undefined && { isTire: filters.isTire.toString() }),
+        ...(filters.sortBy && { sortBy: filters.sortBy }),
+        ...(filters.sortOrder && { sortOrder: filters.sortOrder }),
       });
       
       const res = await fetch(`/api/v1/inventory?${query}`);
@@ -97,12 +113,26 @@ export default function InventoryPage() {
     setFilters(prev => ({ ...prev, page: 1 }));
   };
 
+  const handleSort = (field: string) => {
+    setFilters(prev => ({
+      ...prev,
+      sortBy: field,
+      sortOrder: prev.sortBy === field && prev.sortOrder === 'asc' ? 'desc' : 'asc',
+      page: 1
+    }));
+  };
+
   const getTotalQuantity = (item: InventoryItem) => {
     return item.inventory.reduce((sum, inv) => sum + inv.quantity, 0);
   };
 
+  const formatType = (type: string) => {
+    if (!type) return '';
+    return type.replace(/_/g, ' ');
+  };
+
   return (
-    <DashboardLayout title="Inventory Management">
+    <DashboardLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
@@ -148,6 +178,42 @@ export default function InventoryPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="border-b border-slate-200">
+          <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+            <button
+              onClick={() => setFilters(prev => ({ ...prev, isTire: undefined, page: 1 }))}
+              className={`${
+                filters.isTire === undefined
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              All Inventory
+            </button>
+            <button
+              onClick={() => setFilters(prev => ({ ...prev, isTire: true, page: 1 }))}
+              className={`${
+                filters.isTire === true
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Tires
+            </button>
+            <button
+              onClick={() => setFilters(prev => ({ ...prev, isTire: false, page: 1 }))}
+              className={`${
+                filters.isTire === false
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Other Items
+            </button>
+          </nav>
         </div>
 
         {/* Filters */}
@@ -209,10 +275,21 @@ export default function InventoryPage() {
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-4 font-semibold text-slate-700">SKU</th>
-                  <th className="px-6 py-4 font-semibold text-slate-700">Description</th>
-                  <th className="px-6 py-4 font-semibold text-slate-700">Brand</th>
-                  <th className="px-6 py-4 font-semibold text-slate-700">Size</th>
+                  <th className="px-6 py-4 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('tireMasterSku')}>
+                    SKU {filters.sortBy === 'tireMasterSku' && (filters.sortOrder === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th className="px-6 py-4 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('description')}>
+                    Description {filters.sortBy === 'description' && (filters.sortOrder === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th className="px-6 py-4 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('brand')}>
+                    Brand {filters.sortBy === 'brand' && (filters.sortOrder === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th className="px-6 py-4 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('type')}>
+                    Type {filters.sortBy === 'type' && (filters.sortOrder === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th className="px-6 py-4 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100" onClick={() => handleSort('size')}>
+                    Size {filters.sortBy === 'size' && (filters.sortOrder === 'asc' ? '↑' : '↓')}
+                  </th>
                   <th className="px-6 py-4 font-semibold text-slate-700 text-right">Total Qty</th>
                   <th className="px-6 py-4 font-semibold text-slate-700">Location Breakdown</th>
                 </tr>
@@ -220,13 +297,13 @@ export default function InventoryPage() {
               <tbody className="divide-y divide-slate-200">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
+                    <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
                       Loading inventory...
                     </td>
                   </tr>
                 ) : items.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
+                    <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
                       No inventory items found matching your criteria.
                     </td>
                   </tr>
@@ -236,6 +313,7 @@ export default function InventoryPage() {
                       <td className="px-6 py-4 font-medium text-slate-900">{item.tireMasterSku}</td>
                       <td className="px-6 py-4 text-slate-600">{item.description}</td>
                       <td className="px-6 py-4 text-slate-600">{item.brand}</td>
+                      <td className="px-6 py-4 text-slate-600">{formatType(item.type)}</td>
                       <td className="px-6 py-4 text-slate-600">{item.size}</td>
                       <td className="px-6 py-4 text-right font-medium text-slate-900">
                         {getTotalQuantity(item)}
