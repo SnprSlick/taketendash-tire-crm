@@ -490,8 +490,16 @@ model ImportRollbackOperation {
 enum TireType {
   PASSENGER
   LIGHT_TRUCK
+  MEDIUM_TRUCK
+  INDUSTRIAL
+  AGRICULTURAL
+  OTR
+  TRAILER
+  ATV_UTV
+  LAWN_GARDEN
   COMMERCIAL
   SPECIALTY
+  OTHER
 }
 
 enum TireSeason {
@@ -565,6 +573,7 @@ model TireMasterProduct {
   warrantyInfo     String?                      @db.Text
   features         String[]
   manufacturerCode String?                      @map("manufacturer_code") @db.VarChar(50)
+  isTire           Boolean                      @default(false)
   isActive         Boolean                      @default(true)
   lastSyncedAt     DateTime?
   createdAt        DateTime                     @default(now())
