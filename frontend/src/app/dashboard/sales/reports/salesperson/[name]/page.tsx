@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import DashboardLayout from '../../../../../../components/dashboard/dashboard-layout';
 import { useStore } from '../../../../../../contexts/store-context';
@@ -34,23 +34,25 @@ export default function SalespersonDetailPage() {
   const [data, setData] = useState<any>(null);
   const [year, setYear] = useState(new Date().getFullYear().toString());
 
-  useEffect(() => {
-    if (params?.name) {
-      fetchSalespersonDetails();
-    }
-  }, [params?.name, year, selectedStoreId]);
-
-  const fetchSalespersonDetails = async () => {
+  const fetchSalespersonDetails = useCallback(async () => {
     if (!params?.name) return;
     setLoading(true);
     try {
       // Decode the name for the URL
       const encodedName = encodeURIComponent(params.name as string);
       const storeParam = selectedStoreId ? `&storeId=${selectedStoreId}` : '';
-      const res = await fetch(`/api/v1/invoices/reports/salespeople/${encodedName}?year=${year}${storeParam}`);
+      // Add timestamp to prevent caching
+      const timestamp = new Date().getTime();
+      const res = await fetch(`/api/v1/invoices/reports/salespeople/${encodedName}?year=${year}${storeParam}&_t=${timestamp}`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       const result = await res.json();
       
       if (result.salesperson) {
+        console.log('Salesperson Data:', result); // Debug log
         setData(result);
       } else if (result.success) {
         setData(result.data);
@@ -60,7 +62,13 @@ export default function SalespersonDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params?.name, year, selectedStoreId]);
+
+  useEffect(() => {
+    if (params?.name) {
+      fetchSalespersonDetails();
+    }
+  }, [fetchSalespersonDetails, params?.name]);
 
   const formatCurrency = (val: number | string) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(val));
@@ -99,11 +107,23 @@ export default function SalespersonDetailPage() {
   const { salesperson, monthlyStats, recentInvoices, topCustomers, totalCommission } = data;
 
   // Calculate totals from monthly stats
-  const totalRevenue = monthlyStats.reduce((sum: number, m: any) => sum + Number(m.total_revenue), 0);
-  const totalProfit = monthlyStats.reduce((sum: number, m: any) => sum + Number(m.total_profit), 0);
-  const totalInvoices = monthlyStats.reduce((sum: number, m: any) => sum + Number(m.invoice_count), 0);
+  const totalRevenue = monthlyStats.reduce((sum: number, m: any) => sum + Number(m.total_revenue || 0), 0);
+  const totalProfit = monthlyStats.reduce((sum: number, m: any) => sum + Number(m.total_profit || 0), 0);
+  const totalInvoices = monthlyStats.reduce((sum: number, m: any) => sum + Number(m.invoice_count || 0), 0);
+  // Handle both total_units (snake_case from DB) and totalUnits (potential camelCase conversion)
+  const totalUnits = monthlyStats.reduce((sum: number, m: any) => sum + Number(m.total_units || m.totalUnits || 0), 0);
+  
+  console.log('Calculated Totals:', { totalRevenue, totalProfit, totalInvoices, totalUnits });
+
   const avgMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
   const avgTicket = totalInvoices > 0 ? totalRevenue / totalInvoices : 0;
+
+  // New Metrics
+  const avgProfitPerTicket = totalInvoices > 0 ? totalProfit / totalInvoices : 0;
+  const unitsPerTicket = totalInvoices > 0 ? totalUnits / totalInvoices : 0;
+  const numberOfMonths = monthlyStats.length || 1;
+  const avgInvoicesPerMonth = totalInvoices / numberOfMonths;
+  const avgProfitPerUnit = totalUnits > 0 ? totalProfit / totalUnits : 0;
 
   return (
     <DashboardLayout title={`Salesperson: ${salesperson}`}>
@@ -143,7 +163,7 @@ export default function SalespersonDetailPage() {
           </div>
         </div>
 
-        {/* KPI Cards */}
+        {/* Primary KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div className="flex items-center justify-between mb-4">
@@ -196,6 +216,49 @@ export default function SalespersonDetailPage() {
               <span className="text-xs font-medium text-slate-500 uppercase">Avg Ticket</span>
             </div>
             <div className="text-2xl font-bold text-slate-800">{formatCurrency(avgTicket)}</div>
+          </div>
+        </div>
+
+        {/* Secondary KPI Cards - Detailed Metrics */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 bg-emerald-50 rounded-lg">
+                <DollarSign className="w-6 h-6 text-emerald-600" />
+              </div>
+              <span className="text-xs font-medium text-slate-500 uppercase">Avg Profit/Ticket</span>
+            </div>
+            <div className="text-2xl font-bold text-slate-800">{formatCurrency(avgProfitPerTicket)}</div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 bg-cyan-50 rounded-lg">
+                <ShoppingCart className="w-6 h-6 text-cyan-600" />
+              </div>
+              <span className="text-xs font-medium text-slate-500 uppercase">Units/Ticket</span>
+            </div>
+            <div className="text-2xl font-bold text-slate-800">{Number(unitsPerTicket).toFixed(1)}</div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 bg-orange-50 rounded-lg">
+                <Calendar className="w-6 h-6 text-orange-600" />
+              </div>
+              <span className="text-xs font-medium text-slate-500 uppercase">Avg Invoices/Month</span>
+            </div>
+            <div className="text-2xl font-bold text-slate-800">{Number(avgInvoicesPerMonth).toFixed(1)}</div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 bg-rose-50 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-rose-600" />
+              </div>
+              <span className="text-xs font-medium text-slate-500 uppercase">Avg Profit/Unit</span>
+            </div>
+            <div className="text-2xl font-bold text-slate-800">{formatCurrency(avgProfitPerUnit)}</div>
           </div>
         </div>
 
@@ -275,11 +338,14 @@ export default function SalespersonDetailPage() {
                   <th className="px-6 py-4">Customer</th>
                   <th className="px-6 py-4 text-right">Amount</th>
                   <th className="px-6 py-4 text-right">Profit</th>
+                  <th className="px-6 py-4 text-right">Avg Profit/Unit</th>
                   <th className="px-6 py-4 text-right">Reconciliation</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {recentInvoices.map((invoice: any) => (
+                {recentInvoices.map((invoice: any) => {
+                  const profitPerUnit = invoice.totalUnits > 0 ? Number(invoice.grossProfit) / Number(invoice.totalUnits) : 0;
+                  return (
                   <tr 
                     key={invoice.id} 
                     className="hover:bg-slate-50 transition-colors cursor-pointer"
@@ -300,11 +366,15 @@ export default function SalespersonDetailPage() {
                     <td className="px-6 py-4 text-right text-green-600">
                       {formatCurrency(invoice.grossProfit)}
                     </td>
+                    <td className="px-6 py-4 text-right text-slate-600">
+                      {formatCurrency(profitPerUnit)}
+                    </td>
                     <td className="px-6 py-4 text-right text-indigo-600 font-medium">
                       {formatCurrency(invoice.commission || 0)}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

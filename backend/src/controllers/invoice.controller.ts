@@ -138,6 +138,10 @@ export class InvoiceController {
         if (totalAmount > 0) {
           profitMargin = (calculatedGrossProfit / totalAmount) * 100;
         }
+
+        // Calculate avg profit per unit
+        const totalUnits = invoice.lineItems.reduce((sum: any, item: any) => sum + Number(item.quantity || 0), 0);
+        const avgProfitPerUnit = totalUnits > 0 ? calculatedGrossProfit / totalUnits : 0;
         
         // Calculate recon difference
         const isGS = invoice.invoiceNumber.toUpperCase().includes('GS');
@@ -160,6 +164,7 @@ export class InvoiceController {
           totalAmount: totalAmount,
           grossProfit: calculatedGrossProfit,
           profitMargin: profitMargin, // Add profit margin
+          avgProfitPerUnit,
           reconDifference,
           lineItemsCount: invoice.lineItems.length,
           lineItems: invoice.lineItems.map((item: any) => ({
@@ -601,7 +606,7 @@ export class InvoiceController {
       const endDate = endDateStr ? new Date(endDateStr) : new Date();
       
       // Whitelist sort columns to prevent SQL injection
-      const allowedSorts = ['salesperson', 'invoice_count', 'total_revenue', 'total_profit', 'profit_margin', 'avg_ticket'];
+      const allowedSorts = ['salesperson', 'invoice_count', 'total_revenue', 'total_profit', 'profit_margin', 'avg_ticket', 'avg_profit_per_unit'];
       const sortColumn = allowedSorts.includes(sortBy) ? sortBy : 'total_revenue';
       const orderDirection = sortOrder.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
@@ -623,11 +628,16 @@ export class InvoiceController {
           COUNT(DISTINCT i.id)::int as invoice_count,
           SUM(ili.line_total) as total_revenue,
           SUM(ili.gross_profit) as total_profit,
+          COALESCE(SUM(ili.quantity), 0) as total_units,
           CASE 
             WHEN SUM(ili.line_total) > 0 THEN (SUM(ili.gross_profit) / SUM(ili.line_total) * 100)
             ELSE 0 
           END as profit_margin,
-          SUM(ili.line_total) / COUNT(DISTINCT i.id) as avg_ticket
+          SUM(ili.line_total) / COUNT(DISTINCT i.id) as avg_ticket,
+          CASE
+            WHEN SUM(ili.quantity) > 0 THEN SUM(ili.gross_profit) / SUM(ili.quantity)
+            ELSE 0
+          END as avg_profit_per_unit
         FROM invoices i
         JOIN invoice_line_items ili ON i.id = ili.invoice_id
         WHERE i.invoice_date >= ${startDate} 
@@ -913,14 +923,15 @@ export class InvoiceController {
           TO_CHAR(i.invoice_date, 'YYYY-MM') as month_key,
           TO_CHAR(i.invoice_date, 'Month') as month_name,
           COUNT(DISTINCT i.id)::int as invoice_count,
-          SUM(ili.line_total) as total_revenue,
-          SUM(ili.gross_profit) as total_profit,
+          COALESCE(SUM(ili.line_total), 0) as total_revenue,
+          COALESCE(SUM(ili.gross_profit), 0) as total_profit,
+          COALESCE(SUM(ili.quantity), 0) as total_units,
           CASE 
-            WHEN SUM(ili.line_total) > 0 THEN (SUM(ili.gross_profit) / SUM(ili.line_total) * 100)
+            WHEN COALESCE(SUM(ili.line_total), 0) > 0 THEN (COALESCE(SUM(ili.gross_profit), 0) / SUM(ili.line_total) * 100)
             ELSE 0 
           END as profit_margin
         FROM invoices i
-        JOIN invoice_line_items ili ON i.id = ili.invoice_id
+        LEFT JOIN invoice_line_items ili ON i.id = ili.invoice_id
         WHERE i.salesperson = ${decodedName} 
           AND i.invoice_date >= ${startDate} 
           AND i.invoice_date <= ${endDate} 
@@ -938,6 +949,7 @@ export class InvoiceController {
           i.invoice_date as "invoiceDate",
           i.total_amount as "totalAmount",
           COALESCE(SUM(ili.gross_profit), 0) as "grossProfit",
+          COALESCE(SUM(ili.quantity), 0) as "totalUnits",
           i.salesperson,
           i.vehicle_info as "vehicleInfo",
           c.name as "customerName",

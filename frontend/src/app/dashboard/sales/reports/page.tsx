@@ -26,6 +26,7 @@ interface SalespersonReport {
   total_profit: number;
   profit_margin: number;
   avg_ticket: number;
+  avg_profit_per_unit: number;
 }
 
 interface CustomerReport {
@@ -278,6 +279,7 @@ export default function SalesReportsPage() {
                         <SortableHeader field="total_profit" label="Gross Profit" align="right" />
                         <SortableHeader field="profit_margin" label="Margin" align="right" />
                         <SortableHeader field="avg_ticket" label="Avg Ticket" align="right" />
+                        <SortableHeader field="avg_profit_per_unit" label="Avg Profit/Unit" align="right" />
                       </>
                     )}
                     {activeTab === 'customers' && (
@@ -298,6 +300,7 @@ export default function SalesReportsPage() {
                         <SortableHeader field="salesperson" label="Salesperson" />
                         <SortableHeader field="totalAmount" label="Amount" align="right" />
                         <th className="px-6 py-4 font-semibold text-slate-700 text-right">Gross Profit</th>
+                        <th className="px-6 py-4 font-semibold text-slate-700 text-right">Avg Profit/Unit</th>
                         <th className="px-6 py-4 font-semibold text-slate-700 text-right">Items</th>
                       </>
                     )}
@@ -341,6 +344,7 @@ export default function SalesReportsPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4 text-right text-slate-600">{formatCurrency(row.avg_ticket)}</td>
+                          <td className="px-6 py-4 text-right text-slate-600">{formatCurrency(row.avg_profit_per_unit)}</td>
                         </>
                       )}
                       {activeTab === 'customers' && (
@@ -372,6 +376,7 @@ export default function SalesReportsPage() {
                           <td className="px-6 py-4 text-slate-600">{row.salesperson}</td>
                           <td className="px-6 py-4 text-right font-medium text-slate-900">{formatCurrency(row.totalAmount)}</td>
                           <td className="px-6 py-4 text-right text-green-600">{formatCurrency(row.grossProfit)}</td>
+                          <td className="px-6 py-4 text-right text-slate-600">{formatCurrency(row.avgProfitPerUnit)}</td>
                           <td className="px-6 py-4 text-right text-slate-600">{row.lineItemsCount}</td>
                         </>
                       )}
