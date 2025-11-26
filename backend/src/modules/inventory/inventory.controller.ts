@@ -19,6 +19,9 @@ export class InventoryController {
     @Query('type') type?: string,
     @Query('size') size?: string,
     @Query('inStock') inStock?: string,
+    @Query('isTire') isTire?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
   ) {
     return this.inventoryService.getInventory({
       page: page ? Number(page) : 1,
@@ -28,6 +31,9 @@ export class InventoryController {
       type,
       size,
       inStock: inStock === 'true',
+      isTire: isTire === 'true' ? true : isTire === 'false' ? false : undefined,
+      sortBy,
+      sortOrder,
     });
   }
 

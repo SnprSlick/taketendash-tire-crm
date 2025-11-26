@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as readline from 'readline';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
+import { classifyProduct } from '../src/utils/tire-classifier';
 
 // Load environment variables
 dotenv.config();
@@ -123,8 +124,13 @@ async function main() {
       }
 
       // 2. Upsert Product
-      // We need to determine type/season/brand from description or just set defaults
-      // For now, we'll set defaults and let the user update them or infer from description later
+      // Classify the product
+      const classification = classifyProduct({
+        tireMasterSku: productCode,
+        description: description,
+        size: size
+      });
+
       const product = await prisma.tireMasterProduct.upsert({
         where: { tireMasterSku: productCode },
         update: {
@@ -132,20 +138,24 @@ async function main() {
           size: size,
           laborPrice: laborPrice,
           fetAmount: fetAmount,
-          // Only update prices if they are non-zero? Or always?
-          // Let's always update for now
+          // Update classification if it was previously unknown or generic
+          // But maybe we should trust the script's latest logic?
+          // Let's update it to keep it fresh with our rules
+          type: classification.type,
+          isTire: classification.isTire,
         },
         create: {
           tireMasterSku: productCode,
           brand: 'Unknown', // Placeholder
           pattern: 'Unknown', // Placeholder
           size: size || 'Unknown',
-          type: TireType.PASSENGER, // Default
+          type: classification.type,
           season: TireSeason.ALL_SEASON, // Default
           description: description,
           laborPrice: laborPrice,
           fetAmount: fetAmount,
-          isActive: true
+          isActive: true,
+          isTire: classification.isTire
         }
       });
 

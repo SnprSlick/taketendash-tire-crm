@@ -40,13 +40,20 @@ export class InventoryService {
     type?: string;
     size?: string;
     inStock?: boolean;
+    isTire?: boolean;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
   }) {
-    const { page = 1, limit = 50, search, locationId, type, size, inStock } = params;
+    const { page = 1, limit = 50, search, locationId, type, size, inStock, isTire, sortBy, sortOrder = 'asc' } = params;
     const skip = (page - 1) * limit;
 
     const where: Prisma.TireMasterProductWhereInput = {
       isActive: true,
     };
+
+    if (isTire !== undefined) {
+      where.isTire = isTire;
+    }
 
     if (search) {
       where.OR = [
@@ -74,6 +81,13 @@ export class InventoryService {
       };
     }
 
+    const orderBy: Prisma.TireMasterProductOrderByWithRelationInput = {};
+    if (sortBy) {
+      orderBy[sortBy as keyof Prisma.TireMasterProductOrderByWithRelationInput] = sortOrder;
+    } else {
+      orderBy.tireMasterSku = 'asc';
+    }
+
     const [items, total] = await Promise.all([
       this.prisma.tireMasterProduct.findMany({
         where,
@@ -87,7 +101,7 @@ export class InventoryService {
         },
         skip,
         take: limit,
-        orderBy: { tireMasterSku: 'asc' }
+        orderBy
       }),
       this.prisma.tireMasterProduct.count({ where })
     ]);
