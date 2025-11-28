@@ -27,7 +27,7 @@ interface EmployeePerformanceFilters {
 
 // Temporarily disabled employee performance controller
 /*
-@Controller('api/v1/analytics')
+@Controller('analytics')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class EmployeePerformanceController {
   private readonly logger = new Logger(EmployeePerformanceController.name);

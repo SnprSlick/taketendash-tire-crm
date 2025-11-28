@@ -8,6 +8,8 @@ import { CsvFileProcessor } from '../processors/csv-file-processor';
 import { CreateImportBatchInput } from '../entities/import-batch.entity';
 import { CreateImportErrorInput } from '../entities/import-error.entity';
 import { ImportStatus, ErrorType, DuplicateHandlingStrategy } from '../../shared/enums/import.enums';
+import { TireType, TireQuality } from '@prisma/client';
+import { classifyProduct, classifyBrandQuality } from '../../utils/tire-classifier';
 
 /**
  * CSV Import Orchestration Service
@@ -491,10 +493,46 @@ export class CsvImportService {
         timestamp: new Date()
       });
 
+      // OPTIMIZATION: Batch fetch existing invoices to avoid N+1 queries
+      const invoiceNumbers = batch
+        .map(inv => inv.header.invoiceNumber?.trim())
+        .filter(num => num && num.length > 0);
+
+      let existingInvoicesMap = new Map<string, any>();
+      
+      if (invoiceNumbers.length > 0) {
+        try {
+          const existingInvoices = await this.prisma.invoice.findMany({
+            where: { 
+              invoiceNumber: { in: invoiceNumbers } 
+            },
+            include: {
+              lineItems: true,
+              customer: true
+            }
+          });
+          
+          existingInvoices.forEach(inv => {
+            existingInvoicesMap.set(inv.invoiceNumber, inv);
+          });
+        } catch (err) {
+          this.logger.warn(`Failed to batch fetch existing invoices: ${err.message}`);
+          // Fallback to individual fetching in handleDuplicateInvoice
+        }
+      }
+
       // Process each invoice in the batch
       for (const invoice of batch) {
         try {
-          const duplicateResult = await this.handleDuplicateInvoice(invoice, batchId, duplicateHandling);
+          const invoiceNum = invoice.header.invoiceNumber?.trim();
+          const existingInvoice = invoiceNum ? existingInvoicesMap.get(invoiceNum) : null;
+
+          const duplicateResult = await this.handleDuplicateInvoice(
+            invoice, 
+            batchId, 
+            duplicateHandling,
+            existingInvoice
+          );
 
           // Only count as successful if not failed
           if (duplicateResult.action !== 'FAILED') {
@@ -532,7 +570,9 @@ export class CsvImportService {
               break;
           }
 
-          this.logger.debug(`Successfully processed invoice: ${invoice.header.invoiceNumber} - Action: ${duplicateResult.action}`);
+          if (duplicateResult.action !== 'SKIPPED') {
+             this.logger.debug(`Successfully processed invoice: ${invoice.header.invoiceNumber} - Action: ${duplicateResult.action}`);
+          }
 
         } catch (error) {
           failedRecords++;
@@ -601,6 +641,62 @@ export class CsvImportService {
       errorSummary,
       duplicateStatistics
     };
+  }
+
+  /**
+   * Ensure products exist in TireMasterProduct table and return map of Code -> ID
+   * CRITICAL: This method uses upsert but protects existing classification data
+   */
+  private async ensureProductsExist(tx: any, lineItems: any[]): Promise<Map<string, string>> {
+    const productMap = new Map<string, string>();
+    const uniqueProducts = new Map<string, any>();
+
+    // Deduplicate products by code
+    for (const item of lineItems) {
+      const code = (item.productCode?.trim() || 'UNKNOWN').substring(0, 100);
+      if (code && code !== 'UNKNOWN' && !uniqueProducts.has(code)) {
+        uniqueProducts.set(code, item);
+      }
+    }
+
+    for (const [code, item] of uniqueProducts) {
+      try {
+        // Classify the product
+        const classification = classifyProduct({
+          tireMasterSku: code,
+          description: item.description,
+          size: '' // We don't have size parsed separately in line items yet
+        });
+
+        // Determine quality (default to UNKNOWN as we don't have brand)
+        const quality = TireQuality.UNKNOWN;
+
+        const product = await tx.tireMasterProduct.upsert({
+          where: { tireMasterSku: code },
+          create: {
+            tireMasterSku: code,
+            brand: 'Unknown',
+            pattern: 'Unknown',
+            size: 'Unknown',
+            type: classification.type,
+            season: 'ALL_SEASON',
+            quality: quality,
+            description: item.description?.substring(0, 500),
+            isTire: classification.isTire,
+            isActive: true
+          },
+          update: {
+            // CRITICAL: Do NOT update classification fields (isTire, type, quality, brand, etc.)
+            // This prevents overwriting manual or script-based classifications
+            updatedAt: new Date()
+          }
+        });
+        productMap.set(code, product.id);
+      } catch (err) {
+        this.logger.warn(`Failed to upsert product ${code}: ${err.message}`);
+      }
+    }
+    return productMap;
   }
 
   /**
@@ -710,15 +806,19 @@ export class CsvImportService {
 
         this.logger.debug(`Created invoice: ${createdInvoice.invoiceNumber}`);
 
+        // 2.5 Ensure products exist and get their IDs
+        const productMap = await this.ensureProductsExist(tx, lineItems);
+
         // 3. Create line item records with proper validation
         for (let i = 0; i < lineItems.length; i++) {
           const lineItem = lineItems[i];
           const transformedLineItem = transformedData?.lineItems?.[i];
+          const productCode = (lineItem.productCode?.trim() || 'UNKNOWN').substring(0, 100);
 
           const lineItemData = {
             invoiceId: createdInvoice.id,
             lineNumber: lineItem.lineNumber || i + 1,
-            productCode: (lineItem.productCode?.trim() || 'UNKNOWN').substring(0, 100),
+            productCode: productCode,
             description: (lineItem.description?.trim() || 'No description').substring(0, 500),
             adjustment: lineItem.adjustment?.trim() || null,
             quantity: this.parseDecimal(transformedLineItem?.quantity || lineItem.quantity || 0),
@@ -729,7 +829,8 @@ export class CsvImportService {
             costPrice: this.parseDecimal(transformedLineItem?.costPrice || lineItem.cost || 0),
             grossProfitMargin: this.parseDecimal(transformedLineItem?.grossProfitMargin || lineItem.grossProfitMargin || 0),
             grossProfit: this.parseDecimal(transformedLineItem?.grossProfit || lineItem.grossProfit || 0),
-            category: this.categorizeProduct(lineItem.description || lineItem.productCode || 'OTHER')
+            category: this.categorizeProduct(lineItem.description || lineItem.productCode || 'OTHER'),
+            tireMasterProductId: productMap.get(productCode)
           };
 
           this.logger.debug(`Creating line item ${i + 1}:`, JSON.stringify(lineItemData, null, 2));
@@ -785,7 +886,8 @@ export class CsvImportService {
   private async handleDuplicateInvoice(
     invoice: any,
     importBatchId: string,
-    strategy: string
+    strategy: string,
+    preFetchedInvoice?: any
   ): Promise<{
     action: 'PROCESSED' | 'SKIPPED' | 'UPDATED' | 'RENAMED' | 'FAILED';
     newInvoiceNumber?: string;
@@ -799,14 +901,18 @@ export class CsvImportService {
       return { action: 'PROCESSED' };
     }
 
-    // Check if invoice already exists
-    const existingInvoice = await this.prisma.invoice.findUnique({
-      where: { invoiceNumber },
-      include: {
-        lineItems: true,
-        customer: true
-      }
-    });
+    // Check if invoice already exists (use pre-fetched if available)
+    let existingInvoice = preFetchedInvoice;
+    
+    if (!existingInvoice) {
+      existingInvoice = await this.prisma.invoice.findUnique({
+        where: { invoiceNumber },
+        include: {
+          lineItems: true,
+          customer: true
+        }
+      });
+    }
 
     if (!existingInvoice) {
       // No duplicate, process normally
@@ -822,6 +928,12 @@ export class CsvImportService {
 
       case 'UPDATE':
         try {
+          // OPTIMIZATION: Check if invoice has actually changed before updating
+          if (!this.hasInvoiceChanged(existingInvoice, invoice)) {
+            this.logger.debug(`Skipping update for unchanged invoice: ${invoiceNumber}`);
+            return { action: 'SKIPPED' };
+          }
+
           await this.updateExistingInvoice(existingInvoice, invoice, importBatchId);
           return { action: 'UPDATED' };
         } catch (error) {
@@ -853,6 +965,65 @@ export class CsvImportService {
           error: `Duplicate invoice number: ${invoiceNumber}`
         };
     }
+  }
+
+  /**
+   * Check if an invoice has changed compared to the existing database record
+   */
+  private hasInvoiceChanged(existingInvoice: any, newInvoice: any): boolean {
+    const { header, lineItems, transformedData } = newInvoice;
+
+    // 1. Check Header Fields
+    // Compare dates (ignoring time if needed, but usually exact match is good)
+    const newDate = header.invoiceDate ? new Date(header.invoiceDate).getTime() : 0;
+    const oldDate = existingInvoice.invoiceDate ? new Date(existingInvoice.invoiceDate).getTime() : 0;
+    if (Math.abs(newDate - oldDate) > 1000) return true; // Allow 1s difference
+
+    // Compare totals (using small epsilon for float comparison)
+    const newTotal = this.parseDecimal(transformedData?.invoice?.totalAmount || header.totalAmount || 0);
+    const oldTotal = Number(existingInvoice.totalAmount);
+    if (Math.abs(newTotal - oldTotal) > 0.01) return true;
+
+    // Compare customer name (if stored on invoice, though it's usually a relation)
+    // If the customer relation changed, we might need to check that too, but usually name is enough proxy
+    // existingInvoice.customer might be null if not loaded or not linked
+    // But we can check other fields like salesperson
+    if ((header.salesperson?.trim() || '') !== (existingInvoice.salesperson || '')) return true;
+    if ((header.vehicleInfo?.trim() || '') !== (existingInvoice.vehicleInfo || '')) return true;
+
+    // 2. Check Line Items
+    // First check count
+    if (lineItems.length !== existingInvoice.lineItems.length) return true;
+
+    // If count is same, we need to verify content.
+    // Since order might differ, we can sort or just check existence.
+    // Assuming CSV order is preserved, we can check by index.
+    // But to be safe, let's check totals of line items.
+    
+    // Quick check: Sum of line totals
+    const newLineTotalSum = lineItems.reduce((sum, item) => sum + this.parseDecimal(item.lineTotal || 0), 0);
+    const oldLineTotalSum = existingInvoice.lineItems.reduce((sum, item) => sum + Number(item.lineTotal), 0);
+    if (Math.abs(newLineTotalSum - oldLineTotalSum) > 0.01) return true;
+
+    // Deep check: Iterate and compare key fields
+    // We assume line items are in same order for performance. 
+    // If strict accuracy is needed regardless of order, we'd need a Map/Set approach.
+    for (let i = 0; i < lineItems.length; i++) {
+      const newItem = lineItems[i];
+      const oldItem = existingInvoice.lineItems[i];
+
+      if ((newItem.productCode?.trim() || 'UNKNOWN') !== oldItem.productCode) return true;
+      
+      const newQty = this.parseDecimal(newItem.quantity || 0);
+      const oldQty = Number(oldItem.quantity);
+      if (Math.abs(newQty - oldQty) > 0.01) return true;
+
+      const newItemTotal = this.parseDecimal(newItem.lineTotal || 0);
+      const oldItemTotal = Number(oldItem.lineTotal);
+      if (Math.abs(newItemTotal - oldItemTotal) > 0.01) return true;
+    }
+
+    return false;
   }
 
   /**
@@ -910,16 +1081,20 @@ export class CsvImportService {
         where: { invoiceId: existingInvoice.id }
       });
 
+      // Ensure products exist
+      const productMap = await this.ensureProductsExist(tx, lineItems);
+
       // Add new line items
       for (let i = 0; i < lineItems.length; i++) {
         const lineItem = lineItems[i];
         const transformedLineItem = transformedData?.lineItems?.[i];
+        const productCode = (lineItem.productCode?.trim() || 'UNKNOWN').substring(0, 100);
 
         await tx.invoiceLineItem.create({
           data: {
             invoiceId: existingInvoice.id,
             lineNumber: lineItem.lineNumber || i + 1,
-            productCode: (lineItem.productCode?.trim() || 'UNKNOWN').substring(0, 100),
+            productCode: productCode,
             description: (lineItem.description?.trim() || 'No description').substring(0, 500),
             adjustment: lineItem.adjustment?.trim() || null,
             quantity: this.parseDecimal(transformedLineItem?.quantity || lineItem.quantity || 0),
@@ -930,7 +1105,8 @@ export class CsvImportService {
             costPrice: this.parseDecimal(transformedLineItem?.costPrice || lineItem.cost || 0),
             grossProfitMargin: this.parseDecimal(transformedLineItem?.grossProfitMargin || lineItem.grossProfitMargin || 0),
             grossProfit: this.parseDecimal(transformedLineItem?.grossProfit || lineItem.grossProfit || 0),
-            category: this.categorizeProduct(lineItem.description || lineItem.productCode || 'OTHER')
+            category: this.categorizeProduct(lineItem.description || lineItem.productCode || 'OTHER'),
+            tireMasterProductId: productMap.get(productCode)
           }
         });
       }
@@ -955,16 +1131,20 @@ export class CsvImportService {
         ? Math.max(...existingInvoice.lineItems.map((li: any) => li.lineNumber))
         : 0;
 
+      // Ensure products exist
+      const productMap = await this.ensureProductsExist(tx, lineItems);
+
       // Add new line items with incremented line numbers
       for (let i = 0; i < lineItems.length; i++) {
         const lineItem = lineItems[i];
         const transformedLineItem = transformedData?.lineItems?.[i];
+        const productCode = (lineItem.productCode?.trim() || 'UNKNOWN').substring(0, 100);
 
         await tx.invoiceLineItem.create({
           data: {
             invoiceId: existingInvoice.id,
             lineNumber: maxLineNumber + i + 1,
-            productCode: (lineItem.productCode?.trim() || 'UNKNOWN').substring(0, 100),
+            productCode: productCode,
             description: (lineItem.description?.trim() || 'No description').substring(0, 500),
             adjustment: lineItem.adjustment?.trim() || null,
             quantity: this.parseDecimal(transformedLineItem?.quantity || lineItem.quantity || 0),
@@ -975,7 +1155,8 @@ export class CsvImportService {
             costPrice: this.parseDecimal(transformedLineItem?.costPrice || lineItem.cost || 0),
             grossProfitMargin: this.parseDecimal(transformedLineItem?.grossProfitMargin || lineItem.grossProfitMargin || 0),
             grossProfit: this.parseDecimal(transformedLineItem?.grossProfit || lineItem.grossProfit || 0),
-            category: this.categorizeProduct(lineItem.description || lineItem.productCode || 'OTHER')
+            category: this.categorizeProduct(lineItem.description || lineItem.productCode || 'OTHER'),
+            tireMasterProductId: productMap.get(productCode)
           }
         });
       }

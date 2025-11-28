@@ -44,7 +44,7 @@ import { StoreController } from './controllers/store.controller';
     // GraphQLConfigModule, // Temporarily disabled to isolate CSV import functionality
     PrismaModule,
     RedisModule, // Re-enabled for AppController dependency
-    // AuthModule, // Temporarily disabled for debugging
+    AuthModule, // Temporarily disabled for debugging
     LoggerModule,
     // LibrariesModule, // Temporarily disabled
     // CustomerModule, // Temporarily disabled
@@ -54,13 +54,13 @@ import { StoreController } from './controllers/store.controller';
     // LargeAccountsModule, // Temporarily disabled for debugging
     // NotificationsModule, // Temporarily disabled for debugging
     // AuditModule, // Temporarily disabled for debugging
-    // TireMasterModule, // Temporarily disabled for debugging
+    TireMasterModule,
     CsvImportModule,
     ReconciliationModule,
     InventoryModule,
     BrandsModule,
     TireAnalyticsModule,
-    // AuthModule, // Temporarily disabled for debugging
+    AuthModule,
   ],
   controllers: [AppController, InvoiceController, StoreController], // CsvImportController moved to CsvImportModule
   providers: [], // DateScalar and HealthResolver removed with GraphQL

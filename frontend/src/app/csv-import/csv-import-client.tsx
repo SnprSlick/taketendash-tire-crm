@@ -54,6 +54,13 @@ export default function CsvImportClientPage() {
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [isMounted, setIsMounted] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [updateExisting, setUpdateExisting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    processed: number;
+    total: number;
+    percentage: number;
+    status: string;
+  } | null>(null);
 
   // Track component mounting on client side
   useEffect(() => {
@@ -264,13 +271,60 @@ Troubleshooting:
     }
   };
 
+  const pollProgress = async (batchId: string) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/v1/csv-import/progress/${batchId}`);
+        
+        if (res.status === 404) {
+           // Batch might be done or not found. Stop polling.
+           clearInterval(pollInterval);
+           setLoading(false);
+           window.location.reload();
+           return;
+        }
+
+        const data = await res.json();
+        
+        if (data.success && data.progress) {
+           setUploadProgress({
+             processed: data.progress.processed,
+             total: data.progress.total,
+             percentage: data.progress.percentage,
+             status: data.progress.currentStep
+           });
+
+           // Check if completed (100% or specific status)
+           if (data.progress.percentage === 100 || 
+               data.progress.currentStep.includes('Complete') || 
+               data.progress.currentStep.includes('Finished')) {
+             clearInterval(pollInterval);
+             
+             // Give it a moment to finalize DB writes
+             setTimeout(() => {
+                setLoading(false);
+                window.location.reload();
+             }, 1000);
+           }
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+        // Don't stop polling on transient network errors, but maybe limit retries?
+        // For now, we just log.
+      }
+    }, 1000);
+  };
+
   const handleFileUpload = async () => {
     if (!selectedFile) return;
 
     setLoading(true);
+    setUploadProgress({ processed: 0, total: 0, percentage: 0, status: 'Starting upload...' });
+    
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
+      formData.append('duplicateHandling', updateExisting ? 'UPDATE' : 'SKIP');
 
       const response = await fetch('/api/v1/csv-import/upload', {
         method: 'POST',
@@ -287,29 +341,35 @@ Troubleshooting:
         throw new Error(result.message || 'Import failed');
       }
 
-      setParseResult({
-        success: true,
-        filename: selectedFile.name,
-        totalLines: result.result.totalRecords,
-        totalInvoicesDetected: result.result.successfulRecords,
-        lineItems: result.result.totalRecords,
-        invoices: result.result.successfulRecords,
-        formatValid: true,
-        importBatchId: result.batchId,
-        duration: result.result.processingTimeMs,
-        errors: result.result.errorSummary || [],
-        isHistorical: result.isHistorical || false,
-        originalProcessingDate: result.originalProcessingDate,
-        message: result.message
-      });
-
-      // Refresh the invoice data to show newly imported data
-      window.location.reload();
+      // If we have a batch ID, start polling
+      if (result.batchId) {
+        console.log('Upload started, batch ID:', result.batchId);
+        pollProgress(result.batchId);
+      } else {
+        // Fallback for synchronous or instant completion
+        setParseResult({
+          success: true,
+          filename: selectedFile.name,
+          totalLines: result.result?.totalRecords || 0,
+          totalInvoicesDetected: result.result?.successfulRecords || 0,
+          lineItems: result.result?.totalRecords || 0,
+          invoices: result.result?.successfulRecords || 0,
+          formatValid: true,
+          importBatchId: result.batchId,
+          duration: result.result?.processingTimeMs || 0,
+          errors: result.result?.errorSummary || [],
+          isHistorical: result.isHistorical || false,
+          originalProcessingDate: result.originalProcessingDate,
+          message: result.message
+        });
+        window.location.reload();
+      }
 
     } catch (error) {
       console.error('Upload error:', error);
       setError(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setLoading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -345,6 +405,23 @@ Troubleshooting:
       <div className="max-w-7xl mx-auto">
         <div className="animate-pulse space-y-6">
           <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+          
+          {uploadProgress && (
+            <div className="bg-white border border-blue-200 rounded-lg p-6 shadow-sm">
+              <h3 className="text-lg font-medium text-blue-900 mb-2">Importing Data...</h3>
+              <div className="w-full bg-gray-200 rounded-full h-4 mb-2">
+                <div 
+                  className="bg-blue-600 h-4 rounded-full transition-all duration-500" 
+                  style={{ width: `${uploadProgress.percentage}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>{uploadProgress.status}</span>
+                <span>{uploadProgress.percentage}% ({uploadProgress.processed} / {uploadProgress.total})</span>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[...Array(3)].map((_, i) => (
               <div key={i} className="h-32 bg-gray-200 rounded"></div>
@@ -633,6 +710,20 @@ Troubleshooting:
               className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             />
           </div>
+          
+          <div className="flex items-center">
+            <input
+              id="update-existing"
+              type="checkbox"
+              checked={updateExisting}
+              onChange={(e) => setUpdateExisting(e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="update-existing" className="ml-2 block text-sm text-gray-900">
+              Update existing invoices (slower, but keeps data in sync)
+            </label>
+          </div>
+
           {selectedFile && (
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">Selected: {selectedFile.name}</span>

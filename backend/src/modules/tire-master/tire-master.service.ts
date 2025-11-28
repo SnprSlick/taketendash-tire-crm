@@ -1,5 +1,6 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SyncStatus } from '@prisma/client';
 import {
   SyncTireMasterDataDto,
   TireMasterProductSearchDto,
@@ -129,7 +130,7 @@ export class TireMasterService {
         },
         mappings: {
           include: {
-            crmProduct: true,
+            tireMasterProduct: true,
           },
         },
       },
@@ -215,7 +216,6 @@ export class TireMasterService {
       where,
       include: {
         tireMasterProduct: true,
-        crmProduct: true,
       },
     });
   }
@@ -446,7 +446,31 @@ export class TireMasterService {
   }
 
   private async checkIntegrationHealth() {
-    return this.checkTireMasterConnectivity();
+    const lastSync = await this.getLastSyncInfo();
+    const recentFailures = await this.prisma.tireMasterSyncHistory.count({
+      where: {
+        status: 'FAILED',
+        endTime: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+      }
+    });
+    const totalProducts = await this.prisma.tireMasterProduct.count();
+    const activeMappings = await this.prisma.tireMasterProductMapping.count();
+    const connectivity = await this.checkTireMasterConnectivity();
+    const healthScore = this.calculateHealthScore(lastSync, recentFailures);
+
+    return {
+      healthScore,
+      status: healthScore > 80 ? 'HEALTHY' : healthScore > 50 ? 'WARNING' : 'CRITICAL',
+      lastSuccessfulRefreshCw: lastSync?.endTime,
+      recentFailures,
+      activeMappings,
+      totalProducts,
+      checks: {
+        connectivity,
+        dataRefreshCw: !!lastSync,
+        mappings: activeMappings > 0
+      }
+    };
   }
 
   private async checkTireMasterConnectivity(): Promise<boolean> {
@@ -485,7 +509,7 @@ export class TireMasterService {
       data: {
         syncId,
         syncType,
-        status,
+        status: status as SyncStatus,
         startTime: new Date(),
         endTime: new Date(),
         recordsProcessed: result?.recordsProcessed || 0,

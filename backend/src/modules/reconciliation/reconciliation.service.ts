@@ -267,10 +267,93 @@ export class ReconciliationService {
         });
       }
 
+      // 3. Match with variations (Same Store Only)
+      if (!invoice) {
+        const variations = [];
+        
+        // Extract components: [Store]-[Type][Number] or [Store]-[Type]-[Number]
+        const match = rawInvoiceNumber.match(/^(\d+)-([A-Z]+)-?(\d+)$/);
+        
+        if (match) {
+            const [_, store, type, number] = match;
+            
+            // Try stripping type if it's GS (e.g. 3-GS331116 -> 3-331116)
+            if (type === 'GS') {
+                variations.push(`${store}-${number}`);
+            }
+            
+            // Try adding hyphen to NA if missing (e.g. 3-NA330820 -> 3-NA-330820)
+            if (type === 'NA') {
+                variations.push(`${store}-NA-${number}`);
+            }
+
+            // Try compact format (e.g. 3-GS-331116 -> 3-GS331116)
+            variations.push(`${store}-${type}${number}`);
+            
+            // Try hyphenated format (e.g. 3-GS331116 -> 3-GS-331116)
+            variations.push(`${store}-${type}-${number}`);
+        }
+
+        // Try all variations
+        for (const variant of variations) {
+          // Skip if same as raw or dbInvoiceNumber (already checked)
+          if (variant === rawInvoiceNumber || variant === dbInvoiceNumber) continue;
+
+          invoice = await this.prisma.invoice.findFirst({
+            where: {
+              invoiceNumber: {
+                equals: variant,
+                mode: 'insensitive'
+              }
+            },
+            include: { lineItems: true }
+          });
+          if (invoice) break;
+        }
+      }
+
+      // 4. Last Resort: Match by numeric part only (Must match Store Prefix)
+      if (!invoice) {
+        const numericPart = rawInvoiceNumber.replace(/[^0-9]/g, '');
+        // Extract store prefix from raw invoice number (e.g. "3-")
+        const storePrefixMatch = rawInvoiceNumber.match(/^(\d+)-/);
+        const storePrefix = storePrefixMatch ? storePrefixMatch[1] + '-' : null;
+
+        if (numericPart.length > 4 && storePrefix) { 
+           const potentialMatches = await this.prisma.invoice.findMany({
+             where: {
+               invoiceNumber: {
+                 contains: numericPart,
+                 startsWith: storePrefix // Enforce store prefix
+               }
+             },
+             include: { lineItems: true }
+           });
+
+           // If exactly one match found, assume it's the one
+           if (potentialMatches.length === 1) {
+             invoice = potentialMatches[0];
+           } else if (potentialMatches.length > 1) {
+             // If multiple matches, try to find one with matching amount
+             const amountMatch = potentialMatches.find(inv => 
+               Math.abs(Number(inv.totalAmount) - invoiceAmount) < 0.01
+             );
+             if (amountMatch) invoice = amountMatch;
+           }
+        }
+      }
+
       if (invoice) {
         matchedInvoiceId = invoice.id;
-        // User requested to match only on Invoice Number, ignoring amount differences
-        status = 'MATCHED';
+        // Check for amount discrepancy
+        const invAmount = Number(invoice.totalAmount);
+        const diff = Math.abs(invAmount - invoiceAmount);
+        
+        if (diff < 0.01) {
+            status = 'MATCHED';
+        } else {
+            status = 'DISCREPANCY'; // Found invoice, but amount differs
+        }
       }
     }
 
@@ -379,9 +462,10 @@ export class ReconciliationService {
 
   private formatInvoiceNumberForSearch(raw: string): string {
     // "3-GS320748" -> "3-GS-320748"
-    // "3-NA321261" -> "3-NA-321261"
-    if (raw.match(/^3-[A-Z]{2}\d+$/)) {
-      return raw.replace(/^(3-[A-Z]{2})(\d+)$/, '$1-$2');
+    // "4-NA321261" -> "4-NA-321261"
+    // Generic: [Store]-[Type][Number] -> [Store]-[Type]-[Number]
+    if (raw.match(/^\d+-[A-Z]{2}\d+$/)) {
+      return raw.replace(/^(\d+-[A-Z]{2})(\d+)$/, '$1-$2');
     }
     return raw;
   }

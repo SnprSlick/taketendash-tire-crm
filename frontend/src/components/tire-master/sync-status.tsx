@@ -4,12 +4,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, RefreshCw, Play, Square, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
 interface RefreshCwStatus {
-  activeRefreshCws: {
+  activeSyncs: {
     syncId: string;
     status: string;
     progress: number;
   }[];
-  lastRefreshCw: {
+  lastSync: {
     id: string;
     syncType: string;
     status: string;
@@ -168,22 +168,22 @@ export default function TireMasterRefreshCwStatus({ onBackToOverview }: TireMast
       )}
 
       {/* Active RefreshCws */}
-      {syncStatus?.activeRefreshCws.length > 0 && (
+      {syncStatus?.activeSyncs.length > 0 && (
         <div className="bg-white rounded-lg shadow p-6">
           <div className="mb-4">
             <h2 className="flex items-center text-lg font-medium text-gray-900">
               <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
-              Active RefreshCwhronizations
+              Active Synchronizations
             </h2>
           </div>
           <div>
             <div className="space-y-4">
-              {syncStatus.activeRefreshCws.map((sync) => (
+              {syncStatus.activeSyncs.map((sync) => (
                 <div key={sync.syncId} className="space-y-2">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center space-x-2">
                       {getStatusIcon(sync.status)}
-                      <span className="font-medium">RefreshCw {sync.syncId}</span>
+                      <span className="font-medium">Sync {sync.syncId}</span>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(sync.status)}`}>
                         {sync.status}
                       </span>
@@ -202,22 +202,22 @@ export default function TireMasterRefreshCwStatus({ onBackToOverview }: TireMast
         </div>
       )}
 
-      {/* Start New RefreshCw */}
+      {/* Start New Sync */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="mb-4">
           <h2 className="flex items-center text-lg font-medium text-gray-900">
             <Play className="h-5 w-5 mr-2" />
-            Start Data RefreshCwhronization
+            Start Data Synchronization
           </h2>
           <p className="text-sm text-gray-600">
-            RefreshCw data from Tire Master to the CRM system
+            Sync data from Tire Master to the CRM system
           </p>
         </div>
         <div>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="syncType" className="block text-sm font-medium text-gray-700 mb-1">RefreshCw Type</label>
+                <label htmlFor="syncType" className="block text-sm font-medium text-gray-700 mb-1">Sync Type</label>
                 <select
                   id="syncType"
                   value={selectedRefreshCwType}
@@ -228,7 +228,7 @@ export default function TireMasterRefreshCwStatus({ onBackToOverview }: TireMast
                   <option value="INVENTORY">Inventory Only</option>
                   <option value="PRICES">Prices Only</option>
                   <option value="ORDERS">Orders Only</option>
-                  <option value="FULL">Full RefreshCw (All Data)</option>
+                  <option value="FULL">Full Sync (All Data)</option>
                 </select>
               </div>
               <div>
@@ -245,45 +245,45 @@ export default function TireMasterRefreshCwStatus({ onBackToOverview }: TireMast
             </div>
             <button
               onClick={startRefreshCw}
-              disabled={syncing || syncStatus?.activeRefreshCws.length > 0}
+              disabled={syncing || syncStatus?.activeSyncs.length > 0}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Play className="h-4 w-4 mr-2" />
-              {syncing ? 'Starting RefreshCw...' : 'Start RefreshCwhronization'}
+              {syncing ? 'Starting Sync...' : 'Start Synchronization'}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Last RefreshCw Status */}
-      {syncStatus?.lastRefreshCw && (
+      {/* Last Sync Status */}
+      {syncStatus?.lastSync && (
         <div className="bg-white rounded-lg shadow p-6">
           <div className="mb-4">
-            <h2 className="text-lg font-medium text-gray-900">Last RefreshCwhronization</h2>
+            <h2 className="text-lg font-medium text-gray-900">Last Synchronization</h2>
           </div>
           <div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-1">
                 <p className="text-sm text-gray-500">Status</p>
                 <div className="flex items-center space-x-2">
-                  {getStatusIcon(syncStatus.lastRefreshCw.status)}
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(syncStatus.lastRefreshCw.status)}`}>
-                    {syncStatus.lastRefreshCw.status}
+                  {getStatusIcon(syncStatus.lastSync.status)}
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(syncStatus.lastSync.status)}`}>
+                    {syncStatus.lastSync.status}
                   </span>
                 </div>
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-gray-500">Type</p>
-                <p className="font-medium">{syncStatus.lastRefreshCw.syncType}</p>
+                <p className="font-medium">{syncStatus.lastSync.syncType}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-gray-500">Records Processed</p>
-                <p className="font-medium">{syncStatus.lastRefreshCw.recordsProcessed.toLocaleString()}</p>
+                <p className="font-medium">{syncStatus.lastSync.recordsProcessed.toLocaleString()}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-gray-500">End Time</p>
                 <p className="font-medium">
-                  {formatDateTime(syncStatus.lastRefreshCw.endTime)}
+                  {formatDateTime(syncStatus.lastSync.endTime)}
                 </p>
               </div>
             </div>

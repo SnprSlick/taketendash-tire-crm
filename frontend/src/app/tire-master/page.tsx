@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '@/components/dashboard/dashboard-layout';
-import { AlertCircle, RefreshCw, Search, Package, Truck, Database, Settings } from 'lucide-react';
+import { AlertCircle, RefreshCw, Search, Package, Truck, Database, Settings, Upload, FileText } from 'lucide-react';
 import TireMasterProductSearch from '@/components/tire-master/product-search';
 import TireMasterRefreshCwStatus from '@/components/tire-master/sync-status';
 import TireMasterInventory from '@/components/tire-master/inventory';
+import ImportCenter from '@/components/tire-master/import-center';
+import ReconciliationCenter from '@/components/tire-master/reconciliation';
 
-type ViewType = 'overview' | 'search' | 'sync' | 'inventory' | 'settings';
+type ViewType = 'overview' | 'search' | 'sync' | 'inventory' | 'settings' | 'import' | 'reconciliation';
 
 interface IntegrationHealth {
   healthScore: number;
@@ -141,6 +143,28 @@ export default function TireMasterIntegrationPage() {
               >
                 <Search className="h-4 w-4 mr-1" />
                 Search
+              </button>
+              <button
+                onClick={() => setView('import')}
+                className={`hidden sm:inline-flex items-center px-3 py-2 text-sm font-medium rounded-md border ${
+                  view === 'import'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <Upload className="h-4 w-4 mr-1" />
+                Import
+              </button>
+              <button
+                onClick={() => setView('reconciliation')}
+                className={`hidden sm:inline-flex items-center px-3 py-2 text-sm font-medium rounded-md border ${
+                  view === 'reconciliation'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <FileText className="h-4 w-4 mr-1" />
+                Reconciliation
               </button>
               <button
                 onClick={() => setView('sync')}
@@ -302,7 +326,7 @@ export default function TireMasterIntegrationPage() {
               </div>
 
               {/* Quick Actions */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setView('search')}>
                   <div className="mb-4">
                     <h3 className="flex items-center text-lg font-medium text-gray-900">
@@ -324,10 +348,10 @@ export default function TireMasterIntegrationPage() {
                   <div className="mb-4">
                     <h3 className="flex items-center text-lg font-medium text-gray-900">
                       <RefreshCw className="h-5 w-5 mr-2 text-green-600" />
-                      Data RefreshCwhronization
+                      Data Sync
                     </h3>
                     <p className="text-sm text-gray-600">
-                      RefreshCw products, inventory, and pricing data
+                      Sync products, inventory, and pricing data
                     </p>
                   </div>
                   <div>
@@ -353,6 +377,23 @@ export default function TireMasterIntegrationPage() {
                     </p>
                   </div>
                 </div>
+
+                <div className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setView('import')}>
+                  <div className="mb-4">
+                    <h3 className="flex items-center text-lg font-medium text-gray-900">
+                      <Upload className="h-5 w-5 mr-2 text-orange-600" />
+                      Data Import
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Import data from CSV files
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">
+                      Upload invoices, inventory updates, and brand mappings
+                    </p>
+                  </div>
+                </div>
               </div>
             </>
           )}
@@ -370,6 +411,10 @@ export default function TireMasterIntegrationPage() {
             <TireMasterInventory onBackToOverview={() => setView('overview')} />
           )}
 
+          {view === 'import' && (
+            <ImportCenter />
+          )}
+
           {view === 'settings' && (
             <div className="bg-white rounded-lg shadow p-6">
               <div className="mb-4">
@@ -382,6 +427,10 @@ export default function TireMasterIntegrationPage() {
                 <p className="text-gray-500">Settings panel coming soon...</p>
               </div>
             </div>
+          )}
+
+          {view === 'reconciliation' && (
+            <ReconciliationCenter onBackToOverview={() => setView('overview')} />
           )}
         </div>
       </div>

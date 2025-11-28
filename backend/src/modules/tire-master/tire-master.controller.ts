@@ -19,8 +19,8 @@ import {
   UpdateTireMasterMappingDto,
 } from './dto/tire-master.dto';
 
-@Controller('api/v1/tire-master')
-@UseGuards(JwtAuthGuard)
+@Controller('tire-master')
+// @UseGuards(JwtAuthGuard)
 export class TireMasterController {
   private readonly logger = new Logger(TireMasterController.name);
 

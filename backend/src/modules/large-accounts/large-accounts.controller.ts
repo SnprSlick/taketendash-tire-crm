@@ -18,7 +18,7 @@ import {
 } from './entities/large-account.entity';
 import { LargeAccountType, LargeAccountTier, LargeAccountStatus, ServiceLevel } from '@prisma/client';
 
-@Controller('api/v1/large-accounts')
+@Controller('large-accounts')
 export class LargeAccountsController {
   constructor(private readonly largeAccountsService: LargeAccountsService) {}
 

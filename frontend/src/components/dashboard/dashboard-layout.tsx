@@ -17,7 +17,8 @@ import {
   Package,
   FileText,
   BarChart3,
-  Tag
+  Tag,
+  Disc
 } from 'lucide-react';
 import { useStore } from '../../contexts/store-context';
 
@@ -157,6 +158,12 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
               icon={<Tag className="w-4 h-4" />}
               label="Brands"
               active={isActive('/brands')}
+            />
+            <NavItem
+              href="/tires"
+              icon={<Disc className="w-4 h-4" />}
+              label="Tires"
+              active={isActive('/tires')}
             />
             <NavItem
               href="/tire-master"

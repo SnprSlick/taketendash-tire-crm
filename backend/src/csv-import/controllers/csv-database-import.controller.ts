@@ -9,7 +9,7 @@ import { ImportProgressGateway } from '../gateways/import-progress.gateway';
 import * as fs from 'fs';
 
 @ApiTags('CSV Import - Database')
-@Controller('api/csv-import/database')
+@Controller('csv-import/database')
 export class CsvDatabaseImportController {
   private readonly logger = new Logger(CsvDatabaseImportController.name);
 

@@ -367,6 +367,10 @@ export class TireMasterColumnMapper {
         upper.includes('REPORT') ||
         upper.includes('TOTAL') ||
         upper.includes('SUMMARY') ||
+        upper.includes('LAB-MISC') || // Explicit exclusion
+        upper.includes('LAB MISC') || // Explicit exclusion
+        upper.startsWith('LAB ') ||   // Starts with LAB
+        upper.startsWith('MISC') ||   // Starts with MISC
         upper.includes('$') ||
         upper.includes('%') ||
         /^\d+$/.test(trimmed)) { // Pure numbers
@@ -377,17 +381,42 @@ export class TireMasterColumnMapper {
     // Simple pattern for "JOHNSON STEVE" format - two words, all letters
     const words = trimmed.split(/\s+/).filter(word => word.length > 0);
 
-    // Customer name should be 1-3 words, all alphabetic
+    // Customer name should be 1-3 words
     if (words.length >= 1 && words.length <= 3) {
-      // All words should be primarily alphabetic (allow some punctuation like apostrophes)
-      const allWordsValid = words.every(word =>
-        /^[A-Z][A-Z\s'.-]*$/.test(word) && word.length >= 2
-      );
+      
+      // Check if it's a single word
+      if (words.length === 1) {
+         // Single word must be alphabetic (and > 2 chars)
+         // e.g. "GOOGLE", "AMAZON"
+         // Reject "12345", "OP123", "235/75R15"
+         const word = words[0];
+         // Allow hyphens/apostrophes in single names like "O'REILLY"
+         if (!/^[A-Z][A-Z'.-]*$/.test(word) || word.length < 3) {
+           // Fall through to other checks or return false?
+           // If single word fails this, it's likely not a customer name (unless it's "OG" but that's 2 chars)
+           // "OG" is usually "OG & E" (3 words).
+           // If just "OG", it's too short.
+         } else {
+           return true;
+         }
+      } else {
+        // Multi-word
+        // Allow digits, but must look like a name.
+        // "1ST CHOICE", "A-1 AUTO", "OG & E"
+        
+        const allWordsValid = words.every(word =>
+          // Allow letters, digits, &, ', ., -
+          // Must contain at least one valid char
+          // Exclude / to avoid tire sizes
+          /^[A-Z0-9&][A-Z0-9\s'&.-]*$/.test(word)
+        );
 
-      if (allWordsValid) {
-        // Additional check: at least one word should be longer than 2 characters
-        const hasSubstantialWord = words.some(word => word.length >= 3);
-        return hasSubstantialWord;
+        if (allWordsValid) {
+          // Ensure it's not just a list of numbers "123 456"
+          // At least one word must have letters
+          const hasLetters = words.some(word => /[A-Z]/.test(word));
+          if (hasLetters) return true;
+        }
       }
     }
 
