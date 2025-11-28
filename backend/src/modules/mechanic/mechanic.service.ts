@@ -83,9 +83,12 @@ export class MechanicService {
         SUM(CASE WHEN (ml.category ILIKE '%Service Truck Mileage%' OR ml.category ILIKE '%SRVT Service Truck%') THEN ml.quantity ELSE 0 END) as "totalMiles",
         MAX(e.status) as "status",
         MAX(e.role) as "role",
-        BOOL_OR(e."isMechanic") as "isMechanic"
+        BOOL_OR(e."isMechanic") as "isMechanic",
+        STRING_AGG(DISTINCT s.code, ', ') as "storeCodes"
       FROM mechanic_labor ml
       LEFT JOIN employees e ON LOWER(ml.mechanic_name) = LOWER(CONCAT(e."firstName", ' ', e."lastName"))
+      LEFT JOIN "_EmployeeToStore" es ON e.id = es."A"
+      LEFT JOIN stores s ON es."B" = s.id
       GROUP BY ml.mechanic_name
       ORDER BY ml.mechanic_name ASC
     `;
@@ -102,7 +105,8 @@ export class MechanicService {
       totalMiles: Number(item.totalMiles) || 0,
       status: item.status || 'UNKNOWN',
       role: item.role || 'UNKNOWN',
-      isMechanic: item.isMechanic === true
+      isMechanic: item.isMechanic === true,
+      storeCodes: item.storeCodes ? item.storeCodes.split(', ').sort().join(', ') : ''
     }));
   }
 

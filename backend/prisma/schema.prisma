@@ -162,6 +162,7 @@ model Employee {
   serviceRecords   ServiceRecord[]
   appointments     Appointment[]
   salesData        SalesData[]
+  stores           Store[]
 
   @@index([role])
   @@map("employees")
@@ -392,6 +393,7 @@ model Store {
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
   invoices    Invoice[]
+  employees   Employee[]
 
   @@map("stores")
 }

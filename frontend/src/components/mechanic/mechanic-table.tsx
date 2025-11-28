@@ -62,9 +62,10 @@ interface MechanicSummary {
   status: string;
   role: string;
   isMechanic?: boolean;
+  storeCodes?: string;
 }
 
-type SortKey = 'mechanicName' | 'totalParts' | 'totalLabor' | 'totalGrossProfit' | 'totalHours' | 'totalMiles';
+type SortKey = 'mechanicName' | 'totalParts' | 'totalLabor' | 'totalGrossProfit' | 'totalHours' | 'totalMiles' | 'storeCodes';
 type SortDirection = 'asc' | 'desc';
 
 export default function MechanicTable() {
@@ -309,6 +310,15 @@ export default function MechanicTable() {
                 </div>
               </th>
               <th 
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('storeCodes')}
+              >
+                <div className="flex items-center">
+                  Store(s)
+                  <SortIcon column="storeCodes" />
+                </div>
+              </th>
+              <th 
                 className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('totalHours')}
               >
@@ -391,6 +401,15 @@ export default function MechanicTable() {
                       {mechanic.mechanicName}
                       <span className="ml-2 text-xs font-normal text-gray-500">({mechanic.itemCount} items)</span>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {mechanic.storeCodes ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {mechanic.storeCodes}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 italic">None</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-semibold">{formatNumber(mechanic.totalHours)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-semibold">{formatNumber(mechanic.totalMiles)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-semibold">{formatCurrency(mechanic.totalParts)}</td>
@@ -424,6 +443,7 @@ export default function MechanicTable() {
                             </span>
                           )}
                         </td>
+                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600"></td>
                         <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600 text-right">{formatNumber(invoice.totalHours)}</td>
                         <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600 text-right">{formatNumber(invoice.totalMiles)}</td>
                         <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600 text-right">{formatCurrency(invoice.totalParts)}</td>
@@ -443,6 +463,7 @@ export default function MechanicTable() {
                               </span>
                             </div>
                           </td>
+                          <td className="px-6 py-2"></td>
                           <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-500 text-right">
                             {(item.category.toLowerCase().includes('service truck mileage') || item.category.toLowerCase().includes('srvt service truck')) ? '-' : (Number(item.labor) > 0 && Number(item.quantity) > 0 ? formatNumber(item.quantity) : '-')}
                           </td>

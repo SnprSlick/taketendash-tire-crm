@@ -340,3 +340,30 @@ This comprehensive debugging session successfully resolved a **systemic failure*
 - `frontend/src/components/mechanic/mechanic-table.tsx`
 - `frontend/src/components/mechanic/mechanic-analytics.tsx`
 - `backend/src/modules/mechanic/mechanic.service.ts`
+
+### ✅ 5. Mechanic Store Assignment
+**Problem**: Mechanics needed to be assigned to stores based on the invoice numbers they worked on (first digit/segment of invoice #).
+**Solution**:
+- Updated `schema.prisma` to add Many-to-Many relationship between `Employee` and `Store`.
+- Created and ran a backfill script `backend/scripts/assign-mechanic-stores.ts` to process existing `MechanicLabor` records and link employees to stores.
+- Updated `MechanicService` to include `storeCodes` in the summary query.
+- Updated `MechanicTable` to display the assigned stores.
+**Files Changed**:
+- `backend/prisma/schema.prisma`
+- `backend/scripts/assign-mechanic-stores.ts` (Created)
+- `backend/src/modules/mechanic/mechanic.service.ts`
+- `frontend/src/components/mechanic/mechanic-table.tsx`
+
+### ✅ 6. Mechanic Classification Backfill
+**Problem**: After adding `isMechanic` field, existing employees defaulted to `false`, causing them to be hidden or misclassified as non-mechanics.
+**Solution**: Created and ran `backend/scripts/fix-mechanic-classification.ts` to backfill `isMechanic = true` for all employees with `role = TECHNICIAN`.
+**Files Changed**:
+- `backend/scripts/fix-mechanic-classification.ts` (Created)
+
+### ✅ 7. Store Cleanup and Renaming
+**Problem**: Store 3 was named "Store 3" instead of "Tulsa West". Stores 101 and 102 existed but were invalid/empty.
+**Solution**:
+- Renamed Store 3 to "Tulsa West".
+- Deleted empty Stores 101 and 102.
+**Files Changed**:
+- `backend/scripts/fix-stores.ts` (Created)
