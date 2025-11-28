@@ -20,6 +20,7 @@ import * as path from 'path';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody } from '../utils/mock-swagger';
 import { CsvImportService } from '../services/csv-import.service';
 import { InventoryImportService } from '../services/inventory-import.service';
+import { EmployeeImportService } from '../services/employee-import.service';
 import { ImportBatchService } from '../services/import-batch.service';
 import { FileMonitorSchedulerService } from '../services/file-monitor-scheduler.service';
 import { RollbackService } from '../services/rollback.service';
@@ -46,6 +47,7 @@ export class CsvImportController {
   constructor(
     private readonly csvImportService: CsvImportService,
     private readonly inventoryImportService: InventoryImportService,
+    private readonly employeeImportService: EmployeeImportService,
     private readonly importBatchService: ImportBatchService,
     private readonly fileMonitorScheduler: FileMonitorSchedulerService,
     private readonly rollbackService: RollbackService
@@ -544,6 +546,50 @@ export class CsvImportController {
     return {
       success: true,
       message: 'Database cleared successfully'
+    };
+  }
+
+  /**
+   * Import employee list CSV
+   */
+  @Post('employees')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Import employee list CSV' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  async importEmployees(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    this.logger.log(`Received employee import request: ${file.originalname}`);
+    
+    // Read file buffer directly since we're using memory storage or need to read it now
+    // Note: If using diskStorage, file.buffer might be undefined, use fs.readFileSync(file.path)
+    let buffer: Buffer;
+    if (file.buffer) {
+      buffer = file.buffer;
+    } else if (file.path) {
+      buffer = fs.readFileSync(file.path);
+    } else {
+      throw new BadRequestException('Could not read file content');
+    }
+
+    const result = await this.employeeImportService.importEmployees(buffer);
+    
+    return {
+      message: 'Employee import completed',
+      ...result
     };
   }
 }

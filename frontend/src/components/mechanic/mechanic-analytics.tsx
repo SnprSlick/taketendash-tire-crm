@@ -13,6 +13,9 @@ interface MechanicAnalyticsData {
   laborPerHour: number;
   profitPerHour: number;
   efficiency: number;
+  status: string;
+  role: string;
+  isMechanic?: boolean;
 }
 
 type SortKey = 'mechanicName' | 'businessHoursAvailable' | 'totalBilledHours' | 'efficiency' | 'laborPerHour' | 'profitPerHour';
@@ -23,6 +26,8 @@ export default function MechanicAnalytics() {
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>('profitPerHour');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [showInactive, setShowInactive] = useState(false);
+  const [showNonMechanics, setShowNonMechanics] = useState(false);
 
   useEffect(() => {
     fetch('http://localhost:3001/api/v1/mechanic/analytics')
@@ -46,8 +51,23 @@ export default function MechanicAnalytics() {
     }
   };
 
+  const filteredData = useMemo(() => {
+    return data.filter(m => {
+      if (!showInactive && m.status === 'INACTIVE') return false;
+      
+      if (!showNonMechanics) {
+        if (m.isMechanic === true) return true;
+        if (m.role === 'UNKNOWN') return true;
+        if (m.isMechanic === undefined && m.role === 'TECHNICIAN') return true;
+        return false;
+      }
+      
+      return true;
+    });
+  }, [data, showInactive, showNonMechanics]);
+
   const sortedData = useMemo(() => {
-    return [...data].sort((a, b) => {
+    return [...filteredData].sort((a, b) => {
       const aValue = a[sortKey];
       const bValue = b[sortKey];
 
@@ -61,7 +81,7 @@ export default function MechanicAnalytics() {
       const numB = Number(bValue) || 0;
       return sortDirection === 'asc' ? numA - numB : numB - numA;
     });
-  }, [data, sortKey, sortDirection]);
+  }, [filteredData, sortKey, sortDirection]);
 
   const SortIcon = ({ column }: { column: SortKey }) => {
     if (sortKey !== column) return <ArrowUpDown size={14} className="ml-1 text-gray-400" />;
@@ -74,13 +94,33 @@ export default function MechanicAnalytics() {
 
   return (
     <div className="space-y-8">
+      <div className="flex justify-end space-x-4 px-4">
+          <label className="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showInactive}
+              onChange={(e) => setShowInactive(e.target.checked)}
+              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <span>Show Inactive</span>
+          </label>
+          <label className="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showNonMechanics}
+              onChange={(e) => setShowNonMechanics(e.target.checked)}
+              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <span>Show Non-Mechanics</span>
+          </label>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-lg font-semibold mb-4 text-gray-900">Top 10: Profit per Business Hour</h3>
           <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
-                data={[...data].sort((a, b) => b.profitPerHour - a.profitPerHour).slice(0, 10)} 
+                data={[...filteredData].sort((a, b) => b.profitPerHour - a.profitPerHour).slice(0, 10)} 
                 layout="vertical" 
                 margin={{ left: 40, right: 40 }}
               >
@@ -102,7 +142,7 @@ export default function MechanicAnalytics() {
           <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
-                data={[...data].sort((a, b) => b.laborPerHour - a.laborPerHour).slice(0, 10)} 
+                data={[...filteredData].sort((a, b) => b.efficiency - a.efficiency).slice(0, 10)} 
                 layout="vertical" 
                 margin={{ left: 40, right: 40 }}
               >

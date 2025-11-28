@@ -74,16 +74,20 @@ export class MechanicService {
   async getMechanicSummary() {
     const summary = await this.prisma.$queryRaw<any[]>`
       SELECT 
-        mechanic_name as "mechanicName",
-        SUM(labor) as "totalLabor",
-        SUM(parts) as "totalParts",
-        SUM(gross_profit) as "totalGrossProfit",
-        COUNT(id) as "itemCount",
-        SUM(CASE WHEN labor > 0 AND NOT (category ILIKE '%Service Truck Mileage%' OR category ILIKE '%SRVT Service Truck%') THEN quantity ELSE 0 END) as "totalHours",
-        SUM(CASE WHEN (category ILIKE '%Service Truck Mileage%' OR category ILIKE '%SRVT Service Truck%') THEN quantity ELSE 0 END) as "totalMiles"
-      FROM mechanic_labor
-      GROUP BY mechanic_name
-      ORDER BY mechanic_name ASC
+        ml.mechanic_name as "mechanicName",
+        SUM(ml.labor) as "totalLabor",
+        SUM(ml.parts) as "totalParts",
+        SUM(ml.gross_profit) as "totalGrossProfit",
+        COUNT(ml.id) as "itemCount",
+        SUM(CASE WHEN ml.labor > 0 AND NOT (ml.category ILIKE '%Service Truck Mileage%' OR ml.category ILIKE '%SRVT Service Truck%') THEN ml.quantity ELSE 0 END) as "totalHours",
+        SUM(CASE WHEN (ml.category ILIKE '%Service Truck Mileage%' OR ml.category ILIKE '%SRVT Service Truck%') THEN ml.quantity ELSE 0 END) as "totalMiles",
+        MAX(e.status) as "status",
+        MAX(e.role) as "role",
+        BOOL_OR(e."isMechanic") as "isMechanic"
+      FROM mechanic_labor ml
+      LEFT JOIN employees e ON LOWER(ml.mechanic_name) = LOWER(CONCAT(e."firstName", ' ', e."lastName"))
+      GROUP BY ml.mechanic_name
+      ORDER BY ml.mechanic_name ASC
     `;
 
     console.log('Summary raw result sample:', summary[0]);
@@ -96,21 +100,28 @@ export class MechanicService {
       itemCount: Number(item.itemCount) || 0,
       totalHours: Number(item.totalHours) || 0,
       totalMiles: Number(item.totalMiles) || 0,
+      status: item.status || 'UNKNOWN',
+      role: item.role || 'UNKNOWN',
+      isMechanic: item.isMechanic === true
     }));
   }
 
   async getMechanicAnalytics() {
     const data = await this.prisma.$queryRaw<any[]>`
       SELECT 
-        mechanic_name as "mechanicName",
-        SUM(labor) as "totalLabor",
-        SUM(gross_profit) as "totalGrossProfit",
-        MIN(created_at) as "firstSeen",
-        MAX(created_at) as "lastSeen",
-        SUM(CASE WHEN labor > 0 AND NOT (category ILIKE '%Service Truck Mileage%' OR category ILIKE '%SRVT Service Truck%') THEN quantity ELSE 0 END) as "totalBilledHours"
-      FROM mechanic_labor
-      GROUP BY mechanic_name
-      ORDER BY mechanic_name ASC
+        ml.mechanic_name as "mechanicName",
+        SUM(ml.labor) as "totalLabor",
+        SUM(ml.gross_profit) as "totalGrossProfit",
+        MIN(ml.created_at) as "firstSeen",
+        MAX(ml.created_at) as "lastSeen",
+        SUM(CASE WHEN ml.labor > 0 AND NOT (ml.category ILIKE '%Service Truck Mileage%' OR ml.category ILIKE '%SRVT Service Truck%') THEN ml.quantity ELSE 0 END) as "totalBilledHours",
+        MAX(e.status) as "status",
+        MAX(e.role) as "role",
+        BOOL_OR(e."isMechanic") as "isMechanic"
+      FROM mechanic_labor ml
+      LEFT JOIN employees e ON LOWER(ml.mechanic_name) = LOWER(CONCAT(e."firstName", ' ', e."lastName"))
+      GROUP BY ml.mechanic_name
+      ORDER BY ml.mechanic_name ASC
     `;
 
     return data.map(item => {
@@ -132,7 +143,10 @@ export class MechanicService {
         businessHoursAvailable: businessHours,
         laborPerHour: businessHours > 0 ? totalLabor / businessHours : 0,
         profitPerHour: businessHours > 0 ? totalGrossProfit / businessHours : 0,
-        efficiency: businessHours > 0 ? (totalBilledHours / businessHours) * 100 : 0
+        efficiency: businessHours > 0 ? (totalBilledHours / businessHours) * 100 : 0,
+        status: item.status || 'UNKNOWN',
+        role: item.role || 'UNKNOWN',
+        isMechanic: item.isMechanic === true
       };
     });
   }

@@ -21,6 +21,7 @@ import { FileArchiverService } from './services/file-archiver.service';
 import { MockConfigService } from './services/mock-config.service';
 import { DatabaseImportService } from './services/database-import.service';
 import { InventoryImportService } from './services/inventory-import.service';
+import { EmployeeImportService } from './services/employee-import.service';
 
 // Controllers
 import { CsvImportController } from './controllers/csv-import.controller';
@@ -86,6 +87,7 @@ import { TireMasterDataTransformer } from './mappers/tiremaster-data-transformer
     RollbackService,
     DatabaseImportService,
     InventoryImportService,
+    EmployeeImportService,
 
     // Monitoring Services
     FileMonitorSchedulerService,
@@ -118,6 +120,7 @@ import { TireMasterDataTransformer } from './mappers/tiremaster-data-transformer
     RollbackService,
     DatabaseImportService,
     InventoryImportService,
+    EmployeeImportService,
 
     // Export monitoring services
     FileMonitorSchedulerService,

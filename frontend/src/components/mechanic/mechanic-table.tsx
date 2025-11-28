@@ -59,6 +59,9 @@ interface MechanicSummary {
   itemCount: number;
   totalHours: number;
   totalMiles: number;
+  status: string;
+  role: string;
+  isMechanic?: boolean;
 }
 
 type SortKey = 'mechanicName' | 'totalParts' | 'totalLabor' | 'totalGrossProfit' | 'totalHours' | 'totalMiles';
@@ -70,6 +73,8 @@ export default function MechanicTable() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [showInactive, setShowInactive] = useState(false);
+  const [showNonMechanics, setShowNonMechanics] = useState(false);
   
   // Sorting state
   const [sortKey, setSortKey] = useState<SortKey>('mechanicName');
@@ -201,9 +206,28 @@ export default function MechanicTable() {
   };
 
   const sortedData = useMemo(() => {
-    const filtered = summaryData.filter(m => 
-      m.mechanicName.toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = summaryData.filter(m => {
+      const matchesSearch = m.mechanicName.toLowerCase().includes(search.toLowerCase());
+      if (!matchesSearch) return false;
+
+      if (!showInactive && m.status === 'INACTIVE') return false;
+      
+      // Filter non-mechanics
+      // Show if:
+      // 1. showNonMechanics is true OR
+      // 2. isMechanic is true OR
+      // 3. role is UNKNOWN (might be a mechanic not yet in system)
+      if (!showNonMechanics) {
+        if (m.isMechanic === true) return true;
+        if (m.role === 'UNKNOWN') return true;
+        // Fallback for backward compatibility if isMechanic missing
+        if (m.isMechanic === undefined && m.role === 'TECHNICIAN') return true;
+        
+        return false;
+      }
+
+      return true;
+    });
 
     return filtered.sort((a, b) => {
       const aValue = a[sortKey];
@@ -224,7 +248,7 @@ export default function MechanicTable() {
         ? strA.localeCompare(strB) 
         : strB.localeCompare(strA);
     });
-  }, [summaryData, search, sortKey, sortDirection]);
+  }, [summaryData, search, sortKey, sortDirection, showInactive, showNonMechanics]);
 
   const SortIcon = ({ column }: { column: SortKey }) => {
     if (sortKey !== column) return <ArrowUpDown size={14} className="ml-1 text-gray-400" />;
@@ -238,7 +262,7 @@ export default function MechanicTable() {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center px-4 py-2 bg-white rounded-lg shadow-sm">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-4">
           <input
             type="text"
             placeholder="Search mechanics..."
@@ -246,6 +270,24 @@ export default function MechanicTable() {
             onChange={(e) => setSearch(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
+          <label className="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showInactive}
+              onChange={(e) => setShowInactive(e.target.checked)}
+              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <span>Show Inactive</span>
+          </label>
+          <label className="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showNonMechanics}
+              onChange={(e) => setShowNonMechanics(e.target.checked)}
+              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <span>Show Non-Mechanics</span>
+          </label>
         </div>
         <div className="text-sm text-gray-500">
           Showing {sortedData.length} Mechanics

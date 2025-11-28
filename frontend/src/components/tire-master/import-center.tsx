@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { FileText, Package, Tag, Upload, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
+import { FileText, Package, Tag, Upload, Trash2, CheckCircle, AlertCircle, Users } from 'lucide-react';
 import CsvImportClientPage from '../../app/csv-import/csv-import-client';
 
-type ImportType = 'invoices' | 'inventory' | 'brands';
+type ImportType = 'invoices' | 'inventory' | 'brands' | 'employees';
 
 export default function ImportCenter() {
   const [activeTab, setActiveTab] = useState<ImportType>('invoices');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'inventory' | 'brands') => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'inventory' | 'brands' | 'employees') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -20,8 +20,12 @@ export default function ImportCenter() {
     formData.append('file', file);
 
     try {
-      const endpoint = type === 'inventory' ? '/api/v1/csv-import/inventory' : '/api/v1/csv-import/brands';
-      const res = await fetch(endpoint, {
+      let endpoint = '';
+      if (type === 'inventory') endpoint = '/api/v1/csv-import/inventory';
+      else if (type === 'brands') endpoint = '/api/v1/csv-import/brands';
+      else if (type === 'employees') endpoint = '/api/v1/csv-import/employees';
+
+      const res = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
         body: formData,
       });
@@ -29,7 +33,7 @@ export default function ImportCenter() {
       if (!res.ok) throw new Error('Upload failed');
 
       const data = await res.json();
-      setMessage({ type: 'success', text: `${type === 'inventory' ? 'Inventory' : 'Brands'} imported successfully! Processed: ${data.processed}` });
+      setMessage({ type: 'success', text: `${type.charAt(0).toUpperCase() + type.slice(1)} imported successfully! Processed: ${data.processed}` });
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Upload failed' });
     } finally {
@@ -97,6 +101,17 @@ export default function ImportCenter() {
           >
             <Tag className="h-4 w-4 mr-2" />
             Brand Import
+          </button>
+          <button
+            onClick={() => setActiveTab('employees')}
+            className={`${
+              activeTab === 'employees'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+          >
+            <Users className="h-4 w-4 mr-2" />
+            Employee Import
           </button>
         </nav>
       </div>
@@ -176,6 +191,28 @@ export default function ImportCenter() {
                 <Trash2 className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
                 Clear Database
               </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'employees' && (
+          <div className="text-center py-12">
+            <Users className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">Employee Import</h3>
+            <p className="mt-1 text-sm text-gray-500">Upload employee list CSV to update roles and statuses.</p>
+            
+            <div className="mt-6 flex justify-center space-x-4">
+              <label className="cursor-pointer inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                <Upload className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+                {loading ? 'Uploading...' : 'Upload Employee CSV'}
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  accept=".csv" 
+                  onChange={(e) => handleFileUpload(e, 'employees')} 
+                  disabled={loading}
+                />
+              </label>
             </div>
           </div>
         )}

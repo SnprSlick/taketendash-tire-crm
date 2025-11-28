@@ -305,3 +305,38 @@ This comprehensive debugging session successfully resolved a **systemic failure*
 4. **End-to-End Validation**: Confirmed working database persistence and API functionality
 
 **Result**: CSV import system is now fully operational with successful data persistence confirmed.
+
+## Session Summary
+**Date**: 2025-11-28
+**Primary Issue**: User requested to simplify employee import role assignment to "Mechanic Yes or No".
+
+## Changes Implemented
+### ✅ 1. Schema Update
+**Problem**: User wanted a simple boolean flag for mechanics instead of relying solely on `EmployeeRole` enum.
+**Solution**: Added `isMechanic` Boolean field to `Employee` model.
+**Files Changed**:
+- `backend/prisma/schema.prisma`: Added `isMechanic Boolean @default(false)` to `Employee` model.
+
+### ✅ 2. Import Logic Update
+**Problem**: Import logic was mapping "Mechanic Yes/No" to `EmployeeRole` in a complex way.
+**Solution**: Updated `EmployeeImportService` to:
+- Populate `isMechanic` field based on CSV column.
+- Simplify `role` assignment: "Yes" -> `TECHNICIAN`, "No" -> `SERVICE_ADVISOR`.
+**Files Changed**:
+- `backend/src/csv-import/services/employee-import.service.ts`: Updated `importEmployees` method.
+
+### ✅ 3. Database Migration
+**Action**: Pushed schema changes to database using `npx prisma db push`.
+**Result**: Database schema updated successfully.
+
+### ✅ 4. Mechanic Page Toggle Fix
+**Problem**: "Show Inactive" and "Show Non-Mechanics" toggles were not working on the Mechanic Data page (table view).
+**Root Cause**: Missing dependencies (`showInactive`, `showNonMechanics`) in the `useMemo` hook in `mechanic-table.tsx`.
+**Solution**: 
+- Added missing dependencies to `useMemo`.
+- Updated backend `MechanicService` to return `isMechanic` field.
+- Updated frontend filtering logic in both `mechanic-table.tsx` and `mechanic-analytics.tsx` to use `isMechanic` field for more accurate filtering.
+**Files Changed**:
+- `frontend/src/components/mechanic/mechanic-table.tsx`
+- `frontend/src/components/mechanic/mechanic-analytics.tsx`
+- `backend/src/modules/mechanic/mechanic.service.ts`
