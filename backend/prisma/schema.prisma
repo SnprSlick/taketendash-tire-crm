@@ -867,3 +867,21 @@ model ReconciliationRecord {
   @@map("reconciliation_records")
 }
 
+model MechanicLabor {
+  id            String   @id @default(cuid())
+  mechanicName  String   @map("mechanic_name")
+  category      String
+  invoiceNumber String   @map("invoice_number")
+  productCode   String   @map("product_code")
+  quantity      Decimal  @db.Decimal(10, 2)
+  parts         Decimal  @db.Decimal(10, 2)
+  labor         Decimal  @db.Decimal(10, 2)
+  totalCost     Decimal  @map("total_cost") @db.Decimal(10, 2)
+  grossProfit   Decimal  @map("gross_profit") @db.Decimal(10, 2)
+  gpPercent     Decimal  @map("gp_percent") @db.Decimal(10, 2)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("mechanic_labor")
+}
+

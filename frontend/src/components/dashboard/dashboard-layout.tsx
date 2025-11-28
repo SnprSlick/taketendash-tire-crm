@@ -18,7 +18,8 @@ import {
   FileText,
   BarChart3,
   Tag,
-  Disc
+  Disc,
+  Wrench
 } from 'lucide-react';
 import { useStore } from '../../contexts/store-context';
 
@@ -140,6 +141,12 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
               icon={<ClipboardCheck className="w-4 h-4" />}
               label="Reconciliation"
               active={isActive('/dashboard/reconciliation')}
+            />
+            <NavItem
+              href="/mechanic"
+              icon={<Wrench className="w-4 h-4" />}
+              label="Mechanic"
+              active={isActive('/mechanic')}
             />
             <NavItem
               href="/dashboard/inventory"
