@@ -1,6 +1,6 @@
 
-import { PrismaClient, TireType } from '@prisma/client';
-import { classifyProduct } from '../src/utils/tire-classifier';
+import { PrismaClient, TireType, TireQuality } from '@prisma/client';
+import { classifyProduct, classifyBrandQuality } from '../src/utils/tire-classifier';
 
 const prisma = new PrismaClient();
 
@@ -15,7 +15,10 @@ async function main() {
       description: true,
       size: true,
       type: true,
-      isTire: true
+      isTire: true,
+      brand: true,
+      manufacturerCode: true,
+      quality: true
     }
   });
 
@@ -31,17 +34,31 @@ async function main() {
       size: product.size
     });
 
+    let quality: TireQuality = TireQuality.UNKNOWN;
+    
+    // Only classify quality if it's a tire
     if (classification.isTire) {
       tiresFound++;
+      quality = classifyBrandQuality(product.brand, product.manufacturerCode);
     }
 
-    // Only update if classification changed
-    if (product.type !== classification.type || product.isTire !== classification.isTire) {
+    // Debug first few items
+    if (updates < 5 && product.quality !== quality) {
+       console.log(`Updating ${product.tireMasterSku}: Quality ${product.quality} -> ${quality}`);
+    }
+
+    // Only update if classification or quality changed
+    if (
+      product.type !== classification.type || 
+      product.isTire !== classification.isTire ||
+      product.quality !== quality
+    ) {
       await prisma.tireMasterProduct.update({
         where: { id: product.id },
         data: {
           type: classification.type,
-          isTire: classification.isTire
+          isTire: classification.isTire,
+          quality: quality
         }
       });
       updates++;

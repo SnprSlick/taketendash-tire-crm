@@ -1,5 +1,5 @@
 
-import { TireType } from '@prisma/client';
+import { TireType, TireQuality } from '@prisma/client';
 
 interface ClassificationRule {
   id: TireType;
@@ -8,6 +8,49 @@ interface ClassificationRule {
   sizePatterns: RegExp[];
   keywords: (string | RegExp)[];
   excludeKeywords: string[];
+}
+
+const premiumBrands = ["MICHELIN", "BRIDGESTONE", "GOODYEAR", "CONTINENTAL", "PIRELLI", "DUNLOP", "YOKOHAMA", "TOYO"];
+const standardBrands = ["FIRESTONE", "BFGOODRICH", "COOPER", "HANKOOK", "FALKEN", "KUMHO", "NITTO", "GENERAL", "KELLY", "SUMITOMO", "NEXEN", "UNIROYAL", "MAXXIS"];
+const economyBrands = ["SAILUN", "WESTLAKE", "BLACKHAWK", "IRONMAN", "MASTERCRAFT", "STARFIRE", "LINGLONG", "DOUBLE COIN", "SAMSON", "DEESTONE", "AMERICUS", "FUZION", "OHTSU", "ZEETEX", "TRIANGLE", "GALAXY", "BKT", "ALLIANCE", "PRINX", "FORTUNE", "MULTI-MILE", "POWER KING", "TRAILER KING", "CARLISLE"];
+
+// Mapping from Manufacturer Code to Brand Name
+export const BRAND_MAPPING: Record<string, string> = {
+  'GY': 'Goodyear', 'MI': 'Michelin', 'BFG': 'BFGoodrich', 'BRI': 'Bridgestone', 'FIR': 'Firestone',
+  'CON': 'Continental', 'DUN': 'Dunlop', 'HAN': 'Hankook', 'KUM': 'Kumho', 'NEX': 'Nexen',
+  'NIT': 'Nitto', 'PIR': 'Pirelli', 'TOY': 'Toyo', 'YOK': 'Yokohama', 'COO': 'Cooper',
+  'FAL': 'Falken', 'GEN': 'General', 'GTR': 'GT Radial', 'HER': 'Hercules', 'IRO': 'Ironman',
+  'KEL': 'Kelly', 'MAS': 'Mastercraft', 'MIC': 'Mickey Thompson', 'MUL': 'Multi-Mile',
+  'SUM': 'Sumitomo', 'UNI': 'Uniroyal', 'VOG': 'Vogue', 'AC': 'AC Delco', 'ALC': 'Alcoa',
+  'ALL': 'Alliance', 'AMR': 'Americus', 'AR': 'American Racing', 'AS': 'Armstrong',
+  'BAN': 'Bandag', 'BEN': 'Bendix', 'BG': 'BG Products', 'BKT': 'BKT', 'BLKH': 'Blackhawk',
+  'CAL': 'Cachland', 'CAR': 'Carlisle', 'CAS': 'Castrol', 'CEN': 'Centramatic', 'CHE': 'Havoline',
+  'CRP': 'CRP', 'DBLC': 'Double Coin', 'DEE': 'Deestone', 'DEL': 'Delinte', 'DURO': 'Duro',
+  'DYNT': 'Dynatrac', 'FUZ': 'Fuzion', 'GAL': 'Galaxy', 'KEN': 'Kenda', 'LING': 'Linglong',
+  'MAST': 'Mastercraft', 'MAX': 'Maxxis', 'MAXAM': 'Maxam', 'MCH': 'Michelin', 'MISC': 'Miscellaneous',
+  'MOB': 'Mobil', 'MSTRK': 'Mastertrack', 'OTAN': 'Ohtsu', 'OTR': 'OTR', 'PEN': 'Pennzoil',
+  'PIRNX': 'Pirelli', 'PWRK': 'Power King', 'RHEMA': 'Rema Tip Top', 'ROAD': 'Roadmaster',
+  'SAI': 'Sailun', 'SAM': 'Samson', 'SCH': 'Schrader', 'STAR': 'Starfire', 'TIT': 'Titan',
+  'TRAN': 'Triangle', 'USED': 'Used Tires', 'VAL': 'Valvoline', 'VEE': 'Vee Rubber',
+  'WAG': 'Wagner', 'WES': 'Westlake', 'ZEE': 'Zeetex'
+};
+
+export function classifyBrandQuality(brand: string, manufacturerCode?: string | null): TireQuality {
+  let checkBrand = brand;
+  
+  // If we have a manufacturer code, try to resolve it to a full brand name
+  if (manufacturerCode && BRAND_MAPPING[manufacturerCode]) {
+    checkBrand = BRAND_MAPPING[manufacturerCode];
+  }
+
+  if (!checkBrand) return TireQuality.UNKNOWN;
+  const upperBrand = checkBrand.toUpperCase();
+  
+  if (premiumBrands.some(b => upperBrand.includes(b))) return TireQuality.PREMIUM;
+  if (standardBrands.some(b => upperBrand.includes(b))) return TireQuality.STANDARD;
+  if (economyBrands.some(b => upperBrand.includes(b))) return TireQuality.ECONOMY;
+  
+  return TireQuality.UNKNOWN;
 }
 
 const rules: ClassificationRule[] = [

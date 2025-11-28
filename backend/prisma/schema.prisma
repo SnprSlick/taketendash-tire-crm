@@ -509,6 +509,13 @@ enum TireSeason {
   WINTER
 }
 
+enum TireQuality {
+  PREMIUM
+  STANDARD
+  ECONOMY
+  UNKNOWN
+}
+
 enum SyncStatus {
   PENDING
   RUNNING
@@ -566,6 +573,7 @@ model TireMasterProduct {
   size             String                       @db.VarChar(50)
   type             TireType
   season           TireSeason
+  quality          TireQuality                  @default(UNKNOWN)
   description      String?                      @db.Text
   weight           Decimal?                     @db.Decimal(8, 2)
   laborPrice       Decimal?                     @map("labor_price") @db.Decimal(10, 2)
