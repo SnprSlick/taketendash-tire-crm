@@ -35,8 +35,35 @@ export class MechanicService {
   }
 
   async createMany(dtos: CreateMechanicLaborDto[]) {
+    // Check for existing invoices to avoid FK constraint errors
+    const invoiceNumbers = [...new Set(dtos.map(d => d.invoiceNumber))];
+    
+    // Chunk the invoice check to avoid "too many parameters" error if list is huge
+    const chunkSize = 1000;
+    const existingInvoiceSet = new Set<string>();
+    
+    for (let i = 0; i < invoiceNumbers.length; i += chunkSize) {
+        const chunk = invoiceNumbers.slice(i, i + chunkSize);
+        const found = await this.prisma.invoice.findMany({
+            where: { invoiceNumber: { in: chunk } },
+            select: { invoiceNumber: true }
+        });
+        found.forEach(inv => existingInvoiceSet.add(inv.invoiceNumber));
+    }
+
+    const validDtos = dtos.filter(d => existingInvoiceSet.has(d.invoiceNumber));
+    const skipped = dtos.length - validDtos.length;
+
+    if (skipped > 0) {
+        console.warn(`Skipping ${skipped} mechanic labor records due to missing invoices.`);
+    }
+
+    if (validDtos.length === 0) {
+        return { count: 0 };
+    }
+
     return this.prisma.mechanicLabor.createMany({
-      data: dtos,
+      data: validDtos,
     });
   }
 

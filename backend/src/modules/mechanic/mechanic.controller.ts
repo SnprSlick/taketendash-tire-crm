@@ -186,7 +186,12 @@ export class MechanicController {
         const dto = new CreateMechanicLaborDto();
         dto.mechanicName = currentMechanic;
         dto.category = currentCategory || 'Uncategorized';
-        dto.invoiceNumber = invoiceNumber.toString();
+        let rawInvoice = invoiceNumber.toString();
+        // Fix for NA invoices missing dash (e.g. 4-NA343699 -> 4-NA-343699)
+        if (rawInvoice.includes('NA') && !rawInvoice.includes('NA-')) {
+            rawInvoice = rawInvoice.replace(/NA(\d)/, 'NA-$1');
+        }
+        dto.invoiceNumber = rawInvoice;
         dto.productCode = getCol(2).toString(); 
         // Description is at getCol(3)
 
@@ -239,14 +244,22 @@ export class MechanicController {
     }
 
     try {
+      let insertedCount = 0;
       if (results.length > 0) {
-        await this.mechanicService.createMany(results);
+        const result = await this.mechanicService.createMany(results);
+        insertedCount = result.count;
       }
       fs.unlinkSync(file.path); // Clean up
       
+      const skipped = results.length - insertedCount;
+      const message = skipped > 0 
+        ? `Import successful. ${insertedCount} records created. ${skipped} skipped due to missing invoices.`
+        : `Import successful. ${insertedCount} records created.`;
+
       return { 
-        message: results.length > 0 ? 'Import successful' : 'No valid records found', 
-        count: results.length,
+        message, 
+        count: insertedCount,
+        skipped,
         debug: {
             totalRows: rows.length,
             mechanicsFound: results.map(r => r.mechanicName).filter((v, i, a) => a.indexOf(v) === i),

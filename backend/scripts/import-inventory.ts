@@ -1,235 +1,152 @@
-import { PrismaClient, TireType, TireSeason } from '@prisma/client';
-import * as fs from 'fs';
-import * as readline from 'readline';
+import { PrismaClient } from '@prisma/client';
+import { TireMasterInventoryParser } from '../src/csv-import/processors/tiremaster-inventory-parser';
+import { CsvFileProcessor } from '../src/csv-import/processors/csv-file-processor';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as path from 'path';
-import * as dotenv from 'dotenv';
-import { classifyProduct } from '../src/utils/tire-classifier';
-
-// Load environment variables
-dotenv.config();
+import { classifyBrandQuality } from '../src/utils/tire-classifier';
 
 const prisma = new PrismaClient();
 
+// Mock EventEmitter for CsvFileProcessor
+const eventEmitter = new EventEmitter2();
+const csvProcessor = new CsvFileProcessor(eventEmitter);
+const parser = new TireMasterInventoryParser(csvProcessor);
+
 async function main() {
-  const filePath = path.join(__dirname, '../data/inventorymasterlist.csv');
-  
-  if (!fs.existsSync(filePath)) {
-    console.error(`File not found: ${filePath}`);
-    process.exit(1);
+  const filePath = path.join(__dirname, '../data', 'inventorymasterlist.csv');
+  console.log(`Parsing ${filePath}...`);
+
+  if (!require('fs').existsSync(filePath)) {
+      console.error(`File not found: ${filePath}`);
+      return;
   }
 
-  console.log(`Starting inventory import from ${filePath}...`);
+  const result = await parser.parse(filePath);
+  console.log(`Parsed ${result.inventoryItems.length} items.`);
 
-  // Ensure Default Price List exists
-  const defaultPriceList = await prisma.tireMasterPriceList.upsert({
-    where: { tireMasterCode: 'DEFAULT' },
-    update: {},
-    create: {
-      tireMasterCode: 'DEFAULT',
-      name: 'Default Price List',
-      currency: 'USD',
-      isActive: true
-    }
-  });
+  // Cache Stores
+  const storeMap = new Map<string, string>();
+  const stores = await prisma.store.findMany();
+  stores.forEach((s: { code: string; id: string; name: string }) => storeMap.set(s.code, s.id));
 
-  const fileStream = fs.createReadStream(filePath);
-  const rl = readline.createInterface({
-    input: fileStream,
-    crlfDelay: Infinity
-  });
+  // Cache Locations (TireMasterLocation)
+  const locationMap = new Map<string, string>();
+  const locations = await prisma.tireMasterLocation.findMany();
+  locations.forEach((l: { tireMasterCode: string; id: string }) => locationMap.set(l.tireMasterCode, l.id));
 
-  let lineCount = 0;
   let processedCount = 0;
-  let errorCount = 0;
+  const total = result.inventoryItems.length;
 
-  // Cache locations to minimize DB lookups
-  const locationCache = new Map<string, string>(); // code -> id
-
-  // Helper to parse CSV line (handling quotes)
-  const parseCsvLine = (line: string): string[] => {
-    const fields: string[] = [];
-    let current = '';
-    let inQuotes = false;
-    
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
-        fields.push(current);
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    fields.push(current);
-    return fields.map(f => f.trim().replace(/^"|"$/g, '')); // Remove surrounding quotes
-  };
-
-  let currentSiteId: string | null = null;
-
-  for await (const line of rl) {
-    lineCount++;
-    if (lineCount % 1000 === 0) {
-      process.stdout.write(`\rProcessed ${lineCount} lines...`);
-    }
-
-    const fields = parseCsvLine(line);
-    
-    // Skip empty lines or lines with too few fields
-    if (fields.length < 20) continue;
-
-    let dataStartIndex = 22;
-
-    // Check for Site change
-    if (fields[22] === 'Site#:') {
-      currentSiteId = fields[23];
-      dataStartIndex = 24;
-    }
-
-    if (!currentSiteId) continue;
-
-    const productCode = fields[dataStartIndex];
-    
-    // Skip invalid rows (like the "..." row)
-    if (!productCode || productCode === '...' || productCode === '.') continue;
-
-    const size = fields[dataStartIndex + 1];
-    const description = fields[dataStartIndex + 2];
-    const onHand = parseFloat(fields[dataStartIndex + 3]) || 0;
-    const unpriced = parseFloat(fields[dataStartIndex + 4]) || 0;
-    // const total = parseFloat(fields[dataStartIndex + 5]) || 0;
-    const partsPrice = parseFloat(fields[dataStartIndex + 6]) || 0;
-    const laborPrice = parseFloat(fields[dataStartIndex + 7]) || 0;
-    const fetAmount = parseFloat(fields[dataStartIndex + 8]) || 0;
-
-    try {
-      const siteCode = currentSiteId;
-
-
-      // 1. Get or Create Location
-      let locationId = locationCache.get(siteCode);
-      if (!locationId) {
-        const location = await prisma.tireMasterLocation.upsert({
-          where: { tireMasterCode: siteCode },
-          update: {},
-          create: {
-            tireMasterCode: siteCode,
-            name: `Store ${siteCode}`, // We can update names later or use a map
-            isActive: true
-          }
-        });
-        locationId = location.id;
-        locationCache.set(siteCode, locationId);
-      }
-
-      // 2. Upsert Product
-      // Classify the product
-      const classification = classifyProduct({
-        tireMasterSku: productCode,
-        description: description,
-        size: size
-      });
-
-      const product = await prisma.tireMasterProduct.upsert({
-        where: { tireMasterSku: productCode },
-        update: {
-          description: description,
-          size: size,
-          laborPrice: laborPrice,
-          fetAmount: fetAmount,
-          // Update classification if it was previously unknown or generic
-          // But maybe we should trust the script's latest logic?
-          // Let's update it to keep it fresh with our rules
-          type: classification.type,
-          isTire: classification.isTire,
-        },
-        create: {
-          tireMasterSku: productCode,
-          brand: 'Unknown', // Placeholder
-          pattern: 'Unknown', // Placeholder
-          size: size || 'Unknown',
-          type: classification.type,
-          season: TireSeason.ALL_SEASON, // Default
-          description: description,
-          laborPrice: laborPrice,
-          fetAmount: fetAmount,
-          isActive: true,
-          isTire: classification.isTire
+  for (const item of result.inventoryItems) {
+    // 1. Ensure Location Exists
+    let locationId = locationMap.get(item.siteCode);
+    if (!locationId) {
+        // Check if it maps to a Store
+        const storeId = storeMap.get(item.siteCode);
+        let storeName = `Site ${item.siteCode}`;
+        if (storeId) {
+            const store = stores.find((s: { id: string }) => s.id === storeId);
+            if (store) storeName = store.name;
         }
-      });
 
-      // 3. Upsert Inventory
-      await prisma.tireMasterInventory.upsert({
-        where: {
-          productId_locationId: {
-            productId: product.id,
-            locationId: locationId
-          }
-        },
-        update: {
-          quantity: Math.floor(onHand), // Assuming integer quantity
-          lastUpdated: new Date()
-        },
-        create: {
-          productId: product.id,
-          locationId: locationId,
-          quantity: Math.floor(onHand),
-          availableQty: Math.floor(onHand)
-        }
-      });
-
-      // 4. Upsert Price (Parts)
-      if (partsPrice > 0) {
-        await prisma.tireMasterPrice.upsert({
-          where: {
-            productId_priceListId: {
-              productId: product.id,
-              priceListId: defaultPriceList.id
+        try {
+            const newLoc = await prisma.tireMasterLocation.create({
+                data: {
+                    tireMasterCode: item.siteCode,
+                    name: storeName
+                }
+            });
+            locationId = newLoc.id;
+            locationMap.set(item.siteCode, locationId);
+            console.log(`Created Location: ${storeName} (${item.siteCode})`);
+        } catch (e) {
+            // Handle race condition if running in parallel (though we are sequential here)
+            const existing = await prisma.tireMasterLocation.findUnique({ where: { tireMasterCode: item.siteCode }});
+            if (existing) {
+                locationId = existing.id;
+                locationMap.set(item.siteCode, locationId);
+            } else {
+                console.error(`Failed to create location ${item.siteCode}`, e);
+                continue;
             }
-          },
-          update: {
-            listPrice: partsPrice,
-            updatedAt: new Date()
-          },
-          create: {
-            productId: product.id,
-            priceListId: defaultPriceList.id,
-            listPrice: partsPrice
-          }
+        }
+    }
+
+    if (!locationId) {
+        console.error(`Could not resolve locationId for site ${item.siteCode}`);
+        continue;
+    }
+
+    // 2. Extract Brand
+    // Heuristic: First word of description
+    let brand = item.description.split(' ')[0] || 'Unknown';
+    // Clean up brand (remove trailing comma, etc if any)
+    brand = brand.replace(/[^a-zA-Z0-9]/g, '');
+    if (brand.length < 2) brand = 'Unknown';
+    
+    // 3. Upsert Product
+    // We use productCode as unique identifier (tireMasterSku)
+    try {
+        const product = await prisma.tireMasterProduct.upsert({
+            where: { tireMasterSku: item.productCode },
+            update: {
+                // Update fields if needed, e.g. description
+                description: item.description,
+                size: item.size,
+                // brand: brand, // Don't overwrite brand if it exists, maybe?
+                laborPrice: item.labor,
+                fetAmount: item.fet,
+                updatedAt: new Date()
+            },
+            create: {
+                tireMasterSku: item.productCode,
+                brand: brand,
+                pattern: 'Unknown', // We don't have pattern in CSV
+                size: item.size,
+                type: 'PASSENGER', // Default, need classifier
+                season: 'ALL_SEASON', // Default
+                quality: classifyBrandQuality(brand),
+                description: item.description,
+                laborPrice: item.labor,
+                fetAmount: item.fet,
+                isActive: true
+            }
         });
-      }
 
-      processedCount++;
+        // 4. Upsert Inventory
+        await prisma.tireMasterInventory.upsert({
+            where: {
+                productId_locationId: {
+                    productId: product.id,
+                    locationId: locationId
+                }
+            },
+            update: {
+                quantity: Math.round(item.onHand), // Ensure integer
+                lastUpdated: new Date()
+            },
+            create: {
+                productId: product.id,
+                locationId: locationId,
+                quantity: Math.round(item.onHand),
+                availableQty: Math.round(item.onHand)
+            }
+        });
+    } catch (e) {
+        console.error(`Error processing item ${item.productCode}:`, e);
+    }
 
-    } catch (error: any) {
-      console.error(`\nError processing line ${lineCount}: ${error.message}`);
-      errorCount++;
+    processedCount++;
+    if (processedCount % 1000 === 0) {
+        console.log(`Processed ${processedCount}/${total} items...`);
     }
   }
-
-  console.log(`\n\nImport completed!`);
-  console.log(`Total lines scanned: ${lineCount}`);
-  console.log(`Records processed: ${processedCount}`);
-  console.log(`Errors: ${errorCount}`);
-
-  // 5. Backfill InvoiceLineItems
-  console.log('\nLinking InvoiceLineItems to Products...');
   
-  // We can do this in SQL for speed
-  const updateCount = await prisma.$executeRaw`
-    UPDATE "invoice_line_items" ili
-    SET "tire_master_product_id" = tmp.id
-    FROM "tire_master_products" tmp
-    WHERE ili."product_code" = tmp."tireMasterSku"
-    AND ili."tire_master_product_id" IS NULL
-  `;
-
-  console.log(`Linked ${updateCount} invoice line items.`);
+  console.log('Import complete!');
 }
 
 main()
-  .catch((e) => {
+  .catch(e => {
     console.error(e);
     process.exit(1);
   })

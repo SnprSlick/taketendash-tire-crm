@@ -20,6 +20,7 @@ import { FileSystemScannerService } from './services/file-system-scanner.service
 import { FileArchiverService } from './services/file-archiver.service';
 import { MockConfigService } from './services/mock-config.service';
 import { DatabaseImportService } from './services/database-import.service';
+import { InventoryImportService } from './services/inventory-import.service';
 
 // Controllers
 import { CsvImportController } from './controllers/csv-import.controller';
@@ -31,6 +32,7 @@ import { ImportProgressGateway } from './gateways/import-progress.gateway';
 // Processors
 import { CsvFileProcessor } from './processors/csv-file-processor';
 import { TireMasterCsvParser } from './processors/tiremaster-csv-parser';
+import { TireMasterInventoryParser } from './processors/tiremaster-inventory-parser';
 import { CsvFormatValidator } from './processors/csv-format-validator';
 
 // Mappers and Transformers
@@ -83,6 +85,7 @@ import { TireMasterDataTransformer } from './mappers/tiremaster-data-transformer
     CsvImportService,
     RollbackService,
     DatabaseImportService,
+    InventoryImportService,
 
     // Monitoring Services
     FileMonitorSchedulerService,
@@ -92,6 +95,7 @@ import { TireMasterDataTransformer } from './mappers/tiremaster-data-transformer
     // Processing Services
     CsvFileProcessor,
     TireMasterCsvParser,
+    TireMasterInventoryParser,
     CsvFormatValidator,
 
     // Mappers and Transformers (these are static classes, but included for DI consistency)
@@ -113,6 +117,7 @@ import { TireMasterDataTransformer } from './mappers/tiremaster-data-transformer
     ImportBatchService,
     RollbackService,
     DatabaseImportService,
+    InventoryImportService,
 
     // Export monitoring services
     FileMonitorSchedulerService,
@@ -122,6 +127,7 @@ import { TireMasterDataTransformer } from './mappers/tiremaster-data-transformer
     // Export processors for direct use if needed
     CsvFileProcessor,
     TireMasterCsvParser,
+    TireMasterInventoryParser,
 
     // Export entities for direct database operations if needed
     ImportBatchEntity,

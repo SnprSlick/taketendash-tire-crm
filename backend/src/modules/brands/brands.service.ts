@@ -59,11 +59,24 @@ export class BrandsService {
       AND i.invoice_date <= ${end}
     `;
 
+    // Get current inventory count
+    const inventoryStats = await this.prisma.tireMasterInventory.aggregate({
+      _sum: {
+        quantity: true
+      },
+      where: {
+        product: {
+          brand: brandName
+        }
+      }
+    });
+
     const overview = {
       totalSales: Number(stats[0]?.total_sales || 0),
       totalProfit: Number(stats[0]?.total_profit || 0),
       totalUnits: Number(stats[0]?.total_units || 0),
       transactionCount: Number(stats[0]?.transaction_count || 0),
+      inventoryCount: inventoryStats._sum.quantity || 0,
     };
 
     // 2. Sales Trend (Monthly)

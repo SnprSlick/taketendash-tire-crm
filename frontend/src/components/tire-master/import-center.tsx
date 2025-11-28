@@ -1,11 +1,65 @@
 import React, { useState } from 'react';
-import { FileText, Package, Tag, Upload } from 'lucide-react';
+import { FileText, Package, Tag, Upload, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
 import CsvImportClientPage from '../../app/csv-import/csv-import-client';
 
 type ImportType = 'invoices' | 'inventory' | 'brands';
 
 export default function ImportCenter() {
   const [activeTab, setActiveTab] = useState<ImportType>('invoices');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'inventory' | 'brands') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setLoading(true);
+    setMessage(null);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const endpoint = type === 'inventory' ? '/api/v1/csv-import/inventory' : '/api/v1/csv-import/brands';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error('Upload failed');
+
+      const data = await res.json();
+      setMessage({ type: 'success', text: `${type === 'inventory' ? 'Inventory' : 'Brands'} imported successfully! Processed: ${data.processed}` });
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Upload failed' });
+    } finally {
+      setLoading(false);
+      // Reset file input
+      e.target.value = '';
+    }
+  };
+
+  const handleClearDatabase = async (type: 'inventory' | 'brands') => {
+    if (!confirm(`Are you sure you want to clear all ${type} data? This cannot be undone.`)) return;
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const endpoint = type === 'inventory' ? '/api/v1/csv-import/inventory' : '/api/v1/csv-import/brands';
+      const res = await fetch(endpoint, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) throw new Error('Clear failed');
+
+      setMessage({ type: 'success', text: `${type === 'inventory' ? 'Inventory' : 'Brands'} database cleared successfully.` });
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Clear failed' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="bg-white shadow rounded-lg">
@@ -48,6 +102,13 @@ export default function ImportCenter() {
       </div>
 
       <div className="p-6">
+        {message && (
+          <div className={`mb-4 p-4 rounded-md ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'} flex items-center`}>
+            {message.type === 'success' ? <CheckCircle className="h-5 w-5 mr-2" /> : <AlertCircle className="h-5 w-5 mr-2" />}
+            {message.text}
+          </div>
+        )}
+
         {activeTab === 'invoices' && (
           <div className="-m-6">
             {/* Wrapper to reset some styles if needed, or just render directly */}
@@ -60,14 +121,28 @@ export default function ImportCenter() {
             <Package className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">Inventory Import</h3>
             <p className="mt-1 text-sm text-gray-500">Upload inventory CSV files to update stock levels and product details.</p>
-            <div className="mt-6">
+            
+            <div className="mt-6 flex justify-center space-x-4">
+              <label className="cursor-pointer inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                <Upload className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+                {loading ? 'Uploading...' : 'Upload Inventory CSV'}
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  accept=".csv" 
+                  onChange={(e) => handleFileUpload(e, 'inventory')} 
+                  disabled={loading}
+                />
+              </label>
+
               <button
                 type="button"
-                disabled
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => handleClearDatabase('inventory')}
+                disabled={loading}
+                className="inline-flex items-center px-4 py-2 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
               >
-                <Upload className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-                Coming Soon
+                <Trash2 className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+                Clear Database
               </button>
             </div>
           </div>
@@ -78,14 +153,28 @@ export default function ImportCenter() {
             <Tag className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">Brand Import</h3>
             <p className="mt-1 text-sm text-gray-500">Upload brand mapping CSV files to standardize manufacturer names.</p>
-            <div className="mt-6">
+            
+            <div className="mt-6 flex justify-center space-x-4">
+              <label className="cursor-pointer inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                <Upload className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+                {loading ? 'Uploading...' : 'Upload Brand CSV'}
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  accept=".csv" 
+                  onChange={(e) => handleFileUpload(e, 'brands')} 
+                  disabled={loading}
+                />
+              </label>
+
               <button
                 type="button"
-                disabled
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => handleClearDatabase('brands')}
+                disabled={loading}
+                className="inline-flex items-center px-4 py-2 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
               >
-                <Upload className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-                Coming Soon
+                <Trash2 className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+                Clear Database
               </button>
             </div>
           </div>

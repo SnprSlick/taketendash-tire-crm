@@ -11,8 +11,11 @@ interface ClassificationRule {
 }
 
 const premiumBrands = ["MICHELIN", "BRIDGESTONE", "GOODYEAR", "CONTINENTAL", "PIRELLI", "DUNLOP", "YOKOHAMA", "TOYO"];
-const standardBrands = ["FIRESTONE", "BFGOODRICH", "COOPER", "HANKOOK", "FALKEN", "KUMHO", "NITTO", "GENERAL", "KELLY", "SUMITOMO", "NEXEN", "UNIROYAL", "MAXXIS"];
-const economyBrands = ["SAILUN", "WESTLAKE", "BLACKHAWK", "IRONMAN", "MASTERCRAFT", "STARFIRE", "LINGLONG", "DOUBLE COIN", "SAMSON", "DEESTONE", "AMERICUS", "FUZION", "OHTSU", "ZEETEX", "TRIANGLE", "GALAXY", "BKT", "ALLIANCE", "PRINX", "FORTUNE", "MULTI-MILE", "POWER KING", "TRAILER KING", "CARLISLE"];
+const standardBrands = ["FIRESTONE", "BFGOODRICH", "COOPER", "HANKOOK", "FALKEN", "KUMHO", "NITTO", "GENERAL", "KELLY", "SUMITOMO", "NEXEN", "UNIROYAL", "MAXXIS", "VOGUE", "MICKEY THOMPSON"];
+const economyBrands = [
+  "SAILUN", "WESTLAKE", "BLACKHAWK", "IRONMAN", "MASTERCRAFT", "STARFIRE", "LINGLONG", "DOUBLE COIN", "SAMSON", "DEESTONE", "AMERICUS", "FUZION", "OHTSU", "ZEETEX", "TRIANGLE", "GALAXY", "BKT", "ALLIANCE", "PRINX", "FORTUNE", "MULTI-MILE", "POWER KING", "TRAILER KING", "CARLISLE",
+  "ROADMASTER", "BANDAG", "KENDA", "DURO", "MAXAM", "MASTERTRACK", "CACHLAND", "DELINTE", "DYNATRAC", "ADVANCE", "AEOLUS", "ARMSTRONG", "CENTARA", "CONSTELLATION", "CROSSWIND", "DURATURN", "EVERGREEN", "GLADIATOR", "GOODRIDE", "GT RADIAL", "HERCULES", "JINYU", "JOYROAD", "LANDSPIDER", "LAUFENN", "LIONHART", "LONG MARCH", "MILASTAR", "MILESTAR", "NANKANG", "OTANI", "PATRIOT", "PREMIUM GUARD", "PROMETER", "RADAR", "RIPTIDE", "SENTURY", "SOLUS", "SURETRAC", "THUNDERER", "TRAVELSTAR", "TRIGARD", "VELOCITY", "VENOM", "WANLI", "WINDFORCE", "ZENNA"
+];
 
 // Mapping from Manufacturer Code to Brand Name
 export const BRAND_MAPPING: Record<string, string> = {
@@ -63,7 +66,7 @@ const rules: ClassificationRule[] = [
       /^\d{1,2}\.\d{1,2}-\d{1,2}.*ST/i
     ],
     keywords: ["TRAILER", /\bST\b/, "TOWING", "BOAT", "UTILITY"],
-    excludeKeywords: ["STEER", "DRIVE"]
+    excludeKeywords: ["STEER", "DRIVE", "MAXX", "DISCOVERER", "DESTINATION"]
   },
   {
     id: TireType.ATV_UTV,
@@ -108,7 +111,6 @@ const rules: ClassificationRule[] = [
     priority: 50,
     sizePatterns: [
       /^\d{1,3}\.?\d{0,2}-\d{2}$/i,
-      /^\d{3}\/\d{2}R\d{2}$/i,
       /^\d{1,2}\.\d{1}-\d{2}$/i
     ],
     keywords: ["TRACTOR", "FARM", "IMPLEMENT", "R-1", "R-3", "F-2", "AG ", "AGRICULTURAL", "HARVESTER"],
@@ -120,8 +122,7 @@ const rules: ClassificationRule[] = [
     priority: 60,
     sizePatterns: [
       /^\d{2}\.\d{1,2}-\d{2}$/i,
-      /^\d{2}\.\d{1,2}R\d{2}$/i,
-      /^\d{2,3}\/\d{2}R\d{2}$/i
+      /^\d{2}\.\d{1,2}R\d{2}$/i
     ],
     keywords: ["EARTHMOVER", "LOADER", "GRADER", "MINING", "E-3", "E-4", "L-3", "L-5", "G-2", /\bOTR\b/],
     excludeKeywords: []
@@ -139,6 +140,16 @@ const rules: ClassificationRule[] = [
     excludeKeywords: []
   },
   {
+    id: TireType.PASSENGER,
+    name: "Passenger Car (P-Metric)",
+    priority: 75,
+    sizePatterns: [
+      /^P\d{3}\/\d{2}[R|D|B]\d{2}/i, // Explicit P-Metric
+    ],
+    keywords: [],
+    excludeKeywords: []
+  },
+  {
     id: TireType.LIGHT_TRUCK,
     name: "Light Truck",
     priority: 80,
@@ -148,20 +159,19 @@ const rules: ClassificationRule[] = [
       /^\d{2}x\d{2}\.\d{1,2}[R|D|B]\d{2}LT?/i,
       /^\d{2}x\d{2}\.\d{1,2}[R|D|B]\d{2}/i
     ],
-    keywords: [/\bLT\b/, "LIGHT TRUCK", "MUD TERRAIN", "ALL TERRAIN", "M/T", "A/T", "R/T"],
+    keywords: [/\bLT\b/, "LIGHT TRUCK", "MUD TERRAIN", "M/T", "LOAD RANGE C", "LOAD RANGE D", "LOAD RANGE E", "LOAD RANGE F"],
     excludeKeywords: ["ATV", "UTV", "GOLF"]
   },
   {
     id: TireType.PASSENGER,
-    name: "Passenger Car",
+    name: "Passenger Car (Standard)",
     priority: 90,
     sizePatterns: [
-      /^P?\d{3}\/\d{2}[R|D|B]\d{2}$/i, 
-      /^P\d{3}\/\d{2}[R|D|B]\d{2}$/i,
+      /^\d{3}\/\d{2}[R|D|B]\d{2}$/i, 
       /^\d{3}\/\d{2}Z[R|D|B]\d{2}$/i
     ],
-    keywords: ["PASSENGER", "TOURING", "UHP", "SEDAN", "COUPE"],
-    excludeKeywords: ["LT", "ST", "TRAILER"]
+    keywords: ["PASSENGER", "TOURING", "UHP", "SEDAN", "COUPE", "ALL TERRAIN", "A/T", "R/T", "SUV", "CROSSOVER"],
+    excludeKeywords: ["LT", "ST", "TRAILER", "TRACTOR", "FARM", "EARTHMOVER", "IMPLEMENT"]
   }
 ];
 

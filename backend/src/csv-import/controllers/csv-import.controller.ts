@@ -19,6 +19,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody } from '../utils/mock-swagger';
 import { CsvImportService } from '../services/csv-import.service';
+import { InventoryImportService } from '../services/inventory-import.service';
 import { ImportBatchService } from '../services/import-batch.service';
 import { FileMonitorSchedulerService } from '../services/file-monitor-scheduler.service';
 import { RollbackService } from '../services/rollback.service';
@@ -44,6 +45,7 @@ export class CsvImportController {
 
   constructor(
     private readonly csvImportService: CsvImportService,
+    private readonly inventoryImportService: InventoryImportService,
     private readonly importBatchService: ImportBatchService,
     private readonly fileMonitorScheduler: FileMonitorSchedulerService,
     private readonly rollbackService: RollbackService
@@ -97,87 +99,90 @@ export class CsvImportController {
     this.logger.log(`=== UPDATED CODE: Processing uploaded file: ${file.originalname} ===`);
     this.logger.log(`File buffer available: ${file.buffer ? file.buffer.length + ' bytes' : 'undefined'}`);
 
-    // Handle file path - create temporary file if file.path is undefined
-    let filePath: string;
-    let shouldCleanup = false;
-
-    try {
-      const parsedOptions = options ? JSON.parse(options) : {};
-
-      if (file.path) {
-        // Use the existing file path from disk storage
-        filePath = file.path;
-      } else {
-        // Create temporary file from buffer
-        const tempDir = './uploads/csv';
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        const ext = path.extname(file.originalname);
-        const tempFileName = `file-${uniqueSuffix}${ext}`;
-        filePath = path.join(tempDir, tempFileName);
-
-        // Ensure the directory exists
-        if (!fs.existsSync(tempDir)) {
-          fs.mkdirSync(tempDir, { recursive: true });
-        }
-
-        // Write buffer to temporary file
-        fs.writeFileSync(filePath, file.buffer);
-        shouldCleanup = true;
-
-        this.logger.log(`Created temporary file: ${filePath}`);
+        // Handle file path - create temporary file if file.path is undefined
+    let filePath = file.path;
+    if (!filePath) {
+      const tempDir = path.join(process.cwd(), 'uploads', 'csv');
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
       }
-
-      const importRequest = {
-        filePath: filePath,
-        fileName: file.originalname,
-        userId: 'upload-user', // TODO: Get from authentication
-        deleteFileAfterProcessing: shouldCleanup,
-        ...parsedOptions
-      };
-
-      const result = await this.csvImportService.importCsvAsync(importRequest);
-
-      // File cleanup is handled by the service after processing completes
-      shouldCleanup = false;
-
-      return {
-        success: true,
-        batchId: result.batchId,
-        message: result.message,
-        isHistorical: result.isHistorical || false,
-        originalProcessingDate: undefined,
-        result: {
-          batchId: result.batchId,
-          success: true,
-          totalRecords: 0,
-          successfulRecords: 0,
-          failedRecords: 0,
-          processingTimeMs: 0,
-          successRate: 0,
-          validationResult: { isValid: true, formatErrors: [], estimatedRecords: 0 },
-          duplicateInvoices: [],
-          skippedDuplicates: 0,
-          updatedDuplicates: 0,
-          renamedDuplicates: 0,
-          mergedDuplicates: 0,
-          failedDuplicates: 0
-        }
-      };
-
-    } catch (error) {
-      // Cleanup temporary file on error
-      if (filePath && shouldCleanup && fs.existsSync(filePath)) {
-        try {
-          fs.unlinkSync(filePath);
-          this.logger.log(`Cleaned up temporary file after error: ${filePath}`);
-        } catch (cleanupError) {
-          this.logger.warn(`Failed to cleanup temporary file after error: ${cleanupError.message}`);
-        }
-      }
-
-      this.logger.error(`Upload import failed: ${error.message}`);
-      throw new BadRequestException(error.message);
+      filePath = path.join(tempDir, file.originalname);
+      fs.writeFileSync(filePath, file.buffer);
     }
+
+    // Parse options
+    let importOptions: any = {};
+    if (options) {
+      try {
+        importOptions = JSON.parse(options);
+      } catch (e) {
+        this.logger.warn('Invalid options JSON provided');
+      }
+    }
+
+    // Call service
+    const result = await this.csvImportService.importCsv({
+      filePath,
+      fileName: file.originalname,
+      userId: 'system', // TODO: Get from auth
+      ...importOptions
+    });
+
+    return result;
+  }
+
+  @Post('inventory')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'Upload and import Inventory CSV file' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file'))
+  async importInventory(@UploadedFile() file: any) {
+    if (!file) throw new BadRequestException('No file uploaded');
+    
+    let filePath = file.path;
+    if (!filePath) {
+      const tempDir = path.join(process.cwd(), 'uploads', 'csv');
+      if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+      filePath = path.join(tempDir, `inventory-${Date.now()}.csv`);
+      fs.writeFileSync(filePath, file.buffer);
+    }
+
+    const result = await this.inventoryImportService.importInventory(filePath);
+    return { success: true, ...result };
+  }
+
+  @Post('brands')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'Upload and import Brand Mapping CSV file' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file'))
+  async importBrands(@UploadedFile() file: any) {
+    if (!file) throw new BadRequestException('No file uploaded');
+    
+    let filePath = file.path;
+    if (!filePath) {
+      const tempDir = path.join(process.cwd(), 'uploads', 'csv');
+      if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+      filePath = path.join(tempDir, `brands-${Date.now()}.csv`);
+      fs.writeFileSync(filePath, file.buffer);
+    }
+
+    const result = await this.inventoryImportService.importBrands(filePath);
+    return { success: true, ...result };
+  }
+
+  @Delete('inventory')
+  @ApiOperation({ summary: 'Clear all inventory data' })
+  async clearInventory() {
+    await this.inventoryImportService.clearInventory();
+    return { success: true, message: 'Inventory cleared' };
+  }
+
+  @Delete('brands')
+  @ApiOperation({ summary: 'Clear all brand data' })
+  async clearBrands() {
+    await this.inventoryImportService.clearBrands();
+    return { success: true, message: 'Brands cleared' };
   }
 
   /**

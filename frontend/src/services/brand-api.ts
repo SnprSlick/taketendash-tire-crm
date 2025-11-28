@@ -9,6 +9,7 @@ export interface BrandAnalytics {
     totalProfit: number;
     totalUnits: number;
     transactionCount: number;
+    inventoryCount: number;
   };
   trends: {
     month: string;

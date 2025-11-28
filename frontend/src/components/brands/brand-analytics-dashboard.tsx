@@ -145,7 +145,11 @@ export const BrandAnalyticsDashboard: React.FC = () => {
           ) : (
             <>
               {/* Overview Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="bg-white p-4 rounded shadow">
+                  <h3 className="text-gray-500 text-sm">Inventory Count</h3>
+                  <p className="text-2xl font-bold text-blue-600">{analytics.overview.inventoryCount}</p>
+                </div>
                 <div className="bg-white p-4 rounded shadow">
                   <h3 className="text-gray-500 text-sm">Total Sales</h3>
                   <p className="text-2xl font-bold">{formatCurrency(analytics.overview.totalSales)}</p>
@@ -163,6 +167,14 @@ export const BrandAnalyticsDashboard: React.FC = () => {
                   <p className="text-2xl font-bold">{analytics.overview.transactionCount}</p>
                 </div>
               </div>
+
+              {analytics.overview.totalSales === 0 && analytics.overview.inventoryCount > 0 && (
+                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 my-4">
+                  <p className="text-blue-700">
+                    No sales data found for this brand in the selected period, but inventory exists.
+                  </p>
+                </div>
+              )}
 
               {/* Charts Row */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
