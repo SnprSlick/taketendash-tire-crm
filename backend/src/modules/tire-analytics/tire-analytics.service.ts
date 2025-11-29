@@ -100,6 +100,7 @@ export class TireAnalyticsService {
         AND i.status = 'ACTIVE'
         AND p."isTire" = true
         AND p."brand" != 'Unknown'
+        AND p."quality" IN ('PREMIUM', 'STANDARD', 'ECONOMY')
         ${brandFilter}
         ${qualityFilter}
         ${typeFilter}
@@ -129,7 +130,10 @@ export class TireAnalyticsService {
     // Return available brands, types, qualities, sizes for the frontend filters
     const [brands, types, sizes, stores] = await Promise.all([
       this.prisma.tireMasterProduct.findMany({
-        where: { isTire: true },
+        where: { 
+          isTire: true,
+          quality: { in: ['PREMIUM', 'STANDARD', 'ECONOMY'] }
+        },
         select: { brand: true },
         distinct: ['brand'],
         orderBy: { brand: 'asc' }
@@ -231,6 +235,7 @@ export class TireAnalyticsService {
         AND i.status = 'ACTIVE'
         AND p."isTire" = true
         AND p."brand" != 'Unknown'
+        AND p."quality" IN ('PREMIUM', 'STANDARD', 'ECONOMY')
         ${brandFilter}
         ${qualityFilter}
         ${typeFilter}

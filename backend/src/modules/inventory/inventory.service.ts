@@ -226,24 +226,9 @@ export class InventoryService {
       GROUP BY ili."tire_master_product_id", i."store_id"
     `;
 
-    // Fetch daily sales history for the last 365 days
-    const historyStartDate = new Date();
-    historyStartDate.setDate(historyStartDate.getDate() - 365);
-
-    const dailySalesHistory: Array<{ productId: string; storeId: string; date: Date; quantity: number }> = await this.prisma.$queryRaw`
-      SELECT 
-        ili."tire_master_product_id" as "productId", 
-        i."store_id" as "storeId",
-        DATE(i."invoice_date") as "date",
-        SUM(ili.quantity) as "quantity"
-      FROM "invoice_line_items" ili
-      JOIN "invoices" i ON ili."invoice_id" = i.id
-      WHERE i."invoice_date" >= ${historyStartDate}
-      AND ili."tire_master_product_id" IN (${Prisma.join(productIds)})
-      GROUP BY ili."tire_master_product_id", i."store_id", DATE(i."invoice_date")
-      ORDER BY DATE(i."invoice_date") ASC
-    `;
-
+    // Fetch daily sales history only if requested (or we can move this to a separate method)
+    // For now, we will remove it from the main list query to improve performance
+    
     // Fetch all locations and stores for mapping
     const allLocations = await this.prisma.tireMasterLocation.findMany({ 
       where: { 
@@ -334,14 +319,6 @@ export class InventoryService {
       // Sum up the actual restock needed from all locations
       const totalRestockNeeded = inventoryBreakdown.reduce((sum, loc) => sum + loc.suggestedRestock, 0);
 
-      const productHistory = dailySalesHistory
-        .filter(h => h.productId === product.id)
-        .map(h => ({
-          date: h.date instanceof Date ? h.date.toISOString().split('T')[0] : h.date,
-          storeName: storeIdToNameMap.get(h.storeId) || 'Unknown',
-          quantity: Number(h.quantity)
-        }));
-
       return {
         productId: product.id,
         sku: product.tireMasterSku,
@@ -354,7 +331,7 @@ export class InventoryService {
         daysOfSupply,
         suggestedRestock: totalRestockNeeded,
         inventoryBreakdown,
-        salesHistory: productHistory
+        // salesHistory removed from list view for performance
       };
     });
 
@@ -383,5 +360,32 @@ export class InventoryService {
     }
 
     return sortedItems;
+  }
+
+  async getProductSalesHistory(productId: string, days: number = 365) {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const history: Array<{ storeId: string; date: Date; quantity: number }> = await this.prisma.$queryRaw`
+      SELECT 
+        i."store_id" as "storeId",
+        DATE(i."invoice_date") as "date",
+        SUM(ili.quantity) as "quantity"
+      FROM "invoice_line_items" ili
+      JOIN "invoices" i ON ili."invoice_id" = i.id
+      WHERE i."invoice_date" >= ${startDate}
+      AND ili."tire_master_product_id" = ${productId}
+      GROUP BY i."store_id", DATE(i."invoice_date")
+      ORDER BY DATE(i."invoice_date") ASC
+    `;
+
+    const stores = await this.prisma.$queryRaw<Array<{ id: string, name: string }>>`SELECT id, name FROM stores`;
+    const storeNameMap = new Map(stores.map(s => [s.id, s.name]));
+
+    return history.map(h => ({
+      date: h.date instanceof Date ? h.date.toISOString().split('T')[0] : h.date,
+      storeName: storeNameMap.get(h.storeId) || 'Unknown',
+      quantity: Number(h.quantity)
+    }));
   }
 }

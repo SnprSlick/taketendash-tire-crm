@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Param } from '@nestjs/common';
 import { InventoryService } from './inventory.service';
 
 @Controller('inventory')
@@ -67,5 +67,13 @@ export class InventoryController {
       limit: limit ? Number(limit) : undefined,
       outlook: outlook ? Number(outlook) : 30,
     });
+  }
+
+  @Get('analytics/:productId/history')
+  async getProductHistory(
+    @Param('productId') productId: string,
+    @Query('days') days?: number,
+  ) {
+    return this.inventoryService.getProductSalesHistory(productId, days ? Number(days) : 365);
   }
 }

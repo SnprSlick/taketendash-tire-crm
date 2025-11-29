@@ -459,6 +459,53 @@ This comprehensive debugging session successfully resolved a **systemic failure*
 - **Backend**: Removed the `quality != 'UNKNOWN'` filter from `TireAnalyticsService` methods (`getTireAnalytics`, `getFilterOptions`, `getTireSalesTrends`). This allows products with unspecified quality to be included in analytics.
 **Files Changed**:
 - `backend/src/modules/tire-analytics/tire-analytics.service.ts`
+
+### ✅ 19. Filter Tire Analytics by Quality
+**Goal**: Restrict Tire Analytics to only show products with 'PREMIUM', 'STANDARD', or 'ECONOMY' quality ratings, excluding 'UNKNOWN'.
+**Implementation**:
+- **Backend**: Updated `TireAnalyticsService` methods (`getTireAnalytics`, `getFilterOptions`, `getTireSalesTrends`) to include a filter `quality IN ('PREMIUM', 'STANDARD', 'ECONOMY')`.
+**Files Changed**:
+- `backend/src/modules/tire-analytics/tire-analytics.service.ts`
+
+### ✅ 20. Business Insights Backend
+**Goal**: Implement backend service to calculate actionable business insights for Inventory, Workforce, and Margins.
+**Implementation**:
+- **Backend**: 
+  - Created `InsightsModule`, `InsightsController`, and `InsightsService`.
+  - Implemented endpoints:
+    - `/insights/inventory/restock`: Velocity-based restock alerts (< 7 days supply).
+    - `/insights/inventory/dead-stock`: Items with quantity > 4 and no sales in 90 days.
+    - `/insights/workforce/utilization`: Technician billed hours vs capacity (40h/week).
+    - `/insights/margin/leakage`: Categories with GP% below target (e.g., Tires < 15%).
+    - `/insights/margin/attachment`: % of Tire invoices that include an Alignment.
+  - Registered module in `AppModule`.
+**Files Created**:
+- `backend/src/modules/insights/insights.module.ts`
+- `backend/src/modules/insights/insights.controller.ts`
+- `backend/src/modules/insights/insights.service.ts`
+**Files Changed**:
+- `backend/src/app.module.ts`
+
+### ✅ 21. Business Insights Frontend
+**Goal**: Visualize business insights on a dedicated dashboard.
+**Implementation**:
+- **Frontend**:
+  - Created `InsightsDashboard` component with cards for:
+    - Technician Utilization (KPI Card)
+    - Alignment Attachment Rate (KPI Card)
+    - Dead Stock Value (KPI Card)
+    - Urgent Restock Alerts (List)
+    - Margin Leakage Alerts (List)
+    - Dead Stock Candidates (List)
+    - Attachment Rate Detail (Progress Bar)
+  - Created `/insights` page route.
+  - Added "Insights" link to the main navigation bar.
+**Files Created**:
+- `frontend/src/components/insights/insights-dashboard.tsx` (Refactored to use Tailwind CSS directly)
+- `frontend/src/app/insights/page.tsx`
+- `frontend/src/lib/utils.ts` (Created to provide `formatCurrency` and `cn` utilities)
+**Files Changed**:
+- `frontend/src/components/dashboard/dashboard-layout.tsx`
 **Implementation**:
 - **Backend**: 
   - Updated `StoreService.findAll` to include YTD Revenue and GP stats.

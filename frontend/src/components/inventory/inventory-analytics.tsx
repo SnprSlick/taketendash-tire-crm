@@ -75,6 +75,8 @@ export default function InventoryAnalytics() {
   const [limit, setLimit] = useState(25);
   const [hasMore, setHasMore] = useState(true); // Simple check if we got full page
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+  const [historyCache, setHistoryCache] = useState<Record<string, any[]>>({});
+  const [loadingHistory, setLoadingHistory] = useState<string | null>(null);
   const [graphOutlook, setGraphOutlook] = useState<number>(365);
   const [smoothingWindow, setSmoothingWindow] = useState<number>(30);
   const [hoveredStore, setHoveredStore] = useState<string | null>(null);
@@ -232,6 +234,30 @@ export default function InventoryAnalytics() {
   useEffect(() => {
     fetchAnalytics();
   }, [fetchAnalytics]);
+
+  const handleExpand = async (productId: string) => {
+    if (expandedProductId === productId) {
+      setExpandedProductId(null);
+      return;
+    }
+
+    setExpandedProductId(productId);
+
+    if (!historyCache[productId]) {
+      setLoadingHistory(productId);
+      try {
+        const res = await fetch(`/api/v1/inventory/analytics/${productId}/history?days=365`);
+        if (res.ok) {
+          const history = await res.json();
+          setHistoryCache(prev => ({ ...prev, [productId]: history }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch history', err);
+      } finally {
+        setLoadingHistory(null);
+      }
+    }
+  };
 
   const handleSort = (field: string) => {
     if (sortBy === field) {
@@ -434,7 +460,7 @@ export default function InventoryAnalytics() {
                 items.map((item) => (
                   <React.Fragment key={item.productId}>
                     <tr 
-                      onClick={() => setExpandedProductId(expandedProductId === item.productId ? null : item.productId)}
+                      onClick={() => handleExpand(item.productId)}
                       className={`cursor-pointer hover:bg-gray-50 transition-colors ${expandedProductId === item.productId ? 'bg-blue-50' : ''}`}
                     >
                       <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{item.sku}</td>
@@ -558,9 +584,15 @@ export default function InventoryAnalytics() {
                                       transition: stroke-width 0.3s ease, stroke-opacity 0.3s ease;
                                     }
                                   `}</style>
+                                  {loadingHistory === item.productId ? (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
+                                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                    </div>
+                                  ) : null}
                                   <ResponsiveContainer width="100%" height="100%">
                                     {(() => {
-                                      const { data, stores } = processSalesHistory(item.salesHistory, graphOutlook, smoothingWindow);
+                                      const history = historyCache[item.productId] || item.salesHistory;
+                                      const { data, stores } = processSalesHistory(history, graphOutlook, smoothingWindow);
                                       
                                       // Calculate max value for dynamic scaling
                                       const maxValue = data.reduce((max, point) => {

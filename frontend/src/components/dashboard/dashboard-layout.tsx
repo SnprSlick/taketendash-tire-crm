@@ -108,6 +108,12 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
               active={isActive('/stores')}
             />
             <NavItem
+              href="/insights"
+              icon={<BarChart3 className="w-4 h-4" />}
+              label="Insights"
+              active={isActive('/insights')}
+            />
+            <NavItem
               href="/dashboard/sales"
               icon={<TrendingUp className="w-4 h-4" />}
               label="Analytics"
@@ -116,7 +122,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
             <NavItem
               href="/dashboard/sales/reports"
               icon={<FileText className="w-4 h-4" />}
-              label="Detailed Reports"
+              label="Reports"
               active={isActive('/dashboard/sales/reports')}
             />
             {/* <NavItem
@@ -158,7 +164,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
             <NavItem
               href="/dashboard/inventory/analytics"
               icon={<TrendingUp className="w-4 h-4" />}
-              label="Restock & Analytics"
+              label="Restock"
               active={isActive('/dashboard/inventory/analytics')}
             />
             <NavItem
@@ -176,7 +182,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
             <NavItem
               href="/tire-master"
               icon={<Database className="w-4 h-4" />}
-              label="Tire Master"
+              label="Config"
               active={isActive('/tire-master')}
             />
           </div>
