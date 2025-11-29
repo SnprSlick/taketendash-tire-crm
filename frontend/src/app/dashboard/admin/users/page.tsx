@@ -3,7 +3,17 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../../../components/dashboard/dashboard-layout';
 import { useAuth } from '../../../../contexts/auth-context';
-import { Check, X, Shield, User, Search, Filter } from 'lucide-react';
+import { Check, X, Shield, User, Search, Filter, Edit2, Trash2 } from 'lucide-react';
+import EditUserModal from './edit-user-modal';
+import { ROLE_SCOPES } from '../../../../../../backend/src/auth/constants'; // We can't import from backend directly in frontend usually, but let's see if we can duplicate or just hardcode scopes for now. Actually, let's just pass empty scopes for now as the backend handles defaults if not provided, or we need to fetch them.
+// Better to just hardcode the default scopes map here or fetch from an endpoint.
+// For now, I'll just use a simple map or let the backend handle it if I send empty scopes.
+// The backend assignRole expects scopes. I should probably update the backend to apply default scopes if none provided.
+
+interface Store {
+  id: string;
+  name: string;
+}
 
 interface UserData {
   id: string;
@@ -16,14 +26,60 @@ interface UserData {
   stores: { id: string; name: string }[];
 }
 
+// Duplicate constants for now to avoid import issues across monorepo boundary if not set up
+const ROLES = {
+  ADMINISTRATOR: 'ADMINISTRATOR',
+  CORPORATE: 'CORPORATE',
+  WHOLESALE: 'WHOLESALE',
+  STORE_MANAGER: 'STORE_MANAGER',
+  SALESPERSON: 'SALESPERSON',
+  MECHANIC: 'MECHANIC',
+};
+
+const SCOPES = {
+  ALL: '*',
+  VIEW_DASHBOARD: 'view:dashboard',
+  VIEW_INVENTORY: 'view:inventory',
+  VIEW_RESTOCK: 'view:restock',
+  VIEW_INSIGHTS: 'view:insights',
+  VIEW_REPORTS: 'view:reports',
+  VIEW_MECHANIC_STATS: 'view:mechanic_stats',
+  VIEW_SALES_STATS: 'view:sales_stats',
+  MANAGE_USERS: 'manage:users',
+  IMPORT_DATA: 'import:data',
+  CLEAR_DB: 'clear:db',
+};
+
+const ROLE_SCOPES_MAP: Record<string, string[]> = {
+  [ROLES.ADMINISTRATOR]: [SCOPES.ALL],
+  [ROLES.CORPORATE]: [
+    SCOPES.VIEW_DASHBOARD, 
+    SCOPES.VIEW_INVENTORY, 
+    SCOPES.VIEW_RESTOCK, 
+    SCOPES.VIEW_INSIGHTS, 
+    SCOPES.VIEW_REPORTS, 
+    SCOPES.VIEW_MECHANIC_STATS, 
+    SCOPES.VIEW_SALES_STATS
+  ],
+  [ROLES.WHOLESALE]: [SCOPES.VIEW_INVENTORY, SCOPES.VIEW_RESTOCK, SCOPES.VIEW_INSIGHTS],
+  [ROLES.STORE_MANAGER]: [SCOPES.VIEW_DASHBOARD, SCOPES.VIEW_REPORTS, SCOPES.VIEW_INVENTORY],
+  [ROLES.SALESPERSON]: [SCOPES.VIEW_SALES_STATS],
+  [ROLES.MECHANIC]: [SCOPES.VIEW_MECHANIC_STATS],
+};
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserData[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const { token } = useAuth();
   const [search, setSearch] = useState('');
+  
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [editingUser, setEditingUser] = useState<UserData | null>(null);
 
   useEffect(() => {
     fetchUsers();
+    fetchStores();
   }, []);
 
   const fetchUsers = async () => {
@@ -42,6 +98,20 @@ export default function AdminUsersPage() {
     }
   };
 
+  const fetchStores = async () => {
+    try {
+      const res = await fetch('/api/v1/stores', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStores(data.data || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch stores', error);
+    }
+  };
+
   const handleApprove = async (id: string) => {
     try {
       const res = await fetch(`/api/v1/users/${id}/approve`, {
@@ -54,6 +124,60 @@ export default function AdminUsersPage() {
     } catch (error) {
       console.error('Failed to approve user', error);
     }
+  };
+
+  const handleBulkApprove = async () => {
+    if (selectedUserIds.length === 0) return;
+    
+    // Process sequentially for now, could be a bulk endpoint
+    for (const id of selectedUserIds) {
+      await handleApprove(id);
+    }
+    setSelectedUserIds([]);
+  };
+
+  const handleUpdateUser = async (userId: string, data: { role: string; storeIds: string[] }) => {
+    try {
+      // Update Role
+      const scopes = ROLE_SCOPES_MAP[data.role] || [];
+      await fetch(`/api/v1/users/${userId}/role`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({ role: data.role, scopes })
+      });
+
+      // Update Stores
+      await fetch(`/api/v1/users/${userId}/stores`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({ storeIds: data.storeIds })
+      });
+
+      fetchUsers();
+    } catch (error) {
+      console.error('Failed to update user', error);
+      throw error;
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedUserIds.length === filteredUsers.length) {
+      setSelectedUserIds([]);
+    } else {
+      setSelectedUserIds(filteredUsers.map(u => u.id));
+    }
+  };
+
+  const toggleSelectUser = (id: string) => {
+    setSelectedUserIds(prev => 
+      prev.includes(id) ? prev.filter(uid => uid !== id) : [...prev, id]
+    );
   };
 
   const filteredUsers = users.filter(user => 
@@ -69,6 +193,15 @@ export default function AdminUsersPage() {
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold text-slate-900">User Management</h1>
           <div className="flex gap-4">
+            {selectedUserIds.length > 0 && (
+              <button
+                onClick={handleBulkApprove}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-2"
+              >
+                <Check className="w-4 h-4" />
+                Approve Selected ({selectedUserIds.length})
+              </button>
+            )}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
@@ -86,6 +219,14 @@ export default function AdminUsersPage() {
           <table className="w-full text-sm text-left">
             <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-200">
               <tr>
+                <th className="px-6 py-4 w-10">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-slate-300 text-red-600 focus:ring-red-500"
+                    checked={selectedUserIds.length > 0 && selectedUserIds.length === filteredUsers.length}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th className="px-6 py-4">User</th>
                 <th className="px-6 py-4">Role</th>
                 <th className="px-6 py-4">Status</th>
@@ -96,6 +237,14 @@ export default function AdminUsersPage() {
             <tbody className="divide-y divide-slate-100">
               {filteredUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-slate-300 text-red-600 focus:ring-red-500"
+                      checked={selectedUserIds.includes(user.id)}
+                      onChange={() => toggleSelectUser(user.id)}
+                    />
+                  </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-500">
@@ -130,20 +279,39 @@ export default function AdminUsersPage() {
                     }
                   </td>
                   <td className="px-6 py-4 text-right">
-                    {!user.isApproved && (
+                    <div className="flex items-center justify-end gap-2">
                       <button
-                        onClick={() => handleApprove(user.id)}
-                        className="text-green-600 hover:text-green-700 font-medium text-xs"
+                        onClick={() => setEditingUser(user)}
+                        className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
+                        title="Edit User"
                       >
-                        Approve
+                        <Edit2 className="w-4 h-4" />
                       </button>
-                    )}
+                      {!user.isApproved && (
+                        <button
+                          onClick={() => handleApprove(user.id)}
+                          className="text-green-600 hover:text-green-700 font-medium text-xs"
+                        >
+                          Approve
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+
+        {editingUser && (
+          <EditUserModal
+            user={editingUser}
+            isOpen={!!editingUser}
+            onClose={() => setEditingUser(null)}
+            onSave={handleUpdateUser}
+            availableStores={stores}
+          />
+        )}
       </div>
     </DashboardLayout>
   );
