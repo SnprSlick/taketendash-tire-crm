@@ -423,6 +423,13 @@ This comprehensive debugging session successfully resolved a **systemic failure*
   - Added "Stores" as the first navigation item.
 **Files Changed**:
 - `frontend/src/components/dashboard/dashboard-layout.tsx`
+
+### ✅ 15. Tire Analytics UI Improvement
+**Goal**: Highlight the selected time period button on the tire analytics page.
+**Implementation**:
+- **Frontend**: Updated `TireFilterBar` to conditionally apply active styles (`bg-blue-600 text-white`) to the selected time period button by comparing the calculated start date with the current filter's start date.
+**Files Changed**:
+- `frontend/src/components/tires/tire-filter-bar.tsx`
 **Implementation**:
 - **Backend**: 
   - Updated `StoreService.findAll` to include YTD Revenue and GP stats.

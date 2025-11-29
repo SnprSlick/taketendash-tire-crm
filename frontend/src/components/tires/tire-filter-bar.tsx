@@ -28,6 +28,13 @@ export const TireFilterBar: React.FC<TireFilterBarProps> = ({ options, filter, o
     });
   };
 
+  const isRangeActive = (days: number) => {
+    if (!filter.startDate) return false;
+    const start = new Date();
+    start.setDate(start.getDate() - days);
+    return filter.startDate === start.toISOString().split('T')[0];
+  };
+
   return (
     <div className="bg-white p-4 rounded-lg shadow space-y-4">
       <div className="flex flex-wrap gap-2">
@@ -35,7 +42,11 @@ export const TireFilterBar: React.FC<TireFilterBarProps> = ({ options, filter, o
           <button
             key={days}
             onClick={() => handleDateRangeChange(days)}
-            className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full"
+            className={`px-3 py-1 text-sm rounded-full transition-colors ${
+              isRangeActive(days)
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
           >
             Last {days} Days
           </button>
