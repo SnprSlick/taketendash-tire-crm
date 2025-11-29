@@ -194,40 +194,40 @@ export function InsightsDashboard() {
 
       {/* Top Level KPI Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="bg-white rounded-lg shadow border border-gray-200 group hover:bg-red-600 hover:border-red-600 transition-all duration-700">
+        <div className="bg-white rounded-lg shadow border border-gray-200">
           <div className="p-6 pb-2 flex flex-row items-center justify-between space-y-0">
-            <h3 className="text-sm font-medium text-gray-900 group-hover:text-white">Technician Utilization</h3>
-            <Users className="h-4 w-4 text-gray-500 group-hover:text-red-100" />
+            <h3 className="text-sm font-medium text-gray-900">Technician Utilization</h3>
+            <Users className="h-4 w-4 text-gray-500" />
           </div>
           <div className="p-6 pt-0">
-            <div className="text-2xl font-bold text-gray-900 group-hover:text-white">{utilization?.value}%</div>
-            <p className="text-xs text-gray-500 mt-1 group-hover:text-red-100">
+            <div className="text-2xl font-bold text-gray-900">{utilization?.value}%</div>
+            <p className="text-xs text-gray-500 mt-1">
               {utilization?.insight}
             </p>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow border border-gray-200 group hover:bg-red-600 hover:border-red-600 transition-all duration-700">
+        <div className="bg-white rounded-lg shadow border border-gray-200">
           <div className="p-6 pb-2 flex flex-row items-center justify-between space-y-0">
-            <h3 className="text-sm font-medium text-gray-900 group-hover:text-white">Alignment Attachment</h3>
-            <TrendingUp className="h-4 w-4 text-gray-500 group-hover:text-red-100" />
+            <h3 className="text-sm font-medium text-gray-900">Alignment Attachment</h3>
+            <TrendingUp className="h-4 w-4 text-gray-500" />
           </div>
           <div className="p-6 pt-0">
-            <div className="text-2xl font-bold text-gray-900 group-hover:text-white">{attachmentRate?.value}%</div>
-            <p className="text-xs text-gray-500 mt-1 group-hover:text-red-100">
+            <div className="text-2xl font-bold text-gray-900">{attachmentRate?.value}%</div>
+            <p className="text-xs text-gray-500 mt-1">
               Missed Revenue: {formatCurrency(attachmentRate?.potentialRevenue || 0)}
             </p>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow border border-gray-200 group hover:bg-red-600 hover:border-red-600 transition-all duration-700">
+        <div className="bg-white rounded-lg shadow border border-gray-200">
           <div className="p-6 pb-2 flex flex-row items-center justify-between space-y-0">
-            <h3 className="text-sm font-medium text-gray-900 group-hover:text-white">Dead Stock Value</h3>
-            <DollarSign className="h-4 w-4 text-gray-500 group-hover:text-red-100" />
+            <h3 className="text-sm font-medium text-gray-900">Dead Stock Value</h3>
+            <DollarSign className="h-4 w-4 text-gray-500" />
           </div>
           <div className="p-6 pt-0">
-            <div className="text-2xl font-bold text-gray-900 group-hover:text-white">
+            <div className="text-2xl font-bold text-gray-900">
               {formatCurrency(deadStock.reduce((sum, item) => sum + item.value, 0))}
             </div>
-            <p className="text-xs text-gray-500 mt-1 group-hover:text-red-100">
+            <p className="text-xs text-gray-500 mt-1">
               {deadStock.length} items stagnant &gt; 90 days
             </p>
           </div>
@@ -244,8 +244,8 @@ export function InsightsDashboard() {
           {Object.entries(topTires)
             .filter(([category]) => !['OTHER', 'LAWN AND GARDEN', 'ATV UTV', 'AGRICULTURAL', 'INDUSTRIAL', 'OTR'].includes(category.toUpperCase()))
             .map(([category, tires]) => (
-            <div key={category} className="min-w-[280px] flex-1 bg-white rounded-lg shadow border border-gray-200 p-3 group hover:bg-red-600 hover:border-red-600 transition-all duration-700">
-              <h3 className="font-semibold text-xs text-gray-800 mb-2 border-b pb-1 uppercase tracking-wide group-hover:text-white group-hover:border-red-400">{category}</h3>
+            <div key={category} className="min-w-[280px] flex-1 bg-white rounded-lg shadow border border-gray-200 p-3">
+              <h3 className="font-semibold text-xs text-gray-800 mb-2 border-b pb-1 uppercase tracking-wide">{category}</h3>
               
               {/* Combined Chart */}
               <div className="h-16 w-full mb-2">
@@ -295,16 +295,16 @@ export function InsightsDashboard() {
               {/* Tire Details List */}
               <div className="space-y-1.5">
                 {tires.slice(0, 3).map((tire, index) => (
-                  <div key={tire.productId} className="flex flex-col p-1 bg-gray-50 rounded border border-gray-100 text-[10px] group-hover:bg-red-500 group-hover:border-red-400">
+                  <div key={tire.productId} className="flex flex-col p-1 bg-gray-50 rounded border border-gray-100 text-[10px]">
                     <div className="flex items-center gap-1.5 overflow-hidden mb-0.5">
-                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 group-hover:bg-white" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                      <div className="truncate font-medium text-gray-700 group-hover:text-white" title={tire.productName}>
+                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                      <div className="truncate font-medium text-gray-700" title={tire.productName}>
                         {tire.rank}. {tire.productName}
                       </div>
                     </div>
-                    <div className="flex items-center justify-between text-gray-500 pl-3 group-hover:text-red-100">
-                      <div><span className="font-semibold text-gray-900 group-hover:text-white">{tire.totalSold}</span> Sold</div>
-                      <div><span className={`font-semibold ${tire.daysOfSupply < 30 ? 'text-red-600 group-hover:text-white' : 'text-gray-900 group-hover:text-white'}`}>{tire.daysOfSupply > 365 ? '>1yr' : Math.round(tire.daysOfSupply)}</span>d</div>
+                    <div className="flex items-center justify-between text-gray-500 pl-3">
+                      <div><span className="font-semibold text-gray-900">{tire.totalSold}</span> Sold</div>
+                      <div><span className={`font-semibold ${tire.daysOfSupply < 30 ? 'text-red-600' : 'text-gray-900'}`}>{tire.daysOfSupply > 365 ? '>1yr' : Math.round(tire.daysOfSupply)}</span>d</div>
                     </div>
                   </div>
                 ))}
@@ -358,27 +358,27 @@ export function InsightsDashboard() {
             </div>
             <div className="p-6 space-y-4">
               {restockAlerts.filter(a => a.status === 'Low Stock').slice(0, 5).map((alert) => (
-                <div key={alert.productId} className="relative w-full rounded-lg border border-red-200 p-4 bg-red-50 group hover:bg-red-600 hover:border-red-600 transition-all duration-700">
+                <div key={alert.productId} className="relative w-full rounded-lg border border-red-200 p-4 bg-red-50">
                   <div className="flex items-start gap-4">
-                    <Package className="h-4 w-4 text-red-600 mt-1 group-hover:text-white" />
+                    <Package className="h-4 w-4 text-red-600 mt-1" />
                     <div className="flex-1">
-                      <h5 className="mb-1 font-medium leading-none tracking-tight text-red-800 group-hover:text-white">
+                      <h5 className="mb-1 font-medium leading-none tracking-tight text-red-800">
                         {alert.productName}
                       </h5>
-                      <div className="text-xs text-red-700 mb-1 group-hover:text-red-100">
+                      <div className="text-xs text-red-700 mb-1">
                         SKU: {alert.sku} {alert.manufacturerCode ? `• PN: ${alert.manufacturerCode}` : ''}
                       </div>
-                      <div className="text-sm text-red-700 flex justify-between items-center mt-2 group-hover:text-red-100">
+                      <div className="text-sm text-red-700 flex justify-between items-center mt-2">
                         {alert.currentStock === 0 ? (
                           <span className="font-semibold">Out of Stock ({alert.daysOutOfStock} days)</span>
                         ) : (
                           <span>{Math.round(alert.daysOfSupply)} days supply left ({alert.currentStock} units)</span>
                         )}
-                        <span className="inline-flex items-center rounded-full border border-red-300 bg-white px-2.5 py-0.5 text-xs font-semibold text-red-700 group-hover:bg-red-500 group-hover:text-white group-hover:border-red-400">
+                        <span className="inline-flex items-center rounded-full border border-red-300 bg-white px-2.5 py-0.5 text-xs font-semibold text-red-700">
                           Suggested Order: {alert.suggestedOrder}
                         </span>
                       </div>
-                      <div className="text-xs text-red-600 mt-1 group-hover:text-red-200">
+                      <div className="text-xs text-red-600 mt-1">
                         {alert.storeName} • Velocity: {alert.dailyVelocity.toFixed(2)}/day
                       </div>
                     </div>
@@ -403,14 +403,14 @@ export function InsightsDashboard() {
             </div>
             <div className="p-6 space-y-4">
               {marginLeakage.map((leak) => (
-                <div key={leak.category} className="flex items-center justify-between p-3 border rounded-lg bg-orange-50 border-orange-200 group hover:bg-red-600 hover:border-red-600 transition-all duration-700">
+                <div key={leak.category} className="flex items-center justify-between p-3 border rounded-lg bg-orange-50 border-orange-200">
                   <div>
-                    <div className="font-semibold text-orange-900 group-hover:text-white">{leak.category}</div>
-                    <div className="text-sm text-orange-700 group-hover:text-red-100">Target: {leak.targetMargin}%</div>
+                    <div className="font-semibold text-orange-900">{leak.category}</div>
+                    <div className="text-sm text-orange-700">Target: {leak.targetMargin}%</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold text-orange-800 group-hover:text-white">{leak.currentMargin}%</div>
-                    <div className="text-xs text-orange-600 group-hover:text-red-100">Actual Margin</div>
+                    <div className="text-xl font-bold text-orange-800">{leak.currentMargin}%</div>
+                    <div className="text-xs text-orange-600">Actual Margin</div>
                   </div>
                 </div>
               ))}
@@ -695,16 +695,16 @@ export function InsightsDashboard() {
             </div>
             <div className="p-6 space-y-4">
               {deadStock.slice(0, 5).map((item) => (
-                <div key={item.productId} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-red-600 hover:border-red-600 transition-all duration-700 group">
+                <div key={item.productId} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                   <div className="space-y-1">
-                    <div className="font-medium text-gray-900 group-hover:text-white">{item.productName}</div>
-                    <div className="text-xs text-gray-500 group-hover:text-red-100">
+                    <div className="font-medium text-gray-900">{item.productName}</div>
+                    <div className="text-xs text-gray-500">
                       {item.brand} • SKU: {item.sku} • {item.storeName}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-gray-900 group-hover:text-white">{item.quantity} units</div>
-                    <div className="text-xs text-gray-500 group-hover:text-red-100">
+                    <div className="font-bold text-gray-900">{item.quantity} units</div>
+                    <div className="text-xs text-gray-500">
                       {formatCurrency(item.value)} value
                     </div>
                   </div>
