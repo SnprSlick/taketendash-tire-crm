@@ -47,16 +47,17 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-red-50 to-slate-100">
       {/* Header */}
-      <header className="bg-white/95 backdrop-blur-sm shadow-lg border-b border-slate-200/50 sticky top-0 z-50">
+      <header className="bg-white/95 backdrop-blur-sm shadow-lg border-b border-slate-200/50">
         <div className={`${containerClass} mx-auto px-4 sm:px-6 lg:px-8`}>
-          <div className="flex justify-between items-center h-32">
+          <div className="flex justify-between items-center h-24">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
                 <img 
                   src="https://taketentire.com/wp-content/uploads/2022/03/Take-Ten.png.webp" 
-                  alt="Take Ten Tire" 
-                  className="h-[100px] w-auto object-contain"
+                  alt="10Manager" 
+                  className="h-[67px] w-auto object-contain"
                 />
+                <span className="text-2xl font-bold text-slate-800 tracking-tight">10Manager</span>
               </div>
             </div>
             <div className="flex items-center space-x-4">
