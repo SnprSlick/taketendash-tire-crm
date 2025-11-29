@@ -8,7 +8,9 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'
 
 export const TireAnalyticsDashboard: React.FC = () => {
   const [filter, setFilter] = useState<TireAnalyticsFilter>({
-    groupBy: 'brand'
+    groupBy: 'brand',
+    startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0]
   });
   const [data, setData] = useState<TireAnalyticsResult[]>([]);
   const [trendData, setTrendData] = useState<any[]>([]);
