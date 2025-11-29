@@ -481,8 +481,6 @@ export class InvoiceController {
         LIMIT 5
       `;
 
-      console.log('Top Customers Result:', topCustomers);
-
       // 5. Sales Trend
 
       // 5. Sales Trend
