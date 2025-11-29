@@ -462,12 +462,14 @@ export class InvoiceController {
       // But we can fetch top IDs then fetch names, or use raw query. Raw query is cleaner here.
       const topCustomers = await this.prisma.$queryRaw`
         SELECT 
+          c.id,
           c.name,
           COUNT(i.id)::int as invoice_count,
           SUM(i.total_amount) as total_spent
         FROM invoices i
         JOIN invoice_customers c ON c.id = i.customer_id
         WHERE i.invoice_date >= ${startDate} AND i.status = 'ACTIVE'::"InvoiceStatus"
+        ${storeCondition}
         GROUP BY c.id, c.name
         ORDER BY total_spent DESC
         LIMIT 5

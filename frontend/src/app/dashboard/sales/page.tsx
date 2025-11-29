@@ -223,6 +223,7 @@ export default function SalesDashboardPage() {
           insights={analyticsData?.insights}
           kpis={analyticsData?.kpis}
           loading={loading}
+          storeId={selectedStoreId}
         />
 
         {/* System Status Footer */}

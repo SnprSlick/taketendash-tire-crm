@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import {
   LineChart,
   Line,
@@ -45,6 +46,7 @@ interface CategoryStat {
 }
 
 interface TopEntity {
+  id?: string;
   name: string;
   total_spent?: number;
   invoice_count?: number;
@@ -79,6 +81,7 @@ interface SalesChartsProps {
   insights?: SalesInsight[];
   kpis?: KPI[];
   loading?: boolean;
+  storeId?: string | null;
 }
 
 const mockSalesData = [
@@ -104,7 +107,8 @@ export default function SalesCharts({
   salesTrend = [],
   insights = [],
   kpis = [],
-  loading = false
+  loading = false,
+  storeId
 }: SalesChartsProps) {
   // Use provided salesTrend if available, otherwise fallback to mock data only if loading failed or empty
   const chartData = salesTrend.length > 0 ? salesTrend : mockSalesData;
@@ -290,7 +294,11 @@ export default function SalesCharts({
           </h3>
           <div className="space-y-4">
             {topCustomers.map((customer, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+              <Link 
+                href={`/dashboard/sales/reports/customer/${customer.id}${storeId ? `?storeId=${storeId}` : ''}`}
+                key={index} 
+                className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              >
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold text-sm">
                     {index + 1}
@@ -303,7 +311,7 @@ export default function SalesCharts({
                 <div className="text-right">
                   <p className="font-bold text-slate-800">${Number(customer.total_spent || 0).toLocaleString()}</p>
                 </div>
-              </div>
+              </Link>
             ))}
             {topCustomers.length === 0 && (
               <p className="text-center text-slate-500 py-4">No customer data available</p>
@@ -319,7 +327,11 @@ export default function SalesCharts({
           </h3>
           <div className="space-y-4">
             {topSalespeople.map((person, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+              <Link
+                href={`/dashboard/sales/reports/salesperson/${encodeURIComponent(person.salesperson || '')}${storeId ? `?storeId=${storeId}` : ''}`}
+                key={index} 
+                className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              >
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center font-bold text-sm">
                     {index + 1}
@@ -332,7 +344,7 @@ export default function SalesCharts({
                 <div className="text-right">
                   <p className="font-bold text-slate-800">${Number(person._sum?.totalAmount || 0).toLocaleString()}</p>
                 </div>
-              </div>
+              </Link>
             ))}
             {topSalespeople.length === 0 && (
               <p className="text-center text-slate-500 py-4">No sales data available</p>
