@@ -402,39 +402,27 @@ export class InvoiceController {
 
       // 2. Category Breakdown (Revenue by Category)
       console.log('Step 2: Category Breakdown');
-      // This requires joining with line items. Prisma doesn't support deep groupBy easily, 
-      // so we might need a raw query or separate queries.
-      // Let's use a raw query for performance on analytics.
+      // Updated to match Tire Analytics logic for identifying tires
       
-      let categoryStats;
-      if (storeId) {
-        categoryStats = await this.prisma.$queryRaw`
-          SELECT 
-            category,
-            SUM(line_total) as revenue,
-            SUM(ili.gross_profit) as profit,
-            SUM(quantity) as quantity
-          FROM invoice_line_items ili
-          JOIN invoices i ON i.id = ili.invoice_id
-          WHERE i.invoice_date >= ${startDate} 
-            AND i.status = 'ACTIVE'::"InvoiceStatus"
-            AND i.store_id = ${storeId}
-          GROUP BY category
-        `;
-      } else {
-        categoryStats = await this.prisma.$queryRaw`
-          SELECT 
-            category,
-            SUM(line_total) as revenue,
-            SUM(ili.gross_profit) as profit,
-            SUM(quantity) as quantity
-          FROM invoice_line_items ili
-          JOIN invoices i ON i.id = ili.invoice_id
-          WHERE i.invoice_date >= ${startDate} 
-            AND i.status = 'ACTIVE'::"InvoiceStatus"
-          GROUP BY category
-        `;
-      }
+      const storeCondition = storeId ? Prisma.sql`AND i.store_id = ${storeId}` : Prisma.empty;
+
+      const categoryStats = await this.prisma.$queryRaw`
+        SELECT 
+          CASE 
+            WHEN p."isTire" = true AND p."quality" IN ('PREMIUM', 'STANDARD', 'ECONOMY') AND p."brand" != 'Unknown' THEN 'TIRES'
+            ELSE ili.category::text
+          END as category,
+          SUM(line_total) as revenue,
+          SUM(ili.gross_profit) as profit,
+          SUM(quantity) as quantity
+        FROM invoice_line_items ili
+        JOIN invoices i ON i.id = ili.invoice_id
+        LEFT JOIN "tire_master_products" p ON ili.tire_master_product_id = p.id
+        WHERE i.invoice_date >= ${startDate} 
+          AND i.status = 'ACTIVE'::"InvoiceStatus"
+          ${storeCondition}
+        GROUP BY 1
+      `;
 
       // Recalculate profit if missing from invoice aggregate
       if (totalProfit === 0 && Array.isArray(categoryStats) && categoryStats.length > 0) {
