@@ -26,9 +26,9 @@ export default function StoresPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Date Range State (Default to last 30 days)
+  // Date Range State (Default to Year to Date)
   const [dateRange, setDateRange] = useState<{ startDate: Date | null; endDate: Date | null }>({
-    startDate: new Date(new Date().setDate(new Date().getDate() - 30)),
+    startDate: new Date(new Date().getFullYear(), 0, 1),
     endDate: new Date()
   });
 
