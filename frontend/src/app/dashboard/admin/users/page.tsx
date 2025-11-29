@@ -78,15 +78,21 @@ export default function AdminUsersPage() {
   const [editingUser, setEditingUser] = useState<UserData | null>(null);
 
   useEffect(() => {
-    fetchUsers();
-    fetchStores();
-  }, []);
+    console.log('AdminUsersPage mounted. Token:', token);
+    if (token) {
+      fetchUsers();
+      fetchStores();
+    }
+  }, [token]);
 
   const fetchUsers = async () => {
+    const cleanToken = token?.replace(/"/g, '');
+    console.log('Fetching users with token:', cleanToken);
     try {
       const res = await fetch('/api/v1/users', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${cleanToken}` }
       });
+      console.log('Fetch users response status:', res.status);
       if (res.ok) {
         const data = await res.json();
         setUsers(data);
@@ -99,9 +105,10 @@ export default function AdminUsersPage() {
   };
 
   const fetchStores = async () => {
+    const cleanToken = token?.replace(/"/g, '');
     try {
       const res = await fetch('/api/v1/stores', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${cleanToken}` }
       });
       if (res.ok) {
         const data = await res.json();
@@ -113,10 +120,11 @@ export default function AdminUsersPage() {
   };
 
   const handleApprove = async (id: string) => {
+    const cleanToken = token?.replace(/"/g, '');
     try {
       const res = await fetch(`/api/v1/users/${id}/approve`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${cleanToken}` }
       });
       if (res.ok) {
         fetchUsers();
@@ -137,6 +145,7 @@ export default function AdminUsersPage() {
   };
 
   const handleUpdateUser = async (userId: string, data: { role: string; storeIds: string[] }) => {
+    const cleanToken = token?.replace(/"/g, '');
     try {
       // Update Role
       const scopes = ROLE_SCOPES_MAP[data.role] || [];
@@ -144,7 +153,7 @@ export default function AdminUsersPage() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}` 
+          Authorization: `Bearer ${cleanToken}` 
         },
         body: JSON.stringify({ role: data.role, scopes })
       });
@@ -154,7 +163,7 @@ export default function AdminUsersPage() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}` 
+          Authorization: `Bearer ${cleanToken}` 
         },
         body: JSON.stringify({ storeIds: data.storeIds })
       });
