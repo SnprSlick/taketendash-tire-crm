@@ -111,7 +111,7 @@ interface TopTire {
 }
 
 export function InsightsDashboard() {
-  const COLORS = ['#2563eb', '#16a34a', '#d97706'];
+  const COLORS = ['#dc2626', '#16a34a', '#d97706'];
   const [restockAlerts, setRestockAlerts] = useState<RestockAlert[]>([]);
   const [deadStock, setDeadStock] = useState<DeadStock[]>([]);
   const [utilization, setUtilization] = useState<UtilizationMetric | null>(null);
@@ -179,11 +179,11 @@ export function InsightsDashboard() {
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-200/50 p-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
           <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 bg-gradient-to-r from-red-600 to-slate-800 rounded-xl flex items-center justify-center shadow-lg">
               <BarChart3 className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-blue-700 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-red-700 bg-clip-text text-transparent">
                 Business Insights
               </h1>
               <p className="text-slate-600">AI-driven suggestions to improve profitability</p>
@@ -194,40 +194,40 @@ export function InsightsDashboard() {
 
       {/* Top Level KPI Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="bg-white rounded-lg shadow border border-gray-200">
+        <div className="bg-white rounded-lg shadow border border-gray-200 group hover:bg-red-600 hover:border-red-600 transition-all duration-200">
           <div className="p-6 pb-2 flex flex-row items-center justify-between space-y-0">
-            <h3 className="text-sm font-medium text-gray-900">Technician Utilization</h3>
-            <Users className="h-4 w-4 text-gray-500" />
+            <h3 className="text-sm font-medium text-gray-900 group-hover:text-white">Technician Utilization</h3>
+            <Users className="h-4 w-4 text-gray-500 group-hover:text-red-100" />
           </div>
           <div className="p-6 pt-0">
-            <div className="text-2xl font-bold text-gray-900">{utilization?.value}%</div>
-            <p className="text-xs text-gray-500 mt-1">
+            <div className="text-2xl font-bold text-gray-900 group-hover:text-white">{utilization?.value}%</div>
+            <p className="text-xs text-gray-500 mt-1 group-hover:text-red-100">
               {utilization?.insight}
             </p>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow border border-gray-200">
+        <div className="bg-white rounded-lg shadow border border-gray-200 group hover:bg-red-600 hover:border-red-600 transition-all duration-200">
           <div className="p-6 pb-2 flex flex-row items-center justify-between space-y-0">
-            <h3 className="text-sm font-medium text-gray-900">Alignment Attachment</h3>
-            <TrendingUp className="h-4 w-4 text-gray-500" />
+            <h3 className="text-sm font-medium text-gray-900 group-hover:text-white">Alignment Attachment</h3>
+            <TrendingUp className="h-4 w-4 text-gray-500 group-hover:text-red-100" />
           </div>
           <div className="p-6 pt-0">
-            <div className="text-2xl font-bold text-gray-900">{attachmentRate?.value}%</div>
-            <p className="text-xs text-gray-500 mt-1">
+            <div className="text-2xl font-bold text-gray-900 group-hover:text-white">{attachmentRate?.value}%</div>
+            <p className="text-xs text-gray-500 mt-1 group-hover:text-red-100">
               Missed Revenue: {formatCurrency(attachmentRate?.potentialRevenue || 0)}
             </p>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow border border-gray-200">
+        <div className="bg-white rounded-lg shadow border border-gray-200 group hover:bg-red-600 hover:border-red-600 transition-all duration-200">
           <div className="p-6 pb-2 flex flex-row items-center justify-between space-y-0">
-            <h3 className="text-sm font-medium text-gray-900">Dead Stock Value</h3>
-            <DollarSign className="h-4 w-4 text-gray-500" />
+            <h3 className="text-sm font-medium text-gray-900 group-hover:text-white">Dead Stock Value</h3>
+            <DollarSign className="h-4 w-4 text-gray-500 group-hover:text-red-100" />
           </div>
           <div className="p-6 pt-0">
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-2xl font-bold text-gray-900 group-hover:text-white">
               {formatCurrency(deadStock.reduce((sum, item) => sum + item.value, 0))}
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 mt-1 group-hover:text-red-100">
               {deadStock.length} items stagnant &gt; 90 days
             </p>
           </div>
@@ -244,8 +244,8 @@ export function InsightsDashboard() {
           {Object.entries(topTires)
             .filter(([category]) => !['OTHER', 'LAWN AND GARDEN', 'ATV UTV', 'AGRICULTURAL', 'INDUSTRIAL', 'OTR'].includes(category.toUpperCase()))
             .map(([category, tires]) => (
-            <div key={category} className="min-w-[280px] flex-1 bg-white rounded-lg shadow border border-gray-200 p-3">
-              <h3 className="font-semibold text-xs text-gray-800 mb-2 border-b pb-1 uppercase tracking-wide">{category}</h3>
+            <div key={category} className="min-w-[280px] flex-1 bg-white rounded-lg shadow border border-gray-200 p-3 group hover:bg-red-600 hover:border-red-600 transition-all duration-200">
+              <h3 className="font-semibold text-xs text-gray-800 mb-2 border-b pb-1 uppercase tracking-wide group-hover:text-white group-hover:border-red-400">{category}</h3>
               
               {/* Combined Chart */}
               <div className="h-16 w-full mb-2">
@@ -295,16 +295,16 @@ export function InsightsDashboard() {
               {/* Tire Details List */}
               <div className="space-y-1.5">
                 {tires.slice(0, 3).map((tire, index) => (
-                  <div key={tire.productId} className="flex flex-col p-1 bg-gray-50 rounded border border-gray-100 text-[10px]">
+                  <div key={tire.productId} className="flex flex-col p-1 bg-gray-50 rounded border border-gray-100 text-[10px] group-hover:bg-red-500 group-hover:border-red-400">
                     <div className="flex items-center gap-1.5 overflow-hidden mb-0.5">
-                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                      <div className="truncate font-medium text-gray-700" title={tire.productName}>
+                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 group-hover:bg-white" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                      <div className="truncate font-medium text-gray-700 group-hover:text-white" title={tire.productName}>
                         {tire.rank}. {tire.productName}
                       </div>
                     </div>
-                    <div className="flex items-center justify-between text-gray-500 pl-3">
-                      <div><span className="font-semibold text-gray-900">{tire.totalSold}</span> Sold</div>
-                      <div><span className={`font-semibold ${tire.daysOfSupply < 30 ? 'text-red-600' : 'text-gray-900'}`}>{tire.daysOfSupply > 365 ? '>1yr' : Math.round(tire.daysOfSupply)}</span>d</div>
+                    <div className="flex items-center justify-between text-gray-500 pl-3 group-hover:text-red-100">
+                      <div><span className="font-semibold text-gray-900 group-hover:text-white">{tire.totalSold}</span> Sold</div>
+                      <div><span className={`font-semibold ${tire.daysOfSupply < 30 ? 'text-red-600 group-hover:text-white' : 'text-gray-900 group-hover:text-white'}`}>{tire.daysOfSupply > 365 ? '>1yr' : Math.round(tire.daysOfSupply)}</span>d</div>
                     </div>
                   </div>
                 ))}
@@ -358,27 +358,27 @@ export function InsightsDashboard() {
             </div>
             <div className="p-6 space-y-4">
               {restockAlerts.filter(a => a.status === 'Low Stock').slice(0, 5).map((alert) => (
-                <div key={alert.productId} className="relative w-full rounded-lg border border-red-200 p-4 bg-red-50">
+                <div key={alert.productId} className="relative w-full rounded-lg border border-red-200 p-4 bg-red-50 group hover:bg-red-600 hover:border-red-600 transition-all duration-200">
                   <div className="flex items-start gap-4">
-                    <Package className="h-4 w-4 text-red-600 mt-1" />
+                    <Package className="h-4 w-4 text-red-600 mt-1 group-hover:text-white" />
                     <div className="flex-1">
-                      <h5 className="mb-1 font-medium leading-none tracking-tight text-red-800">
+                      <h5 className="mb-1 font-medium leading-none tracking-tight text-red-800 group-hover:text-white">
                         {alert.productName}
                       </h5>
-                      <div className="text-xs text-red-700 mb-1">
+                      <div className="text-xs text-red-700 mb-1 group-hover:text-red-100">
                         SKU: {alert.sku} {alert.manufacturerCode ? `• PN: ${alert.manufacturerCode}` : ''}
                       </div>
-                      <div className="text-sm text-red-700 flex justify-between items-center mt-2">
+                      <div className="text-sm text-red-700 flex justify-between items-center mt-2 group-hover:text-red-100">
                         {alert.currentStock === 0 ? (
                           <span className="font-semibold">Out of Stock ({alert.daysOutOfStock} days)</span>
                         ) : (
                           <span>{Math.round(alert.daysOfSupply)} days supply left ({alert.currentStock} units)</span>
                         )}
-                        <span className="inline-flex items-center rounded-full border border-red-300 bg-white px-2.5 py-0.5 text-xs font-semibold text-red-700">
+                        <span className="inline-flex items-center rounded-full border border-red-300 bg-white px-2.5 py-0.5 text-xs font-semibold text-red-700 group-hover:bg-red-500 group-hover:text-white group-hover:border-red-400">
                           Suggested Order: {alert.suggestedOrder}
                         </span>
                       </div>
-                      <div className="text-xs text-red-600 mt-1">
+                      <div className="text-xs text-red-600 mt-1 group-hover:text-red-200">
                         {alert.storeName} • Velocity: {alert.dailyVelocity.toFixed(2)}/day
                       </div>
                     </div>
@@ -403,14 +403,14 @@ export function InsightsDashboard() {
             </div>
             <div className="p-6 space-y-4">
               {marginLeakage.map((leak) => (
-                <div key={leak.category} className="flex items-center justify-between p-3 border rounded-lg bg-orange-50 border-orange-200">
+                <div key={leak.category} className="flex items-center justify-between p-3 border rounded-lg bg-orange-50 border-orange-200 group hover:bg-red-600 hover:border-red-600 transition-all duration-200">
                   <div>
-                    <div className="font-semibold text-orange-900">{leak.category}</div>
-                    <div className="text-sm text-orange-700">Target: {leak.targetMargin}%</div>
+                    <div className="font-semibold text-orange-900 group-hover:text-white">{leak.category}</div>
+                    <div className="text-sm text-orange-700 group-hover:text-red-100">Target: {leak.targetMargin}%</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold text-orange-800">{leak.currentMargin}%</div>
-                    <div className="text-xs text-orange-600">Actual Margin</div>
+                    <div className="text-xl font-bold text-orange-800 group-hover:text-white">{leak.currentMargin}%</div>
+                    <div className="text-xs text-orange-600 group-hover:text-red-100">Actual Margin</div>
                   </div>
                 </div>
               ))}
@@ -424,7 +424,7 @@ export function InsightsDashboard() {
         {/* Strategic Opportunities Column */}
         <div className="space-y-6">
           <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900">
-            <TrendingUp className="h-5 w-5 text-blue-500" />
+            <TrendingUp className="h-5 w-5 text-red-500" />
             Strategic Opportunities
           </h2>
 
@@ -449,7 +449,7 @@ export function InsightsDashboard() {
                   {transfers.slice(0, 10).map((transfer, idx) => (
                     <React.Fragment key={idx}>
                       <tr 
-                        className={`border-b hover:bg-gray-50 cursor-pointer transition-colors ${expandedTransferIndex === idx ? 'bg-blue-50' : ''}`}
+                        className={`border-b hover:bg-gray-50 cursor-pointer transition-colors ${expandedTransferIndex === idx ? 'bg-red-50' : ''}`}
                         onClick={() => setExpandedTransferIndex(expandedTransferIndex === idx ? null : idx)}
                       >
                         <td className="px-4 py-3 font-medium text-gray-900">
@@ -471,16 +471,16 @@ export function InsightsDashboard() {
                         </td>
                         <td className="px-4 py-3 text-gray-600">{transfer.sourceStoreName}</td>
                         <td className="px-4 py-3 text-gray-600">{transfer.targetStoreName}</td>
-                        <td className="px-4 py-3 text-center font-bold text-blue-600">{transfer.quantity}</td>
+                        <td className="px-4 py-3 text-center font-bold text-red-600">{transfer.quantity}</td>
                         <td className="px-4 py-3 text-right">
                           <ArrowRight className={`h-4 w-4 text-gray-400 transition-transform ${expandedTransferIndex === idx ? 'rotate-90' : ''}`} />
                         </td>
                       </tr>
                       {expandedTransferIndex === idx && (
-                        <tr className="bg-blue-50/50">
+                        <tr className="bg-red-50/50">
                           <td colSpan={6} className="p-4 space-y-4 border-b">
                             {/* Confidence & Summary */}
-                            <div className="bg-white p-3 rounded border border-blue-100">
+                            <div className="bg-white p-3 rounded border border-red-100">
                               <div className="flex items-center gap-2 mb-2">
                                 {transfer.confidenceLevel && (
                                   <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -498,7 +498,7 @@ export function InsightsDashboard() {
                                 )}
                               </div>
                               <div className="text-sm text-gray-700">
-                                <span className="font-semibold text-blue-800">Why this move?</span> {transfer.reason}
+                                <span className="font-semibold text-red-800">Why this move?</span> {transfer.reason}
                                 {transfer.avgInstallQty !== undefined && (
                                   <div className="mt-1 text-xs text-gray-500">
                                     • Typical install quantity: <strong>{transfer.avgInstallQty}</strong> tires/invoice
@@ -625,7 +625,7 @@ export function InsightsDashboard() {
                             </div>
 
                             {/* Visual Transfer Flow */}
-                            <div className="flex items-center justify-between bg-white p-3 rounded border border-blue-100">
+                            <div className="flex items-center justify-between bg-white p-3 rounded border border-red-100">
                               <div className="text-center flex-1">
                                 <div className="text-xs text-gray-500">From</div>
                                 <div className="font-semibold text-gray-900 truncate px-1">{transfer.sourceStoreName}</div>
@@ -635,11 +635,11 @@ export function InsightsDashboard() {
                               </div>
                               
                               <div className="flex flex-col items-center px-4 w-32">
-                                <div className="text-xs text-blue-600 font-bold mb-1">Transfer {transfer.quantity}</div>
+                                <div className="text-xs text-red-600 font-bold mb-1">Transfer {transfer.quantity}</div>
                                 <div className="relative w-full flex items-center justify-center h-8">
-                                  <div className="absolute h-0.5 w-full bg-blue-200 top-1/2 -translate-y-1/2"></div>
+                                  <div className="absolute h-0.5 w-full bg-red-200 top-1/2 -translate-y-1/2"></div>
                                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-1 z-10">
-                                    <ArrowRight className="h-4 w-4 text-blue-500" />
+                                    <ArrowRight className="h-4 w-4 text-red-500" />
                                   </div>
                                 </div>
                               </div>
@@ -655,7 +655,7 @@ export function InsightsDashboard() {
 
                             {/* All Stores Status */}
                             <div>
-                              <div className="text-xs text-blue-800 mb-1 font-medium">Current Stock Levels Across All Stores:</div>
+                              <div className="text-xs text-red-800 mb-1 font-medium">Current Stock Levels Across All Stores:</div>
                               <div className="grid grid-cols-3 gap-2 text-xs">
                                 {transfer.allStoresInventory.map((store) => (
                                   <div key={store.storeName} className={`p-1.5 rounded text-center border ${
@@ -695,16 +695,16 @@ export function InsightsDashboard() {
             </div>
             <div className="p-6 space-y-4">
               {deadStock.slice(0, 5).map((item) => (
-                <div key={item.productId} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <div key={item.productId} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-red-600 hover:border-red-600 transition-all duration-200 group">
                   <div className="space-y-1">
-                    <div className="font-medium text-gray-900">{item.productName}</div>
-                    <div className="text-xs text-gray-500">
+                    <div className="font-medium text-gray-900 group-hover:text-white">{item.productName}</div>
+                    <div className="text-xs text-gray-500 group-hover:text-red-100">
                       {item.brand} • SKU: {item.sku} • {item.storeName}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-gray-900">{item.quantity} units</div>
-                    <div className="text-xs text-gray-500">
+                    <div className="font-bold text-gray-900 group-hover:text-white">{item.quantity} units</div>
+                    <div className="text-xs text-gray-500 group-hover:text-red-100">
                       {formatCurrency(item.value)} value
                     </div>
                   </div>
@@ -723,23 +723,23 @@ export function InsightsDashboard() {
             </div>
             <div className="p-6">
               <div className="space-y-4">
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                <div className="p-4 bg-red-50 rounded-lg border border-red-100">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium text-blue-900">Alignment Opportunity</span>
-                    <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800">
+                    <span className="font-medium text-red-900">Alignment Opportunity</span>
+                    <span className="inline-flex items-center rounded-full border border-red-200 bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800">
                       High Impact
                     </span>
                   </div>
-                  <p className="text-sm text-blue-800 mb-3">
+                  <p className="text-sm text-red-800 mb-3">
                     {attachmentRate?.message}
                   </p>
-                  <div className="w-full bg-blue-200 rounded-full h-2.5">
+                  <div className="w-full bg-red-200 rounded-full h-2.5">
                     <div 
-                      className="bg-blue-600 h-2.5 rounded-full transition-all duration-500" 
+                      className="bg-red-600 h-2.5 rounded-full transition-all duration-500" 
                       style={{ width: `${attachmentRate?.value}%` }}
                     ></div>
                   </div>
-                  <div className="flex justify-between text-xs text-blue-700 mt-1">
+                  <div className="flex justify-between text-xs text-red-700 mt-1">
                     <span>Current: {attachmentRate?.value}%</span>
                     <span>Target: 50%</span>
                   </div>
