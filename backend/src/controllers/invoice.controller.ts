@@ -620,6 +620,15 @@ export class InvoiceController {
         storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
       }
 
+      // Build order by clause
+      let orderByClause;
+      if (['avg_ticket', 'avg_profit_per_unit'].includes(sortColumn)) {
+        // Prioritize >= 50 invoices for volatile metrics
+        orderByClause = Prisma.sql`ORDER BY CASE WHEN COUNT(DISTINCT i.id) >= 50 THEN 1 ELSE 0 END DESC, ${Prisma.raw(sortColumn)} ${Prisma.raw(orderDirection)}`;
+      } else {
+        orderByClause = Prisma.sql`ORDER BY ${Prisma.raw(sortColumn)} ${Prisma.raw(orderDirection)}`;
+      }
+
       const report = await this.prisma.$queryRaw`
         SELECT 
           i.salesperson,
@@ -644,7 +653,7 @@ export class InvoiceController {
           ${searchCondition}
           ${storeCondition}
         GROUP BY i.salesperson
-        ORDER BY ${Prisma.raw(sortColumn)} ${Prisma.raw(orderDirection)}
+        ${orderByClause}
       `;
 
       return { success: true, data: report };
