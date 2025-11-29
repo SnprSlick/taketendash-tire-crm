@@ -224,9 +224,21 @@ export default function ReconciliationDetailPage() {
                                 <ExternalLink className="w-3 h-3" />
                               </Link>
                               <span className="text-xs text-slate-400">{record.matchedInvoice.customer?.name}</span>
+                              {record.discrepancyReason && (
+                                <span className="text-xs text-amber-600 mt-1 font-medium">
+                                  {record.discrepancyReason}
+                                </span>
+                              )}
                             </div>
                           ) : (
-                            <span className="text-slate-400 italic">No match</span>
+                            <div className="flex flex-col">
+                              <span className="text-slate-400 italic">No match</span>
+                              {record.discrepancyReason && (
+                                <span className="text-xs text-amber-600 mt-1 font-medium max-w-xs break-words">
+                                  {record.discrepancyReason}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </td>
                       </tr>

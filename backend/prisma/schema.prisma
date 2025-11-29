@@ -858,6 +858,7 @@ model ReconciliationRecord {
   // Matching
   status          String   // MATCHED, UNMATCHED, PARTIAL, OVERPAID
   matchedInvoiceId String?
+  discrepancyReason String? // Reason for discrepancy or unmatched status
   
   // Relationships
   batch           ReconciliationBatch @relation(fields: [batchId], references: [id])

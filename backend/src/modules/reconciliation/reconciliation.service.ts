@@ -213,7 +213,8 @@ export class ReconciliationService {
           commission,
           difference,
           status: matchResult.status as any,
-          matchedInvoiceId: matchResult.matchedInvoiceId
+          matchedInvoiceId: matchResult.matchedInvoiceId,
+          discrepancyReason: matchResult.discrepancyReason
         }
       });
     } else {
@@ -229,7 +230,8 @@ export class ReconciliationService {
           commission,
           difference,
           status: matchResult.status as any,
-          matchedInvoiceId: matchResult.matchedInvoiceId
+          matchedInvoiceId: matchResult.matchedInvoiceId,
+          discrepancyReason: matchResult.discrepancyReason
         }
       });
     }
@@ -238,6 +240,7 @@ export class ReconciliationService {
   private async findMatchingInvoice(rawInvoiceNumber: string, invoiceAmount: number) {
     let status = 'UNMATCHED';
     let matchedInvoiceId = null;
+    let discrepancyReason = null;
 
     if (rawInvoiceNumber) {
       const dbInvoiceNumber = this.formatInvoiceNumberForSearch(rawInvoiceNumber);
@@ -312,33 +315,44 @@ export class ReconciliationService {
         }
       }
 
-      // 4. Last Resort: Match by numeric part only (Must match Store Prefix)
+      // 4. Broad Search: Match by numeric part across ALL stores
       if (!invoice) {
         const numericPart = rawInvoiceNumber.replace(/[^0-9]/g, '');
-        // Extract store prefix from raw invoice number (e.g. "3-")
-        const storePrefixMatch = rawInvoiceNumber.match(/^(\d+)-/);
-        const storePrefix = storePrefixMatch ? storePrefixMatch[1] + '-' : null;
-
-        if (numericPart.length > 4 && storePrefix) { 
+        
+        // Only search if we have a substantial numeric part (e.g. > 3 digits) to avoid false positives
+        if (numericPart.length > 3) { 
            const potentialMatches = await this.prisma.invoice.findMany({
              where: {
                invoiceNumber: {
-                 contains: numericPart,
-                 startsWith: storePrefix // Enforce store prefix
+                 contains: numericPart
                }
              },
              include: { lineItems: true }
            });
 
-           // If exactly one match found, assume it's the one
            if (potentialMatches.length === 1) {
+             // Found exactly one match across all stores
              invoice = potentialMatches[0];
            } else if (potentialMatches.length > 1) {
-             // If multiple matches, try to find one with matching amount
-             const amountMatch = potentialMatches.find(inv => 
+             // Multiple matches found - check if any match the amount
+             const amountMatches = potentialMatches.filter(inv => 
                Math.abs(Number(inv.totalAmount) - invoiceAmount) < 0.01
              );
-             if (amountMatch) invoice = amountMatch;
+
+             if (amountMatches.length === 1) {
+               // Exactly one matches the amount - assume it's the correct one
+               invoice = amountMatches[0];
+             } else if (amountMatches.length > 1) {
+               // Multiple match the amount - ambiguous
+               status = 'DISCREPANCY';
+               discrepancyReason = `Multiple invoices found matching number '${numericPart}' and amount $${invoiceAmount}: ${amountMatches.map(i => i.invoiceNumber).join(', ')}`;
+               return { status, matchedInvoiceId, discrepancyReason };
+             } else {
+               // None match the amount - ambiguous
+               status = 'DISCREPANCY';
+               discrepancyReason = `Multiple invoices found matching number '${numericPart}' but none match amount $${invoiceAmount}: ${potentialMatches.map(i => i.invoiceNumber).join(', ')}`;
+               return { status, matchedInvoiceId, discrepancyReason };
+             }
            }
         }
       }
@@ -353,11 +367,14 @@ export class ReconciliationService {
             status = 'MATCHED';
         } else {
             status = 'DISCREPANCY'; // Found invoice, but amount differs
+            discrepancyReason = `Amount mismatch. Invoice: $${invAmount.toFixed(2)}, Record: $${invoiceAmount.toFixed(2)}`;
         }
+      } else {
+        discrepancyReason = 'No matching invoice found';
       }
     }
 
-    return { status, matchedInvoiceId };
+    return { status, matchedInvoiceId, discrepancyReason };
   }
 
   async reprocessBatch(batchId: string) {
@@ -385,7 +402,8 @@ export class ReconciliationService {
           where: { id: record.id },
           data: {
             status: matchResult.status as any,
-            matchedInvoiceId: matchResult.matchedInvoiceId
+            matchedInvoiceId: matchResult.matchedInvoiceId,
+            discrepancyReason: matchResult.discrepancyReason
           }
         });
         updatedCount++;
@@ -426,7 +444,8 @@ export class ReconciliationService {
           where: { id: record.id },
           data: {
             status: matchResult.status as any,
-            matchedInvoiceId: matchResult.matchedInvoiceId
+            matchedInvoiceId: matchResult.matchedInvoiceId,
+            discrepancyReason: matchResult.discrepancyReason
           }
         });
       }
