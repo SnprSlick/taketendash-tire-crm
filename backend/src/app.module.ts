@@ -21,12 +21,12 @@ import { InventoryModule } from './modules/inventory/inventory.module';
 import { BrandsModule } from './modules/brands/brands.module';
 import { TireAnalyticsModule } from './modules/tire-analytics/tire-analytics.module';
 import { MechanicModule } from './modules/mechanic/mechanic.module';
+import { StoreModule } from './modules/store/store.module';
 // Note: CustomersModule and InvoicesModule moved to _disabled folder to resolve schema conflicts
 // import { DateScalar } from './graphql/scalars/date.scalar'; // Disabled with GraphQL
 // import { LibrariesModule } from './libraries/libraries.module'; // Temporarily disabled
 import { AppController } from './app.controller';
 import { InvoiceController } from './controllers/invoice.controller';
-import { StoreController } from './controllers/store.controller';
 // import { CsvImportController } from './csv-import/controllers/csv-import.controller'; // Moved to CsvImportModule
 // import { HealthResolver } from './graphql/resolvers/health.resolver'; // Disabled with GraphQL
 
@@ -62,8 +62,9 @@ import { StoreController } from './controllers/store.controller';
     BrandsModule,
     TireAnalyticsModule,
     MechanicModule,
+    StoreModule,
   ],
-  controllers: [AppController, InvoiceController, StoreController], // CsvImportController moved to CsvImportModule
+  controllers: [AppController, InvoiceController], // CsvImportController moved to CsvImportModule
   providers: [], // DateScalar and HealthResolver removed with GraphQL
 })
 export class AppModule {}

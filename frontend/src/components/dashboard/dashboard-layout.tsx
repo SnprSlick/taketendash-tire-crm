@@ -19,7 +19,8 @@ import {
   BarChart3,
   Tag,
   Disc,
-  Wrench
+  Wrench,
+  Store
 } from 'lucide-react';
 import { useStore } from '../../contexts/store-context';
 
@@ -101,6 +102,12 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
         <div className={`${containerClass} mx-auto px-4 sm:px-6 lg:px-8`}>
           <div className="flex space-x-1">
             <NavItem
+              href="/stores"
+              icon={<Store className="w-4 h-4" />}
+              label="Stores"
+              active={isActive('/stores')}
+            />
+            <NavItem
               href="/dashboard/sales"
               icon={<TrendingUp className="w-4 h-4" />}
               label="Analytics"
@@ -111,12 +118,6 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
               icon={<FileText className="w-4 h-4" />}
               label="Detailed Reports"
               active={isActive('/dashboard/sales/reports')}
-            />
-            <NavItem
-              href="/service/reminders"
-              icon={<Settings className="w-4 h-4" />}
-              label="Service Reminders"
-              active={isActive('/service/reminders')}
             />
             {/* <NavItem
               href="/appointments"

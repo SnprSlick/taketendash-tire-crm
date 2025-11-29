@@ -367,3 +367,88 @@ This comprehensive debugging session successfully resolved a **systemic failure*
 - Deleted empty Stores 101 and 102.
 **Files Changed**:
 - `backend/scripts/fix-stores.ts` (Created)
+
+### ✅ 8. Store Dashboard
+**Goal**: Create a dashboard to view performance and staffing for each store.
+**Implementation**:
+- **Backend**:
+  - Created `StoreService` and `StoreController` in `backend/src/modules/store/`.
+  - Implemented endpoints:
+    - `GET /stores`: List all stores with employee counts.
+    - `GET /stores/:id`: Get store details.
+    - `GET /stores/:id/stats`: Get aggregated stats (Revenue, GP, Car Count, Avg Ticket) for the current month.
+    - `GET /stores/:id/employees`: Get list of employees assigned to the store.
+- **Frontend**:
+  - Created `StoresPage` (`/stores`) to list all stores.
+  - Created `StoreDetailPage` (`/stores/[id]`) to show detailed view.
+  - Created components: `StoreCard`, `StoreStats`, `StoreEmployeeList`.
+**Files Changed**:
+- `backend/src/modules/store/store.service.ts` (Created)
+- `backend/src/modules/store/store.controller.ts` (Created)
+- `backend/src/modules/store/store.module.ts` (Created)
+- `backend/src/app.module.ts` (Updated)
+- `frontend/src/app/stores/page.tsx` (Created)
+- `frontend/src/app/stores/[id]/page.tsx`
+
+### ✅ 12. Gross Profit Prioritization
+**Goal**: Shift focus of all store analytics charts to prioritize Gross Profit (GP) over Revenue.
+**Implementation**:
+- **Backend**: 
+  - Updated `StoreService.getAnalytics` to return `grossProfit` for categories and trend.
+  - Updated `StoreService.getComparisonAnalytics` to aggregate `grossProfit` instead of `totalAmount`.
+- **Frontend**:
+  - **Store Comparison**: Changed to a Line Chart displaying GP over time.
+  - **Store Analytics**: Updated Area Chart to highlight GP (gradient fill) and show Revenue as a secondary dashed line. Updated Pie Chart to show GP by category.
+**Files Changed**:
+- `backend/src/modules/store/store.service.ts`
+- `frontend/src/components/stores/store-comparison-charts.tsx`
+- `frontend/src/components/stores/store-analytics-charts.tsx`
+
+### ✅ 13. Dynamic Time Aggregation for Comparison
+**Goal**: Improve readability of long-term store comparisons by aggregating data points based on the selected time range.
+**Implementation**:
+- **Backend**: Updated `StoreService.getComparisonAnalytics` to dynamically truncate dates:
+  - **> 180 days**: Monthly aggregation
+  - **> 32 days**: Weekly aggregation
+  - **<= 32 days**: Daily aggregation
+- **Result**: "Year to Date" charts now show monthly averages instead of noisy daily data points.
+**Files Changed**:
+- `backend/src/modules/store/store.service.ts`
+
+### ✅ 14. Navigation Updates
+**Goal**: Update navigation menu to prioritize Stores and remove Service Reminders.
+**Implementation**:
+- **Frontend**: 
+  - Removed "Service Reminders" from navigation.
+  - Added "Stores" as the first navigation item.
+**Files Changed**:
+- `frontend/src/components/dashboard/dashboard-layout.tsx`
+**Implementation**:
+- **Backend**: 
+  - Updated `StoreService.findAll` to include YTD Revenue and GP stats.
+  - Added `StoreService.getAnalytics` for daily trends and category breakdown.
+  - Added `/stores/:id/analytics` endpoint.
+- **Frontend**:
+  - **Store List**: Added `StoreComparisonCharts` (Bar Chart) and updated `StoreCard` to show YTD stats.
+  - **Store Detail**: Added `StoreAnalyticsCharts` (Area & Pie Charts) and made `StoreEmployeeList` collapsible.
+**Files Changed**:
+- `backend/src/modules/store/store.service.ts`
+- `backend/src/modules/store/store.controller.ts`
+- `frontend/src/components/stores/store-card.tsx`
+- `frontend/src/components/stores/store-employee-list.tsx`
+- `frontend/src/components/stores/store-comparison-charts.tsx` (Created)
+- `frontend/src/components/stores/store-analytics-charts.tsx` (Created)
+- `frontend/src/app/stores/page.tsx`
+- `frontend/src/app/stores/[id]/page.tsx` (Created)
+- `frontend/src/components/stores/store-card.tsx` (Created)
+- `frontend/src/components/stores/store-stats.tsx` (Created)
+- `frontend/src/components/stores/store-employee-list.tsx` (Created)
+
+### ✅ 9. Store Dashboard Revenue Fix
+**Problem**: Store dashboard revenue/GP was potentially inaccurate or zero because it relied solely on invoice-level fields which might be zero if not aggregated correctly during import.
+**Solution**: Updated `StoreService.getStats` to:
+- Fetch invoices with `lineItems`.
+- Calculate Gross Profit by summing line items if the invoice-level GP is zero.
+- Ensure `status: 'ACTIVE'` filter is applied.
+**Files Changed**:
+- `backend/src/modules/store/store.service.ts`
