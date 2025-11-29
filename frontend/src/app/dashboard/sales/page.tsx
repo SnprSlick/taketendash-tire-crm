@@ -140,11 +140,11 @@ export default function SalesDashboardPage() {
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-200/50 p-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-12 h-12 bg-gradient-to-r from-red-600 to-slate-800 rounded-xl flex items-center justify-center shadow-lg">
                 <TrendingUp className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-blue-700 bg-clip-text text-transparent">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-red-700 bg-clip-text text-transparent">
                   Sales Analytics
                 </h1>
                 <p className="text-slate-600">Real-time insights into your business performance</p>
@@ -158,7 +158,7 @@ export default function SalesDashboardPage() {
                 <select
                   value={selectedPeriod}
                   onChange={(e) => handlePeriodChange(e.target.value)}
-                  className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                  className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
                 >
                   <option value="7">Last 7 days</option>
                   <option value="30">Last 30 days</option>
@@ -171,7 +171,7 @@ export default function SalesDashboardPage() {
               <button
                 onClick={handleRefresh}
                 disabled={loading}
-                className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-slate-400 disabled:to-slate-500 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-slate-400 disabled:to-slate-500 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 {loading ? 'Loading...' : 'Refresh'}
@@ -226,7 +226,7 @@ export default function SalesDashboardPage() {
         />
 
         {/* System Status Footer */}
-        <div className="bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200/50 rounded-2xl p-6">
+        <div className="bg-gradient-to-r from-slate-50 to-red-50 border border-slate-200/50 rounded-2xl p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
@@ -239,7 +239,7 @@ export default function SalesDashboardPage() {
             </div>
             <div className="hidden sm:flex items-center space-x-6 text-xs text-slate-600">
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                 <span>Backend API</span>
               </div>
               <div className="flex items-center space-x-2">

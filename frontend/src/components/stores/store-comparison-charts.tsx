@@ -12,7 +12,7 @@ interface StoreComparisonChartsProps {
   storeNames: string[];
 }
 
-const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'];
+const COLORS = ['#dc2626', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'];
 
 export default function StoreComparisonCharts({ data, storeNames }: StoreComparisonChartsProps) {
   const formatCurrency = (value: number) => {

@@ -113,7 +113,7 @@ export default function SalesCharts({
   const categoryChartData = categoryBreakdown.map((cat, index) => ({
     name: cat.category,
     value: Number(cat.revenue),
-    color: ['#3B82F6', '#10B981', '#F59E0B', '#6366F1', '#EC4899'][index % 5]
+    color: ['#dc2626', '#10B981', '#F59E0B', '#6366F1', '#EC4899'][index % 5]
   }));
 
   // Calculate total revenue for percentages
@@ -141,7 +141,7 @@ export default function SalesCharts({
           value={salesData.totalSales.toString()}
           change="+12.5%"
           changeType="increase"
-          gradient="from-blue-500 to-blue-600"
+          gradient="from-red-500 to-red-600"
           delay="0s"
         />
         <MetricCard
@@ -179,7 +179,7 @@ export default function SalesCharts({
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-200/50 p-6 card-hover animate-slide-up">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-slate-800 flex items-center">
-              <TrendingUp className="w-5 h-5 mr-2 text-blue-600" />
+              <TrendingUp className="w-5 h-5 mr-2 text-red-600" />
               Sales Trend
             </h3>
             <div className="flex items-center space-x-2">
@@ -194,8 +194,8 @@ export default function SalesCharts({
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#dc2626" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#dc2626" stopOpacity={0}/>
                   </linearGradient>
                   <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
@@ -217,7 +217,7 @@ export default function SalesCharts({
                 <Area
                   type="monotone"
                   dataKey="revenue"
-                  stroke="#3B82F6"
+                  stroke="#dc2626"
                   strokeWidth={3}
                   fill="url(#revenueGradient)"
                   name="Revenue"
@@ -434,7 +434,7 @@ function InsightCard({ insight, delay }: { insight: SalesInsight; delay: string 
   const getInsightIcon = () => {
     switch (insight.type) {
       case 'OPPORTUNITY':
-        return <Lightbulb className="w-5 h-5 text-blue-500" />;
+        return <Lightbulb className="w-5 h-5 text-red-500" />;
       case 'WARNING':
         return <AlertTriangle className="w-5 h-5 text-amber-500" />;
       default:
@@ -445,7 +445,7 @@ function InsightCard({ insight, delay }: { insight: SalesInsight; delay: string 
   const getBackgroundColor = () => {
     switch (insight.type) {
       case 'OPPORTUNITY':
-        return 'bg-blue-50 border-blue-200';
+        return 'bg-red-50 border-red-200';
       case 'WARNING':
         return 'bg-amber-50 border-amber-200';
       default:
@@ -468,7 +468,7 @@ function InsightCard({ insight, delay }: { insight: SalesInsight; delay: string 
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
             insight.impact === 'HIGH' ? 'bg-red-100 text-red-800' :
             insight.impact === 'MEDIUM' ? 'bg-amber-100 text-amber-800' :
-            'bg-blue-100 text-blue-800'
+            'bg-red-100 text-red-800'
           }`}>
             Impact: {insight.impact}
           </span>
