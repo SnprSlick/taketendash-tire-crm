@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { usePathname } from 'next/navigation';
+import React, { useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Car,
   Settings,
@@ -35,8 +35,15 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children, title = 'Tire CRM Dashboard', fullWidth = false }: DashboardLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { stores, selectedStoreId, setSelectedStoreId, loading } = useStore();
-  const { user, logout, hasRole } = useAuth();
+  const { user, logout, hasRole, isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isLoading, isAuthenticated, router]);
 
   // Filter stores based on user access
   const allowedStores = stores.filter(store => 
@@ -52,6 +59,18 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
     }
     return pathname === href || pathname.startsWith(href);
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null; // Will redirect in useEffect
+  }
 
   const containerClass = fullWidth ? "max-w-[98%]" : "max-w-7xl";
 
