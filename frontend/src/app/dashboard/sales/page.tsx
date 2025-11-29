@@ -83,9 +83,9 @@ export default function SalesDashboardPage() {
           { category: 'PARTS', revenue: 54000, profit: 20000, quantity: 300 }
         ],
         topCustomers: [
-          { name: 'Fleet Corp A', total_spent: 45000, invoice_count: 12 },
-          { name: 'Transport Logistics', total_spent: 32000, invoice_count: 8 },
-          { name: 'City Services', total_spent: 28000, invoice_count: 15 }
+          { id: 'demo-1', name: 'Fleet Corp A', total_spent: 45000, invoice_count: 12 },
+          { id: 'demo-2', name: 'Transport Logistics', total_spent: 32000, invoice_count: 8 },
+          { id: 'demo-3', name: 'City Services', total_spent: 28000, invoice_count: 15 }
         ],
         topSalespeople: [
           { salesperson: 'John Doe', _sum: { totalAmount: 150000 }, _count: { id: 45 } },

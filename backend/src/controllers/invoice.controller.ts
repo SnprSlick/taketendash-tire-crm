@@ -434,14 +434,20 @@ export class InvoiceController {
 
       // 3. Top Salespeople
       console.log('Step 3: Top Salespeople');
+      const whereSalespeople: any = {
+        invoiceDate: {
+          gte: startDate
+        },
+        status: 'ACTIVE'
+      };
+
+      if (storeId) {
+        whereSalespeople.storeId = storeId;
+      }
+
       const topSalespeople = await this.prisma.invoice.groupBy({
         by: ['salesperson'],
-        where: {
-          invoiceDate: {
-            gte: startDate
-          },
-          status: 'ACTIVE'
-        },
+        where: whereSalespeople,
         _sum: {
           totalAmount: true
         },
@@ -474,6 +480,10 @@ export class InvoiceController {
         ORDER BY total_spent DESC
         LIMIT 5
       `;
+
+      console.log('Top Customers Result:', topCustomers);
+
+      // 5. Sales Trend
 
       // 5. Sales Trend
       console.log('Step 5: Sales Trend');
