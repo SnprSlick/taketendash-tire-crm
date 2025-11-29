@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import DashboardLayout from '../../../../components/dashboard/dashboard-layout';
-import { ArrowLeft, CheckCircle, AlertCircle, XCircle, Search, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowLeft, CheckCircle, AlertCircle, XCircle, Search, RefreshCw, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 
 export default function ReconciliationDetailPage() {
   const params = useParams();
@@ -214,7 +215,14 @@ export default function ReconciliationDetailPage() {
                         <td className="px-6 py-4 text-slate-600">
                           {record.matchedInvoice ? (
                             <div className="flex flex-col">
-                              <span className="text-blue-600 font-medium">{record.matchedInvoice.invoiceNumber}</span>
+                              <Link 
+                                href={`/dashboard/sales/invoices/${record.matchedInvoice.invoiceNumber}`}
+                                className="text-blue-600 font-medium hover:text-blue-800 hover:underline flex items-center gap-1"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {record.matchedInvoice.invoiceNumber}
+                                <ExternalLink className="w-3 h-3" />
+                              </Link>
                               <span className="text-xs text-slate-400">{record.matchedInvoice.customer?.name}</span>
                             </div>
                           ) : (
