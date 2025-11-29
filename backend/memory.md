@@ -430,6 +430,35 @@ This comprehensive debugging session successfully resolved a **systemic failure*
 - **Frontend**: Updated `TireFilterBar` to conditionally apply active styles (`bg-blue-600 text-white`) to the selected time period button by comparing the calculated start date with the current filter's start date.
 **Files Changed**:
 - `frontend/src/components/tires/tire-filter-bar.tsx`
+
+### ✅ 16. Tire Analytics Default State
+**Goal**: Ensure "Last 30 Days" is selected and highlighted by default on page load.
+**Implementation**:
+- **Frontend**: Updated `TireAnalyticsDashboard` to initialize the `filter` state with a start date of 30 days ago and end date of today, matching the logic in `TireFilterBar`.
+**Files Changed**:
+- `frontend/src/components/tires/tire-analytics-dashboard.tsx`
+
+### ✅ 17. Inventory Analytics Performance Optimization
+**Goal**: Improve page load time by deferring the loading of sales history graphs until the user expands a row.
+**Implementation**:
+- **Backend**: 
+  - Updated `InventoryService.getSalesAnalytics` to exclude `salesHistory` from the initial list response.
+  - Added `InventoryService.getProductSalesHistory` method and corresponding endpoint `/inventory/analytics/:productId/history` to fetch history on demand.
+- **Frontend**: 
+  - Updated `InventoryAnalytics` component to fetch sales history only when a row is expanded.
+  - Implemented a caching mechanism (`historyCache`) to avoid re-fetching history for previously expanded rows.
+  - Added a loading state for the graph area.
+**Files Changed**:
+- `backend/src/modules/inventory/inventory.service.ts`
+- `backend/src/modules/inventory/inventory.controller.ts`
+- `frontend/src/components/inventory/inventory-analytics.tsx`
+
+### ✅ 18. Fix Missing Brands in Tire Analytics
+**Goal**: Ensure brands from imported data (which may have 'UNKNOWN' quality) appear in the Tire Analytics dashboard and filters.
+**Implementation**:
+- **Backend**: Removed the `quality != 'UNKNOWN'` filter from `TireAnalyticsService` methods (`getTireAnalytics`, `getFilterOptions`, `getTireSalesTrends`). This allows products with unspecified quality to be included in analytics.
+**Files Changed**:
+- `backend/src/modules/tire-analytics/tire-analytics.service.ts`
 **Implementation**:
 - **Backend**: 
   - Updated `StoreService.findAll` to include YTD Revenue and GP stats.
