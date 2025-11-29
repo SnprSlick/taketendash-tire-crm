@@ -83,7 +83,8 @@ export class ReconciliationService {
 
         // Check for Data in this Rec Code row
         const invoiceNum = row[invoiceIdx]?.toString().trim();
-        if (invoiceNum && (invoiceNum.startsWith('3-') || invoiceNum.startsWith('3GS'))) {
+        // Allow any store number prefix (e.g. 3-, 4-, 10-)
+        if (invoiceNum && (invoiceNum.match(/^\d+-/) || invoiceNum.match(/^\d+GS/))) {
             const recCodeHeaders = {
                 date: invoiceIdx - 1,
                 invoiceNumber: invoiceIdx,
@@ -102,7 +103,7 @@ export class ReconciliationService {
       // 2. Check for Standard National Data Row (Invoice at Index 1)
       // Mapping: Date=0, Inv=1, Amt=2, Claim=3, CRMemo=4, CRDate=5, CRAmt=6, CRComm=7, Diff=8
       const col1 = row[1]?.toString().trim();
-      if (col1 && (col1.startsWith('3-') || col1.startsWith('3GS'))) {
+      if (col1 && (col1.match(/^\d+-/) || col1.match(/^\d+GS/))) {
           const stdHeaders = {
               date: 0,
               invoiceNumber: 1,
@@ -119,7 +120,7 @@ export class ReconciliationService {
 
       // 3. Check for Invoice Detail Report Data Row (Invoice at Index 23)
       const col23 = row[23]?.toString().trim();
-      if (col23 && (col23.startsWith('3-') || col23.startsWith('3GS'))) {
+      if (col23 && (col23.match(/^\d+-/) || col23.match(/^\d+GS/))) {
            await this.processRecord(row, legacyHeaders, batch.id, currentSection, currentAccount);
            processedCount++;
            continue;
