@@ -45,22 +45,18 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
   const containerClass = fullWidth ? "max-w-[98%]" : "max-w-7xl";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-red-50 to-slate-100">
       {/* Header */}
       <header className="bg-white/95 backdrop-blur-sm shadow-lg border-b border-slate-200/50 sticky top-0 z-50">
         <div className={`${containerClass} mx-auto px-4 sm:px-6 lg:px-8`}>
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-32">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-slate-800 rounded-lg flex items-center justify-center shadow-lg">
-                  <Car className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-blue-700 bg-clip-text text-transparent">
-                    TireMaster CRM
-                  </h1>
-                  <p className="text-xs text-slate-500 font-medium">Professional Dashboard</p>
-                </div>
+                <img 
+                  src="https://taketentire.com/wp-content/uploads/2022/03/Take-Ten.png.webp" 
+                  alt="Take Ten Tire" 
+                  className="h-[100px] w-auto object-contain"
+                />
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -68,7 +64,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
                 <select
                   value={selectedStoreId || ''}
                   onChange={(e) => setSelectedStoreId(e.target.value || null)}
-                  className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500"
                   disabled={loading}
                 >
                   <option value="">All Stores</option>
@@ -79,16 +75,16 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
                   ))}
                 </select>
               </div>
-              <button className="relative p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200">
+              <button className="relative p-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200">
                 <Bell className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-pulse"></span>
+                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
               </button>
               <div className="flex items-center space-x-3">
                 <div className="text-right">
                   <span className="text-sm font-medium text-slate-700">Welcome back,</span>
                   <p className="text-xs text-slate-500">Service Manager</p>
                 </div>
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-slate-600 rounded-full flex items-center justify-center shadow-lg ring-2 ring-blue-100">
+                <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-slate-600 rounded-full flex items-center justify-center shadow-lg ring-2 ring-red-100">
                   <User className="w-5 h-5 text-white" />
                 </div>
               </div>
@@ -213,15 +209,15 @@ function NavItem({ href, icon, label, active }: NavItemProps) {
       className={`
         group flex items-center space-x-2 py-4 px-4 text-sm font-medium rounded-t-lg transition-all duration-200
         ${active
-          ? 'bg-gradient-to-t from-blue-50 to-transparent border-b-2 border-blue-500 text-blue-700'
-          : 'text-slate-600 hover:text-blue-700 hover:bg-slate-50/50 border-b-2 border-transparent hover:border-slate-200'
+          ? 'bg-gradient-to-t from-red-50 to-transparent border-b-2 border-red-500 text-red-700'
+          : 'text-slate-600 hover:text-red-700 hover:bg-slate-50/50 border-b-2 border-transparent hover:border-slate-200'
         }
       `}
     >
       <span className={`transition-colors duration-200 ${
         active
-          ? 'text-blue-600'
-          : 'text-slate-500 group-hover:text-blue-600'
+          ? 'text-red-600'
+          : 'text-slate-500 group-hover:text-red-600'
       }`}>
         {icon}
       </span>
