@@ -32,9 +32,10 @@ export default function MechanicAnalytics() {
   const [showNonMechanics, setShowNonMechanics] = useState(false);
 
   useEffect(() => {
+    const timestamp = new Date().getTime();
     const url = selectedStoreId 
-      ? `http://localhost:3001/api/v1/mechanic/analytics?storeId=${selectedStoreId}`
-      : 'http://localhost:3001/api/v1/mechanic/analytics';
+      ? `http://localhost:3001/api/v1/mechanic/analytics?storeId=${selectedStoreId}&_t=${timestamp}`
+      : `http://localhost:3001/api/v1/mechanic/analytics?_t=${timestamp}`;
 
     setLoading(true);
     fetch(url)
@@ -101,7 +102,11 @@ export default function MechanicAnalytics() {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-end space-x-4 px-4">
+      <div className="flex justify-between items-center px-4">
+        <div className="text-sm text-gray-500">
+          {selectedStoreId ? 'Showing data for selected store' : 'Showing data for all stores'}
+        </div>
+        <div className="flex space-x-4">
           <label className="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer select-none">
             <input
               type="checkbox"
@@ -120,6 +125,7 @@ export default function MechanicAnalytics() {
             />
             <span>Show Non-Mechanics</span>
           </label>
+        </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-lg shadow">
