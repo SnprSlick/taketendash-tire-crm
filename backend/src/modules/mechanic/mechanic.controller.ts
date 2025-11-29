@@ -32,9 +32,9 @@ export class MechanicController {
   }
 
   @Get('analytics')
-  async getAnalytics() {
-    console.log('Fetching mechanic analytics...');
-    return this.mechanicService.getMechanicAnalytics();
+  async getAnalytics(@Query('storeId') storeId?: string) {
+    console.log(`Fetching mechanic analytics${storeId ? ` for store ${storeId}` : ''}...`);
+    return this.mechanicService.getMechanicAnalytics(storeId);
   }
 
   @Get()

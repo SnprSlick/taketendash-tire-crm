@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { useStore } from '../../contexts/store-context';
 
 interface MechanicAnalyticsData {
   mechanicName: string;
@@ -22,6 +23,7 @@ type SortKey = 'mechanicName' | 'businessHoursAvailable' | 'totalBilledHours' | 
 type SortDirection = 'asc' | 'desc';
 
 export default function MechanicAnalytics() {
+  const { selectedStoreId } = useStore();
   const [data, setData] = useState<MechanicAnalyticsData[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>('profitPerHour');
@@ -30,7 +32,12 @@ export default function MechanicAnalytics() {
   const [showNonMechanics, setShowNonMechanics] = useState(false);
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/v1/mechanic/analytics')
+    const url = selectedStoreId 
+      ? `http://localhost:3001/api/v1/mechanic/analytics?storeId=${selectedStoreId}`
+      : 'http://localhost:3001/api/v1/mechanic/analytics';
+
+    setLoading(true);
+    fetch(url)
       .then(res => res.json())
       .then(data => {
         setData(data);
@@ -40,7 +47,7 @@ export default function MechanicAnalytics() {
         console.error(err);
         setLoading(false);
       });
-  }, []);
+  }, [selectedStoreId]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -142,7 +149,7 @@ export default function MechanicAnalytics() {
           <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
-                data={[...filteredData].sort((a, b) => b.efficiency - a.efficiency).slice(0, 10)} 
+                data={[...filteredData].sort((a, b) => b.laborPerHour - a.laborPerHour).slice(0, 10)} 
                 layout="vertical" 
                 margin={{ left: 40, right: 40 }}
               >

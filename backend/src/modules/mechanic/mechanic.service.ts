@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMechanicLaborDto } from './dto/create-mechanic-labor.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class MechanicService {
@@ -110,7 +111,11 @@ export class MechanicService {
     }));
   }
 
-  async getMechanicAnalytics() {
+  async getMechanicAnalytics(storeId?: string) {
+    const whereClause = storeId 
+      ? Prisma.sql`AND i.store_id = ${storeId}` 
+      : Prisma.empty;
+
     const data = await this.prisma.$queryRaw<any[]>`
       SELECT 
         ml.mechanic_name as "mechanicName",
@@ -124,6 +129,9 @@ export class MechanicService {
         BOOL_OR(e."isMechanic") as "isMechanic"
       FROM mechanic_labor ml
       LEFT JOIN employees e ON LOWER(ml.mechanic_name) = LOWER(CONCAT(e."firstName", ' ', e."lastName"))
+      LEFT JOIN invoices i ON ml.invoice_number = i.invoice_number
+      WHERE 1=1
+      ${whereClause}
       GROUP BY ml.mechanic_name
       ORDER BY ml.mechanic_name ASC
     `;
