@@ -57,7 +57,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
                   alt="10Manager" 
                   className="h-[67px] w-auto object-contain"
                 />
-                <span className="text-2xl font-bold text-slate-800 tracking-tight">10Manager</span>
+                <span className="text-2xl font-bold text-slate-800 tracking-tight">10Manage</span>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -208,16 +208,16 @@ function NavItem({ href, icon, label, active }: NavItemProps) {
     <a
       href={href}
       className={`
-        group flex items-center space-x-2 py-4 px-4 text-sm font-medium rounded-t-lg transition-all duration-200
+        group flex items-center space-x-2 py-2 px-4 text-sm font-medium rounded-lg transition-all duration-200 my-2
         ${active
-          ? 'bg-gradient-to-t from-red-50 to-transparent border-b-2 border-red-500 text-red-700'
-          : 'text-slate-600 hover:text-red-700 hover:bg-slate-50/50 border-b-2 border-transparent hover:border-slate-200'
+          ? 'bg-red-600 text-white shadow-md'
+          : 'text-slate-600 hover:text-red-700 hover:bg-slate-50/50'
         }
       `}
     >
       <span className={`transition-colors duration-200 ${
         active
-          ? 'text-red-600'
+          ? 'text-white'
           : 'text-slate-500 group-hover:text-red-600'
       }`}>
         {icon}
