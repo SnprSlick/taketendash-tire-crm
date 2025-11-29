@@ -45,7 +45,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
   const containerClass = fullWidth ? "max-w-[98%]" : "max-w-7xl";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-red-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
       {/* Header */}
       <header className="bg-white/95 backdrop-blur-sm shadow-lg border-b border-slate-200/50">
         <div className={`${containerClass} mx-auto px-4 sm:px-6 lg:px-8`}>
