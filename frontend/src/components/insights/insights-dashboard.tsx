@@ -111,7 +111,7 @@ interface TopTire {
 }
 
 export function InsightsDashboard() {
-  const COLORS = ['#dc2626', '#16a34a', '#d97706'];
+  const COLORS = ['#06b6d4', '#eab308', '#84cc16'];
   const [restockAlerts, setRestockAlerts] = useState<RestockAlert[]>([]);
   const [deadStock, setDeadStock] = useState<DeadStock[]>([]);
   const [utilization, setUtilization] = useState<UtilizationMetric | null>(null);
@@ -194,7 +194,7 @@ export function InsightsDashboard() {
 
       {/* Top Level KPI Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="bg-white rounded-lg shadow border border-gray-200 group hover:bg-red-600 hover:border-red-600 transition-all duration-200">
+        <div className="bg-white rounded-lg shadow border border-gray-200 group hover:bg-red-600 hover:border-red-600 transition-all duration-700">
           <div className="p-6 pb-2 flex flex-row items-center justify-between space-y-0">
             <h3 className="text-sm font-medium text-gray-900 group-hover:text-white">Technician Utilization</h3>
             <Users className="h-4 w-4 text-gray-500 group-hover:text-red-100" />
@@ -206,7 +206,7 @@ export function InsightsDashboard() {
             </p>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow border border-gray-200 group hover:bg-red-600 hover:border-red-600 transition-all duration-200">
+        <div className="bg-white rounded-lg shadow border border-gray-200 group hover:bg-red-600 hover:border-red-600 transition-all duration-700">
           <div className="p-6 pb-2 flex flex-row items-center justify-between space-y-0">
             <h3 className="text-sm font-medium text-gray-900 group-hover:text-white">Alignment Attachment</h3>
             <TrendingUp className="h-4 w-4 text-gray-500 group-hover:text-red-100" />
@@ -218,7 +218,7 @@ export function InsightsDashboard() {
             </p>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow border border-gray-200 group hover:bg-red-600 hover:border-red-600 transition-all duration-200">
+        <div className="bg-white rounded-lg shadow border border-gray-200 group hover:bg-red-600 hover:border-red-600 transition-all duration-700">
           <div className="p-6 pb-2 flex flex-row items-center justify-between space-y-0">
             <h3 className="text-sm font-medium text-gray-900 group-hover:text-white">Dead Stock Value</h3>
             <DollarSign className="h-4 w-4 text-gray-500 group-hover:text-red-100" />
@@ -244,7 +244,7 @@ export function InsightsDashboard() {
           {Object.entries(topTires)
             .filter(([category]) => !['OTHER', 'LAWN AND GARDEN', 'ATV UTV', 'AGRICULTURAL', 'INDUSTRIAL', 'OTR'].includes(category.toUpperCase()))
             .map(([category, tires]) => (
-            <div key={category} className="min-w-[280px] flex-1 bg-white rounded-lg shadow border border-gray-200 p-3 group hover:bg-red-600 hover:border-red-600 transition-all duration-200">
+            <div key={category} className="min-w-[280px] flex-1 bg-white rounded-lg shadow border border-gray-200 p-3 group hover:bg-red-600 hover:border-red-600 transition-all duration-700">
               <h3 className="font-semibold text-xs text-gray-800 mb-2 border-b pb-1 uppercase tracking-wide group-hover:text-white group-hover:border-red-400">{category}</h3>
               
               {/* Combined Chart */}
@@ -358,7 +358,7 @@ export function InsightsDashboard() {
             </div>
             <div className="p-6 space-y-4">
               {restockAlerts.filter(a => a.status === 'Low Stock').slice(0, 5).map((alert) => (
-                <div key={alert.productId} className="relative w-full rounded-lg border border-red-200 p-4 bg-red-50 group hover:bg-red-600 hover:border-red-600 transition-all duration-200">
+                <div key={alert.productId} className="relative w-full rounded-lg border border-red-200 p-4 bg-red-50 group hover:bg-red-600 hover:border-red-600 transition-all duration-700">
                   <div className="flex items-start gap-4">
                     <Package className="h-4 w-4 text-red-600 mt-1 group-hover:text-white" />
                     <div className="flex-1">
@@ -403,7 +403,7 @@ export function InsightsDashboard() {
             </div>
             <div className="p-6 space-y-4">
               {marginLeakage.map((leak) => (
-                <div key={leak.category} className="flex items-center justify-between p-3 border rounded-lg bg-orange-50 border-orange-200 group hover:bg-red-600 hover:border-red-600 transition-all duration-200">
+                <div key={leak.category} className="flex items-center justify-between p-3 border rounded-lg bg-orange-50 border-orange-200 group hover:bg-red-600 hover:border-red-600 transition-all duration-700">
                   <div>
                     <div className="font-semibold text-orange-900 group-hover:text-white">{leak.category}</div>
                     <div className="text-sm text-orange-700 group-hover:text-red-100">Target: {leak.targetMargin}%</div>
@@ -695,7 +695,7 @@ export function InsightsDashboard() {
             </div>
             <div className="p-6 space-y-4">
               {deadStock.slice(0, 5).map((item) => (
-                <div key={item.productId} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-red-600 hover:border-red-600 transition-all duration-200 group">
+                <div key={item.productId} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-red-600 hover:border-red-600 transition-all duration-700 group">
                   <div className="space-y-1">
                     <div className="font-medium text-gray-900 group-hover:text-white">{item.productName}</div>
                     <div className="text-xs text-gray-500 group-hover:text-red-100">
