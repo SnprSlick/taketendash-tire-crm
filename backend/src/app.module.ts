@@ -23,6 +23,7 @@ import { TireAnalyticsModule } from './modules/tire-analytics/tire-analytics.mod
 import { MechanicModule } from './modules/mechanic/mechanic.module';
 import { StoreModule } from './modules/store/store.module';
 import { InsightsModule } from './modules/insights/insights.module';
+import { UsersModule } from './modules/users/users.module';
 // Note: CustomersModule and InvoicesModule moved to _disabled folder to resolve schema conflicts
 // import { DateScalar } from './graphql/scalars/date.scalar'; // Disabled with GraphQL
 // import { LibrariesModule } from './libraries/libraries.module'; // Temporarily disabled
@@ -65,6 +66,7 @@ import { InvoiceController } from './controllers/invoice.controller';
     MechanicModule,
     StoreModule,
     InsightsModule,
+    UsersModule,
   ],
   controllers: [AppController, InvoiceController], // CsvImportController moved to CsvImportModule
   providers: [], // DateScalar and HealthResolver removed with GraphQL

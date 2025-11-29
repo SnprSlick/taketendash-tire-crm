@@ -1,5 +1,6 @@
 import './globals.css';
 import { StoreProvider } from '../contexts/store-context';
+import { AuthProvider } from '../contexts/auth-context';
 
 export const metadata = {
   title: 'Tire CRM Dashboard',
@@ -14,9 +15,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="light">
       <body className="min-h-screen bg-background font-sans antialiased">
-        <StoreProvider>
-          {children}
-        </StoreProvider>
+        <AuthProvider>
+          <StoreProvider>
+            {children}
+          </StoreProvider>
+        </AuthProvider>
       </body>
     </html>
   );

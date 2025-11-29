@@ -88,3 +88,12 @@
 - Backend server is running (manually started by user).
 - Frontend is updated with new dashboards and fixes.
 - `memory.md` created to track progress.
+
+### Authentication & Admin Panel (New Feature)
+- **Branch**: `feat/auth-admin-panel`
+- **Goal**: Implement a login system and an admin panel for user management.
+- **Plan**:
+  - Set up authentication (likely JWT based).
+  - Create User model (if not fully robust).
+  - Create Login/Register pages.
+  - Create Admin Dashboard for managing users.

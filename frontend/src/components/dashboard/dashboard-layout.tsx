@@ -20,9 +20,12 @@ import {
   Tag,
   Disc,
   Wrench,
-  Store
+  Store,
+  Shield,
+  LogOut
 } from 'lucide-react';
 import { useStore } from '../../contexts/store-context';
+import { useAuth } from '../../contexts/auth-context';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -33,6 +36,14 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children, title = 'Tire CRM Dashboard', fullWidth = false }: DashboardLayoutProps) {
   const pathname = usePathname();
   const { stores, selectedStoreId, setSelectedStoreId, loading } = useStore();
+  const { user, logout, hasRole } = useAuth();
+
+  // Filter stores based on user access
+  const allowedStores = stores.filter(store => 
+    user?.role === 'ADMINISTRATOR' || 
+    user?.role === 'CORPORATE' || 
+    user?.stores.includes(store.id)
+  );
 
   const isActive = (href: string) => {
     if (href === '/dashboard/sales') {
@@ -69,7 +80,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
                   disabled={loading}
                 >
                   <option value="">All Stores</option>
-                  {stores.map(store => (
+                  {allowedStores.map(store => (
                     <option key={store.id} value={store.id}>
                       {store.name}
                     </option>
@@ -82,11 +93,24 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
               </button>
               <div className="flex items-center space-x-3">
                 <div className="text-right">
-                  <span className="text-sm font-medium text-slate-700">Welcome back,</span>
-                  <p className="text-xs text-slate-500">Service Manager</p>
+                  <span className="text-sm font-medium text-slate-700">
+                    {user ? `${user.firstName} ${user.lastName}` : 'Welcome back'}
+                  </span>
+                  <p className="text-xs text-slate-500">{user?.role || 'Guest'}</p>
                 </div>
-                <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-slate-600 rounded-full flex items-center justify-center shadow-lg ring-2 ring-red-100">
-                  <User className="w-5 h-5 text-white" />
+                <div className="relative group">
+                  <button className="w-10 h-10 bg-gradient-to-r from-red-500 to-slate-600 rounded-full flex items-center justify-center shadow-lg ring-2 ring-red-100">
+                    <User className="w-5 h-5 text-white" />
+                  </button>
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-200 py-1 hidden group-hover:block z-50">
+                    <button 
+                      onClick={logout}
+                      className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sign out
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -182,6 +206,14 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
               label="Config"
               active={isActive('/tire-master')}
             />
+            {hasRole('ADMINISTRATOR') && (
+              <NavItem
+                href="/dashboard/admin/users"
+                icon={<Shield className="w-4 h-4" />}
+                label="Admin"
+                active={isActive('/dashboard/admin')}
+              />
+            )}
           </div>
         </div>
       </nav>

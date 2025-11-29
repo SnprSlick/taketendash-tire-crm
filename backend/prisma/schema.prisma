@@ -163,6 +163,7 @@ model Employee {
   appointments     Appointment[]
   salesData        SalesData[]
   stores           Store[]
+  user             User?
 
   @@index([role])
   @@map("employees")
@@ -394,6 +395,7 @@ model Store {
 
   invoices    Invoice[]
   employees   Employee[]
+  users       User[]
 
   @@map("stores")
 }
@@ -889,5 +891,30 @@ model MechanicLabor {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   @@map("mechanic_labor")
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  username           String    @unique
+  password           String
+  email              String?   @unique
+  firstName          String?
+  lastName           String?
+  
+  role               String    @default("USER") // ADMIN, CORPORATE, STORE_MANAGER, etc.
+  scopes             String[]  // Granular permissions
+  
+  isApproved         Boolean   @default(false)
+  mustChangePassword Boolean   @default(true)
+  
+  employeeId         String?   @unique
+  employee           Employee? @relation(fields: [employeeId], references: [id])
+  
+  stores             Store[]
+  
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@map("users")
 }
 

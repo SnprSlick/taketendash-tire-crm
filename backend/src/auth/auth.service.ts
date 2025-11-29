@@ -5,13 +5,13 @@ import * as bcrypt from 'bcryptjs';
 
 export interface JwtPayload {
   sub: string;
-  email: string;
+  username: string;
   role: string;
-  employeeId?: string;
+  scopes: string[];
 }
 
 export interface LoginDto {
-  email: string;
+  username: string;
   password: string;
 }
 
@@ -19,11 +19,13 @@ export interface AuthResponse {
   access_token: string;
   user: {
     id: string;
-    email: string;
+    username: string;
     firstName: string;
     lastName: string;
     role: string;
-    employeeId?: string;
+    scopes: string[];
+    stores: string[]; // Store IDs
+    mustChangePassword: boolean;
   };
 }
 
@@ -34,20 +36,19 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async validateUser(email: string, password: string): Promise<any> {
-    // For MVP, we'll create a simple user validation
-    // In production, this would validate against a proper user table
-    const employee = await this.prisma.employee.findUnique({
-      where: { email },
+  async validateUser(username: string, password: string): Promise<any> {
+    const user = await this.prisma.user.findUnique({
+      where: { username },
+      include: { stores: true }
     });
 
-    if (employee) {
-      // For MVP demo, we'll use a simple password check
-      // In production, passwords should be hashed
-      const isValid = password === 'demo123' || password === 'password';
-
+    if (user) {
+      const isValid = await bcrypt.compare(password, user.password);
       if (isValid) {
-        const { ...result } = employee;
+        if (!user.isApproved) {
+            throw new UnauthorizedException('Account not approved by administrator');
+        }
+        const { password, ...result } = user;
         return result;
       }
     }
@@ -55,7 +56,7 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto): Promise<AuthResponse> {
-    const user = await this.validateUser(loginDto.email, loginDto.password);
+    const user = await this.validateUser(loginDto.username, loginDto.password);
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -63,40 +64,48 @@ export class AuthService {
 
     const payload: JwtPayload = {
       sub: user.id,
-      email: user.email,
+      username: user.username,
       role: user.role,
-      employeeId: user.employeeId,
+      scopes: user.scopes,
     };
 
     return {
       access_token: this.jwtService.sign(payload),
       user: {
         id: user.id,
-        email: user.email,
+        username: user.username,
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
-        employeeId: user.employeeId,
+        scopes: user.scopes,
+        stores: user.stores.map(s => s.id),
+        mustChangePassword: user.mustChangePassword,
       },
     };
   }
 
   async validateJwtPayload(payload: JwtPayload) {
-    const employee = await this.prisma.employee.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
+      include: { stores: true }
     });
 
-    if (!employee || employee.status === 'INACTIVE') {
-      throw new UnauthorizedException('User not found or inactive');
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (!user.isApproved) {
+        throw new UnauthorizedException('Account not approved');
     }
 
     return {
-      id: employee.id,
-      email: employee.email,
-      firstName: employee.firstName,
-      lastName: employee.lastName,
-      role: employee.role,
-      employeeId: employee.employeeId,
+      id: user.id,
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      scopes: user.scopes,
+      stores: user.stores.map(s => s.id),
     };
   }
 
