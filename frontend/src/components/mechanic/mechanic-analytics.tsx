@@ -76,6 +76,20 @@ export default function MechanicAnalytics() {
 
   const sortedData = useMemo(() => {
     return [...filteredData].sort((a, b) => {
+      // Exception: sorting by name
+      if (sortKey === 'mechanicName') {
+        return sortDirection === 'asc' 
+          ? a.mechanicName.localeCompare(b.mechanicName) 
+          : b.mechanicName.localeCompare(a.mechanicName);
+      }
+
+      // For other columns, prioritize >= 100 hours
+      const aQualified = a.totalBilledHours >= 100;
+      const bQualified = b.totalBilledHours >= 100;
+
+      if (aQualified && !bQualified) return -1; // a comes first (top)
+      if (!aQualified && bQualified) return 1;  // b comes first (top)
+
       const aValue = a[sortKey];
       const bValue = b[sortKey];
 
@@ -133,7 +147,10 @@ export default function MechanicAnalytics() {
           <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
-                data={[...filteredData].sort((a, b) => b.profitPerHour - a.profitPerHour).slice(0, 10)} 
+                data={[...filteredData]
+                  .filter(m => m.totalBilledHours >= 100)
+                  .sort((a, b) => b.profitPerHour - a.profitPerHour)
+                  .slice(0, 10)} 
                 layout="vertical" 
                 margin={{ left: 40, right: 40 }}
               >
@@ -155,7 +172,10 @@ export default function MechanicAnalytics() {
           <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
-                data={[...filteredData].sort((a, b) => b.laborPerHour - a.laborPerHour).slice(0, 10)} 
+                data={[...filteredData]
+                  .filter(m => m.totalBilledHours >= 100)
+                  .sort((a, b) => b.laborPerHour - a.laborPerHour)
+                  .slice(0, 10)} 
                 layout="vertical" 
                 margin={{ left: 40, right: 40 }}
               >
