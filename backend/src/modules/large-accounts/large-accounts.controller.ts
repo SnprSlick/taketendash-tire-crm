@@ -8,8 +8,13 @@ import {
   Query,
   ParseUUIDPipe,
   BadRequestException,
+  UseGuards,
+  ForbiddenException
 } from '@nestjs/common';
 import { LargeAccountsService } from './large-accounts.service';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { User } from '../../common/decorators/user.decorator';
 import {
   CreateLargeAccountRequest,
   UpdateLargeAccountRequest,
@@ -19,11 +24,12 @@ import {
 import { LargeAccountType, LargeAccountTier, LargeAccountStatus, ServiceLevel } from '@prisma/client';
 
 @Controller('large-accounts')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class LargeAccountsController {
   constructor(private readonly largeAccountsService: LargeAccountsService) {}
 
   @Get()
-  async findAll(@Query() query: any) {
+  async findAll(@Query() query: any, @User() user: any) {
     const filters: LargeAccountFilters = {};
 
     // Parse query parameters
@@ -41,6 +47,11 @@ export class LargeAccountsController {
 
     if (query.accountManager) {
       filters.accountManager = query.accountManager;
+    }
+
+    // RBAC: Account Managers can only see their own accounts
+    if (user.role === 'ACCOUNT_MANAGER') {
+      filters.accountManager = `${user.firstName} ${user.lastName}`;
     }
 
     if (query.serviceLevel && this.isValidServiceLevel(query.serviceLevel)) {
@@ -78,7 +89,10 @@ export class LargeAccountsController {
   }
 
   @Post('designate')
-  async designateAccount(@Body() createRequest: CreateLargeAccountRequest) {
+  async designateAccount(@Body() createRequest: CreateLargeAccountRequest, @User() user: any) {
+    if (user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE' && user.role !== 'MANAGER') {
+      throw new ForbiddenException('Access denied');
+    }
     this.validateCreateRequest(createRequest);
     const account = await this.largeAccountsService.designateAccount(createRequest);
     return { data: account };
@@ -88,7 +102,11 @@ export class LargeAccountsController {
   async updateTier(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() tierRequest: TierUpdateRequest,
+    @User() user: any
   ) {
+    if (user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE' && user.role !== 'MANAGER') {
+      throw new ForbiddenException('Access denied');
+    }
     this.validateTierUpdateRequest(tierRequest);
     const account = await this.largeAccountsService.updateTier(id, tierRequest);
     return { data: account };
