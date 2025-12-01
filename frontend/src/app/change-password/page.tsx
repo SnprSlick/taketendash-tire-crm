@@ -26,8 +26,13 @@ export default function ChangePasswordPage() {
       return;
     }
 
+    if (!token) {
+      setError('Authentication session missing. Please login again.');
+      return;
+    }
+
     setLoading(true);
-    const cleanToken = token?.replace(/"/g, '');
+    const cleanToken = token.replace(/"/g, '');
 
     try {
       const res = await fetch('/api/v1/users/change-password', {
