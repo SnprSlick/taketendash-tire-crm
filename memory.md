@@ -184,3 +184,5 @@
   - [x] Updated `AuthService` to return `employeeId` in login response.
   - [x] Updated `CreateUserModal` and `EditUserModal` to allow searching and linking employees.
   - [x] Updated `DashboardLayout` to restrict Salesperson navigation to their specific report page.
+  - [x] Fix missing `useEffect` import in `CreateUserModal` component
+  - [x] Fixed salesperson search in Create/Edit User modals by improving token handling and removing unnecessary quote replacement logic.
