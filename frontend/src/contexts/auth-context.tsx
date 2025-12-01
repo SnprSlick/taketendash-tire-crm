@@ -38,14 +38,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
 
-    if (storedToken && storedUser && storedToken !== 'undefined' && storedToken !== 'null') {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+    const validateAndSetUser = async (token: string, savedUser: User | null) => {
+      try {
+        const res = await fetch('/api/v1/auth/validate', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user) {
+            setUser(data.user);
+            localStorage.setItem('user', JSON.stringify(data.user));
+          } else if (savedUser) {
+            setUser(savedUser);
+          }
+          setToken(token);
+        } else {
+          // Token invalid
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setToken(null);
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Token validation failed:', error);
+        // If validation fails (e.g. network error), fallback to stored user but keep token
+        if (savedUser) {
+          setUser(savedUser);
+          setToken(token);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (storedToken && storedToken !== 'undefined' && storedToken !== 'null') {
+      validateAndSetUser(storedToken, storedUser ? JSON.parse(storedUser) : null);
     } else {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
   const login = (newToken: string, newUser: User) => {

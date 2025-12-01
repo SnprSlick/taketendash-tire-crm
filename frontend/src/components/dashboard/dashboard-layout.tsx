@@ -39,6 +39,9 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
   const { user, logout, hasRole, isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
+    if (user) {
+      console.log('DashboardLayout User:', user);
+    }
     if (!isLoading) {
       if (!isAuthenticated) {
         window.location.href = '/login';
@@ -46,12 +49,11 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
         window.location.href = '/change-password';
       } else if (user?.role === 'SALESPERSON') {
         // Redirect Salesperson to their specific report
-        const salespersonReportPath = user.employeeName 
-          ? `/dashboard/sales/reports/salesperson/${encodeURIComponent(user.employeeName)}`
-          : '/dashboard/sales/reports'; // Fallback if no employee linked
+        const displayName = user.employeeName || `${user.firstName} ${user.lastName}`;
+        const salespersonReportPath = `/dashboard/sales/reports/salesperson/${encodeURIComponent(displayName)}`;
         
         // Allow access to their report page and profile/settings
-        if (pathname === '/' || pathname === '/dashboard' || pathname === '/dashboard/sales') {
+        if (pathname === '/' || pathname === '/dashboard' || pathname === '/dashboard/sales' || pathname === '/dashboard/sales/reports') {
           window.location.href = salespersonReportPath;
         }
       } else if (user?.role === 'STORE_MANAGER') {
@@ -202,8 +204,8 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
               />
             )}
             <NavItem
-              href={isSalesperson && user?.employeeName 
-                ? `/dashboard/sales/reports/salesperson/${encodeURIComponent(user.employeeName)}`
+              href={isSalesperson
+                ? `/dashboard/sales/reports/salesperson/${encodeURIComponent(user?.employeeName || `${user?.firstName} ${user?.lastName}`)}`
                 : "/dashboard/sales/reports"
               }
               icon={<FileText className="w-4 h-4" />}
