@@ -1061,6 +1061,20 @@ export class InvoiceController {
   ) {
     try {
       const decodedName = decodeURIComponent(name);
+      let salespersonName = decodedName;
+
+      // Check if name is an ID (simple heuristic: length 25 and alphanumeric)
+      if (decodedName.length === 25 && !decodedName.includes(' ')) {
+         const employee = await this.prisma.employee.findUnique({
+           where: { id: decodedName }
+         });
+         if (employee) {
+           salespersonName = `${employee.firstName} ${employee.lastName}`;
+           this.logger.log(`Resolved salesperson ID ${decodedName} to name ${salespersonName}`);
+         }
+      }
+
+      this.logger.log(`Getting details for salesperson: ${salespersonName}, year: ${yearStr}, storeId: ${storeId}, user: ${user?.name}`);
       const year = parseInt(yearStr) || new Date().getFullYear();
       const startDate = new Date(year, 0, 1);
       const endDate = new Date(year, 11, 31, 23, 59, 59);
@@ -1098,7 +1112,7 @@ export class InvoiceController {
           END as profit_margin
         FROM invoices i
         LEFT JOIN invoice_line_items ili ON i.id = ili.invoice_id
-        WHERE i.salesperson = ${decodedName} 
+        WHERE i.salesperson = ${salespersonName} 
           AND i.invoice_date >= ${startDate} 
           AND i.invoice_date <= ${endDate} 
           AND i.status = 'ACTIVE'::"InvoiceStatus"
@@ -1123,7 +1137,7 @@ export class InvoiceController {
         FROM invoices i
         LEFT JOIN invoice_line_items ili ON i.id = ili.invoice_id
         LEFT JOIN invoice_customers c ON i.customer_id = c.id
-        WHERE i.salesperson = ${decodedName} 
+        WHERE i.salesperson = ${salespersonName} 
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${storeCondition}
         GROUP BY i.id, c.name
@@ -1145,7 +1159,7 @@ export class InvoiceController {
           SUM(i.total_amount) as total_revenue
         FROM invoices i
         JOIN invoice_customers c ON c.id = i.customer_id
-        WHERE i.salesperson = ${decodedName} 
+        WHERE i.salesperson = ${salespersonName} 
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${storeCondition}
         GROUP BY c.id, c.name
@@ -1158,7 +1172,7 @@ export class InvoiceController {
         SELECT SUM(rr.commission) as total_commission
         FROM invoices i
         JOIN reconciliation_records rr ON i.id = rr."matchedInvoiceId"
-        WHERE i.salesperson = ${decodedName}
+        WHERE i.salesperson = ${salespersonName}
           AND i.invoice_date >= ${startDate}
           AND i.invoice_date <= ${endDate}
           AND i.status = 'ACTIVE'::"InvoiceStatus"
@@ -1174,7 +1188,7 @@ export class InvoiceController {
           SUM(ili.parts_cost) as total_parts
         FROM invoices i
         JOIN invoice_line_items ili ON i.id = ili.invoice_id
-        WHERE i.salesperson = ${decodedName}
+        WHERE i.salesperson = ${salespersonName}
           AND i.invoice_date >= ${startDate}
           AND i.invoice_date <= ${endDate}
           AND i.status = 'ACTIVE'::"InvoiceStatus"
@@ -1185,7 +1199,7 @@ export class InvoiceController {
       const totalParts = laborStats[0]?.total_parts ? Number(laborStats[0].total_parts) : 0;
 
       return {
-        salesperson: decodedName,
+        salesperson: salespersonName,
         monthlyStats,
         recentInvoices,
         topCustomers,
@@ -1213,6 +1227,18 @@ export class InvoiceController {
   ) {
     try {
       const decodedName = decodeURIComponent(name);
+      let salespersonName = decodedName;
+
+      // Check if name is an ID
+      if (decodedName.length === 25 && !decodedName.includes(' ')) {
+         const employee = await this.prisma.employee.findUnique({
+           where: { id: decodedName }
+         });
+         if (employee) {
+           salespersonName = `${employee.firstName} ${employee.lastName}`;
+         }
+      }
+
       const year = parseInt(yearStr) || new Date().getFullYear();
       const page = parseInt(pageStr) || 1;
       const limit = parseInt(limitStr) || 50;
@@ -1252,7 +1278,7 @@ export class InvoiceController {
         FROM reconciliation_records rr
         JOIN invoices i ON rr."matchedInvoiceId" = i.id
         LEFT JOIN invoice_customers c ON i.customer_id = c.id
-        WHERE i.salesperson = ${decodedName}
+        WHERE i.salesperson = ${salespersonName}
           AND i.invoice_date >= ${startDate}
           AND i.invoice_date <= ${endDate}
           AND i.status = 'ACTIVE'::"InvoiceStatus"
@@ -1265,7 +1291,7 @@ export class InvoiceController {
         SELECT COUNT(rr.id)::int as count
         FROM reconciliation_records rr
         JOIN invoices i ON rr."matchedInvoiceId" = i.id
-        WHERE i.salesperson = ${decodedName}
+        WHERE i.salesperson = ${salespersonName}
           AND i.invoice_date >= ${startDate}
           AND i.invoice_date <= ${endDate}
           AND i.status = 'ACTIVE'::"InvoiceStatus"
@@ -1280,7 +1306,7 @@ export class InvoiceController {
       }));
 
       return {
-        salesperson: decodedName,
+        salesperson: salespersonName,
         data: mappedCommissions,
         meta: {
           total: totalCount[0]?.count || 0,
