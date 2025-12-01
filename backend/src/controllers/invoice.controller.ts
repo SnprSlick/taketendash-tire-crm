@@ -1095,16 +1095,23 @@ export class InvoiceController {
 
       let storeCondition = Prisma.sql``;
       if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
-        if (storeId) {
-          if (!user.stores.includes(storeId)) {
-            throw new ForbiddenException('You do not have access to this store');
+        if (user.role === 'SALESPERSON') {
+          // Salespeople can see their own data across all stores
+          if (storeId) {
+            storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
           }
-          storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
         } else {
-          if (user.stores.length > 0) {
-            storeCondition = Prisma.sql`AND i.store_id IN (${Prisma.join(user.stores)})`;
+          if (storeId) {
+            if (!user.stores.includes(storeId)) {
+              throw new ForbiddenException('You do not have access to this store');
+            }
+            storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
           } else {
-            storeCondition = Prisma.sql`AND 1=0`;
+            if (user.stores.length > 0) {
+              storeCondition = Prisma.sql`AND i.store_id IN (${Prisma.join(user.stores)})`;
+            } else {
+              storeCondition = Prisma.sql`AND 1=0`;
+            }
           }
         }
       } else if (storeId) {
@@ -1263,16 +1270,23 @@ export class InvoiceController {
 
       let storeCondition = Prisma.sql``;
       if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
-        if (storeId) {
-          if (!user.stores.includes(storeId)) {
-            throw new ForbiddenException('You do not have access to this store');
+        if (user.role === 'SALESPERSON') {
+          // Salespeople can see their own data across all stores
+          if (storeId) {
+            storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
           }
-          storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
         } else {
-          if (user.stores.length > 0) {
-            storeCondition = Prisma.sql`AND i.store_id IN (${Prisma.join(user.stores)})`;
+          if (storeId) {
+            if (!user.stores.includes(storeId)) {
+              throw new ForbiddenException('You do not have access to this store');
+            }
+            storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
           } else {
-            storeCondition = Prisma.sql`AND 1=0`;
+            if (user.stores.length > 0) {
+              storeCondition = Prisma.sql`AND i.store_id IN (${Prisma.join(user.stores)})`;
+            } else {
+              storeCondition = Prisma.sql`AND 1=0`;
+            }
           }
         }
       } else if (storeId) {
