@@ -121,3 +121,8 @@
 ### UI Improvements
 - **Logout**: Added a logout button to the user dropdown and improved its accessibility.
 - **Z-Index Fix**: Fixed an issue where the user dropdown was hidden behind other elements by adjusting the header's z-index.
+
+### Bug Fixes
+- **401 Unauthorized Error**: Fixed an issue where the Store Manager role (and others) received 401 errors on analytics endpoints.
+  - **Cause**: Frontend API calls in `StoresPage`, `MechanicPage`, `MechanicAnalytics`, `MechanicTable`, `MechanicImport`, and `InsightsDashboard` were missing the `Authorization` header.
+  - **Fix**: Updated all relevant components to retrieve the JWT token from `AuthContext` and include it in the `Authorization: Bearer <token>` header for all `fetch` requests.
