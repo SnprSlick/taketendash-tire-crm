@@ -37,20 +37,33 @@ export class AuthService {
   ) {}
 
   async validateUser(username: string, password: string): Promise<any> {
+    console.log(`[AuthService] Validating user: '${username}'`);
     const user = await this.prisma.user.findUnique({
       where: { username },
       include: { stores: true }
     });
 
     if (user) {
+      console.log(`[AuthService] User found: ${user.username} (ID: ${user.id})`);
+      console.log(`[AuthService] User approved: ${user.isApproved}`);
+      console.log(`[AuthService] Stored password hash length: ${user.password.length}`);
+      console.log(`[AuthService] Received password length: ${password.length}`);
+      
       const isValid = await bcrypt.compare(password, user.password);
+      console.log(`[AuthService] Password valid: ${isValid}`);
+      
       if (isValid) {
         if (!user.isApproved) {
+            console.log('[AuthService] User not approved');
             throw new UnauthorizedException('Account not approved by administrator');
         }
         const { password, ...result } = user;
         return result;
+      } else {
+        console.log('[AuthService] Password mismatch');
       }
+    } else {
+        console.log(`[AuthService] User not found: '${username}'`);
     }
     return null;
   }
@@ -85,16 +98,19 @@ export class AuthService {
   }
 
   async validateJwtPayload(payload: JwtPayload) {
+    console.log(`[AuthService] Validating JWT payload for sub: ${payload.sub}`);
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
       include: { stores: true }
     });
 
     if (!user) {
+      console.log('[AuthService] User not found for JWT');
       throw new UnauthorizedException('User not found');
     }
 
     if (!user.isApproved) {
+        console.log('[AuthService] User not approved for JWT');
         throw new UnauthorizedException('Account not approved');
     }
 

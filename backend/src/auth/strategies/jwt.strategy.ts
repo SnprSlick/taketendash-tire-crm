@@ -14,10 +14,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
+    console.log('[JwtStrategy] Validating payload:', JSON.stringify(payload));
     try {
       return await this.authService.validateJwtPayload(payload);
     } catch (error) {
-      console.error('JwtStrategy validation error:', error);
+      console.error('[JwtStrategy] Validation error:', error);
       throw new UnauthorizedException('Invalid token');
     }
   }

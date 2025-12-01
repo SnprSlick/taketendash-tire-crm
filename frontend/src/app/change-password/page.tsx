@@ -88,8 +88,23 @@ export default function ChangePasswordPage() {
         {error && (
           <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-6">
             {error}
+            {error.includes('Authentication') && (
+              <button 
+                onClick={() => {
+                  localStorage.clear();
+                  window.location.href = '/login';
+                }}
+                className="block mt-2 text-red-700 underline font-bold"
+              >
+                Click here to login again
+              </button>
+            )}
           </div>
         )}
+
+        <div className="mb-4 p-2 bg-gray-100 rounded text-xs text-gray-500 break-all">
+          Debug: Token starts with {token ? token.substring(0, 10).replace(/"/g, '') : 'None'}...
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
