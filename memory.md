@@ -140,3 +140,9 @@
     - `SalespersonDetailPage` (Salesperson reports)
     - `CustomerDetailPage` (Customer reports)
     - **Build Fix**: Fixed duplicate import of `useStore` in `CustomerDetailPage` which was causing build failures.
+  - **Mechanic Page Filtering**:
+    - **Issue**: Mechanic performance page was showing data for all stores instead of the selected store.
+    - **Fix**: Updated `MechanicController` and `MechanicService` to accept `storeId` and filter `mechanic_labor` records by joining with `invoices` table. Updated `MechanicTable` frontend component to pass `selectedStoreId` to the API.
+  - **Inventory Page 401**:
+    - **Issue**: Inventory page was returning 401 Unauthorized.
+    - **Fix**: Updated `InventoryPage` to ensure API calls are only made when `token` is available (added check in `useEffect`).
