@@ -38,13 +38,13 @@ export default function CustomerDetailPage() {
   const [year, setYear] = useState(new Date().getFullYear().toString());
 
   useEffect(() => {
-    if (params?.id) {
+    if (params?.id && token) {
       fetchCustomerDetails();
     }
-  }, [params?.id, year, selectedStoreId]);
+  }, [params?.id, year, selectedStoreId, token]);
 
   const fetchCustomerDetails = async () => {
-    if (!params?.id) return;
+    if (!params?.id || !token) return;
     setLoading(true);
     try {
       const storeParam = selectedStoreId ? `&storeId=${selectedStoreId}` : '';
