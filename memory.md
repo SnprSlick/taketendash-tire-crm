@@ -211,5 +211,8 @@
     - Applied similar fix to `CustomerDetailPage` to ensure token is available before fetching.
   - [x] Fix "authentication required" error on invoice detail page
     - Applied similar fix to `InvoiceDetailPage` to ensure token is available before fetching.
+  - [x] Fix salesperson data visibility (allow viewing data across all stores)
+    - Updated `InvoiceController.getSalespersonDetails` and `getSalespersonCommissions` to bypass store restriction for `SALESPERSON` role when no specific store is requested.
+    - This allows salespeople to see their total performance across all stores they have sales in, rather than just their assigned store.
 
 ## Next Steps
