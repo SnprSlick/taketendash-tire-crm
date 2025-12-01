@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/dashboard/dashboard-layout';
+import { useAuth } from '@/contexts/auth-context';
 import StoreStats from '@/components/stores/store-stats';
 import StoreEmployeeList from '@/components/stores/store-employee-list';
 import StoreAnalyticsCharts from '@/components/stores/store-analytics-charts';
@@ -35,6 +36,7 @@ interface Employee {
 export default function StoreDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { token } = useAuth();
   const id = params.id as string;
 
   const [store, setStore] = useState<Store | null>(null);
@@ -59,7 +61,11 @@ export default function StoreDetailPage() {
         
         // Fetch Store Details (only if not already loaded)
         if (!store) {
-          const storeRes = await fetch(`http://localhost:3001/api/v1/stores/${id}`);
+          const storeRes = await fetch(`http://localhost:3001/api/v1/stores/${id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
           const storeData = await storeRes.json();
           if (!storeData.success) throw new Error(storeData.error);
           setStore(storeData.data);
@@ -71,18 +77,30 @@ export default function StoreDetailPage() {
         if (dateRange.endDate) params.append('endDate', dateRange.endDate.toISOString());
 
         // Fetch Stats
-        const statsRes = await fetch(`http://localhost:3001/api/v1/stores/${id}/stats?${params.toString()}`);
+        const statsRes = await fetch(`http://localhost:3001/api/v1/stores/${id}/stats?${params.toString()}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         const statsData = await statsRes.json();
         if (statsData.success) setStats(statsData.data);
 
         // Fetch Analytics
-        const analyticsRes = await fetch(`http://localhost:3001/api/v1/stores/${id}/analytics?${params.toString()}`);
+        const analyticsRes = await fetch(`http://localhost:3001/api/v1/stores/${id}/analytics?${params.toString()}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         const analyticsData = await analyticsRes.json();
         if (analyticsData.success) setAnalytics(analyticsData.data);
 
         // Fetch Employees (only if not already loaded)
         if (employees.length === 0) {
-          const empRes = await fetch(`http://localhost:3001/api/v1/stores/${id}/employees`);
+          const empRes = await fetch(`http://localhost:3001/api/v1/stores/${id}/employees`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
           const empData = await empRes.json();
           if (empData.success) setEmployees(empData.data);
         }

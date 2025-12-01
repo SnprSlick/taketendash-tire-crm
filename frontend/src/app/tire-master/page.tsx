@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '@/components/dashboard/dashboard-layout';
+import { useAuth } from '@/contexts/auth-context';
 import { AlertCircle, RefreshCw, Search, Package, Truck, Database, Settings, Upload, FileText } from 'lucide-react';
 import TireMasterProductSearch from '@/components/tire-master/product-search';
 import TireMasterRefreshCwStatus from '@/components/tire-master/sync-status';
@@ -26,6 +27,7 @@ interface IntegrationHealth {
 }
 
 export default function TireMasterIntegrationPage() {
+  const { token } = useAuth();
   const [view, setView] = useState<ViewType>('overview');
   const [integrationHealth, setIntegrationHealth] = useState<IntegrationHealth | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,7 +35,11 @@ export default function TireMasterIntegrationPage() {
 
   const fetchIntegrationHealth = useCallback(async () => {
     try {
-      const response = await fetch('/api/v1/tire-master/sync/status');
+      const response = await fetch('/api/v1/tire-master/sync/status', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!response.ok) throw new Error('Failed to fetch sync status');
 
       const data = await response.json();

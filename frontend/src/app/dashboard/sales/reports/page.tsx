@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '../../../../components/dashboard/dashboard-layout';
 import { useStore } from '../../../../contexts/store-context';
+import { useAuth } from '../../../../contexts/auth-context';
 import { 
   Users, 
   User, 
@@ -54,6 +55,7 @@ interface MonthlyReport {
 export default function SalesReportsPage() {
   const router = useRouter();
   const { selectedStoreId } = useStore();
+  const { token } = useAuth();
   const [activeTab, setActiveTab] = useState('salespeople');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any[]>([]);
@@ -107,7 +109,11 @@ export default function SalesReportsPage() {
         url = `/api/v1/invoices/reports/monthly?year=${new Date().getFullYear()}${storeParam}`;
       }
 
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       const result = await res.json();
 
       if (result.success) {

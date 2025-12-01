@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/contexts/auth-context';
 import {
   Search,
   Filter,
@@ -53,6 +54,7 @@ interface Location {
 }
 
 export default function InventoryAnalytics() {
+  const { token } = useAuth();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
@@ -184,7 +186,11 @@ export default function InventoryAnalytics() {
     return { data, stores: sortedStores };
   };  const fetchLocations = async () => {
     try {
-      const res = await fetch('/api/v1/inventory/locations');
+      const res = await fetch('/api/v1/inventory/locations', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setLocations(data);
@@ -211,7 +217,11 @@ export default function InventoryAnalytics() {
       params.append('page', page.toString());
       params.append('limit', limit.toString());
 
-      const res = await fetch(`/api/v1/inventory/analytics?${params.toString()}`);
+      const res = await fetch(`/api/v1/inventory/analytics?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       
       if (!res.ok) {
         throw new Error('Failed to fetch analytics data');
@@ -246,7 +256,11 @@ export default function InventoryAnalytics() {
     if (!historyCache[productId]) {
       setLoadingHistory(productId);
       try {
-        const res = await fetch(`/api/v1/inventory/analytics/${productId}/history?days=365`);
+        const res = await fetch(`/api/v1/inventory/analytics/${productId}/history?days=365`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         if (res.ok) {
           const history = await res.json();
           setHistoryCache(prev => ({ ...prev, [productId]: history }));

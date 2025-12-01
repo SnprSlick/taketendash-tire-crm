@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/contexts/auth-context';
 import { ArrowLeft, Package, MapPin, Search, Truck, AlertTriangle } from 'lucide-react';
 
 interface InventoryItem {
@@ -45,6 +46,7 @@ interface TireMasterInventoryProps {
 }
 
 export default function TireMasterInventory({ onBackToOverview }: TireMasterInventoryProps) {
+  const { token } = useAuth();
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -93,7 +95,11 @@ export default function TireMasterInventory({ onBackToOverview }: TireMasterInve
     setError(null);
 
     try {
-      const response = await fetch(`/api/v1/tire-master/inventory/${locationId}`);
+      const response = await fetch(`/api/v1/tire-master/inventory/${locationId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!response.ok) throw new Error('Failed to fetch inventory');
 
       const data = await response.json();

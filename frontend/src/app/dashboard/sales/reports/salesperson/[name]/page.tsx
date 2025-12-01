@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import DashboardLayout from '../../../../../../components/dashboard/dashboard-layout';
 import { useStore } from '../../../../../../contexts/store-context';
+import { useAuth } from '../../../../../../contexts/auth-context';
 import { 
   User, 
   Calendar, 
@@ -32,6 +33,7 @@ export default function SalespersonDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { selectedStoreId } = useStore();
+  const { token } = useAuth();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [year, setYear] = useState(new Date().getFullYear().toString());
@@ -47,6 +49,7 @@ export default function SalespersonDetailPage() {
       const timestamp = new Date().getTime();
       const res = await fetch(`/api/v1/invoices/reports/salespeople/${encodedName}?year=${year}${storeParam}&_t=${timestamp}`, {
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
         }

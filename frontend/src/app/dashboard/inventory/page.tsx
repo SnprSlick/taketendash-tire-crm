@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/dashboard/dashboard-layout';
+import { useAuth } from '../../../contexts/auth-context';
 import { Search, Filter, Package, MapPin, AlertCircle } from 'lucide-react';
 
 interface InventoryItem {
@@ -26,6 +27,7 @@ interface Location {
 }
 
 export default function InventoryPage() {
+  const { token } = useAuth();
   const [stats, setStats] = useState({ totalProducts: 0, totalQuantity: 0, locationsCount: 0 });
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -64,7 +66,11 @@ export default function InventoryPage() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('/api/v1/inventory/stats');
+      const res = await fetch('/api/v1/inventory/stats', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (res.ok) setStats(await res.json());
     } catch (error) {
       console.error('Failed to fetch stats', error);
@@ -73,7 +79,11 @@ export default function InventoryPage() {
 
   const fetchLocations = async () => {
     try {
-      const res = await fetch('/api/v1/inventory/locations');
+      const res = await fetch('/api/v1/inventory/locations', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (res.ok) setLocations(await res.json());
     } catch (error) {
       console.error('Failed to fetch locations', error);
@@ -95,7 +105,11 @@ export default function InventoryPage() {
         ...(filters.sortOrder && { sortOrder: filters.sortOrder }),
       });
       
-      const res = await fetch(`/api/v1/inventory?${query}`);
+      const res = await fetch(`/api/v1/inventory?${query}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setItems(data.items);

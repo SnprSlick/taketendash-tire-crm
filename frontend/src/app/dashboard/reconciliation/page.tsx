@@ -3,10 +3,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '../../../components/dashboard/dashboard-layout';
+import { useAuth } from '../../../contexts/auth-context';
 import { Upload, FileText, CheckCircle, AlertCircle, Clock, ChevronRight, Trash2 } from 'lucide-react';
 
 export default function ReconciliationPage() {
   const router = useRouter();
+  const { token } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [stats, setStats] = useState({ totalMatched: 0, totalUnmatched: 0, totalDiscrepancy: 0 });
   const [batches, setBatches] = useState([]);
@@ -20,8 +22,16 @@ export default function ReconciliationPage() {
   const fetchData = async () => {
     try {
       const [statsRes, batchesRes] = await Promise.all([
-        fetch('/api/v1/reconciliation/stats'),
-        fetch('/api/v1/reconciliation/batches')
+        fetch('/api/v1/reconciliation/stats', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }),
+        fetch('/api/v1/reconciliation/batches', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
       ]);
       
       if (statsRes.ok) setStats(await statsRes.json());
@@ -42,6 +52,9 @@ export default function ReconciliationPage() {
     try {
       const res = await fetch('/api/v1/reconciliation/upload', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData
       });
       
@@ -68,7 +81,10 @@ export default function ReconciliationPage() {
     setClearing(true);
     try {
       const res = await fetch('/api/v1/reconciliation/clear', {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       
       if (res.ok) {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/contexts/auth-context';
 import { Upload, FileText, RefreshCw, Trash2, CheckCircle, AlertCircle, XCircle, ArrowLeft } from 'lucide-react';
 
 interface ReconciliationBatch {
@@ -22,6 +23,7 @@ interface ReconciliationCenterProps {
 }
 
 export default function ReconciliationCenter({ onBackToOverview }: ReconciliationCenterProps) {
+  const { token } = useAuth();
   const [batches, setBatches] = useState<ReconciliationBatch[]>([]);
   const [stats, setStats] = useState<ReconciliationStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,8 +35,16 @@ export default function ReconciliationCenter({ onBackToOverview }: Reconciliatio
     try {
       setLoading(true);
       const [batchesRes, statsRes] = await Promise.all([
-        fetch('/api/v1/reconciliation/batches'),
-        fetch('/api/v1/reconciliation/stats')
+        fetch('/api/v1/reconciliation/batches', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }),
+        fetch('/api/v1/reconciliation/stats', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
       ]);
 
       if (!batchesRes.ok || !statsRes.ok) throw new Error('Failed to fetch data');
@@ -72,6 +82,9 @@ export default function ReconciliationCenter({ onBackToOverview }: Reconciliatio
 
       const response = await fetch('/api/v1/reconciliation/upload', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData,
       });
 
@@ -93,6 +106,9 @@ export default function ReconciliationCenter({ onBackToOverview }: Reconciliatio
     try {
       const response = await fetch(`/api/v1/reconciliation/batches/${id}/rescan`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       if (!response.ok) throw new Error('Rescan failed');
       await fetchData();
@@ -107,6 +123,9 @@ export default function ReconciliationCenter({ onBackToOverview }: Reconciliatio
     try {
       const response = await fetch('/api/v1/reconciliation/clear', {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       if (!response.ok) throw new Error('Clear failed');
       await fetchData();

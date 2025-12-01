@@ -3,12 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import DashboardLayout from '../../../../components/dashboard/dashboard-layout';
+import { useAuth } from '../../../../contexts/auth-context';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle, AlertCircle, XCircle, Search, RefreshCw, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 
 export default function ReconciliationDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { token } = useAuth();
   const [batch, setBatch] = useState<any>(null);
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,7 +27,11 @@ export default function ReconciliationDetailPage() {
 
   const fetchBatchDetails = async (id: string) => {
     try {
-      const res = await fetch(`/api/v1/reconciliation/batches/${id}`);
+      const res = await fetch(`/api/v1/reconciliation/batches/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setBatch(data.batch);
@@ -43,7 +49,10 @@ export default function ReconciliationDetailPage() {
     setIsRescanning(true);
     try {
       const res = await fetch(`/api/v1/reconciliation/batches/${batch.id}/rescan`, {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       if (res.ok) {
         await fetchBatchDetails(batch.id);

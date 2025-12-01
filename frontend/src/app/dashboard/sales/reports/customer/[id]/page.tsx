@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import DashboardLayout from '../../../../../../components/dashboard/dashboard-layout';
+import { useStore } from '@/contexts/store-context';
+import { useAuth } from '@/contexts/auth-context';
 import { 
   User, 
   Calendar, 
@@ -31,6 +33,7 @@ export default function CustomerDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { selectedStoreId } = useStore();
+  const { token } = useAuth();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [year, setYear] = useState(new Date().getFullYear().toString());
@@ -46,7 +49,11 @@ export default function CustomerDetailPage() {
     setLoading(true);
     try {
       const storeParam = selectedStoreId ? `&storeId=${selectedStoreId}` : '';
-      const res = await fetch(`/api/v1/invoices/reports/customers/${params.id}?year=${year}${storeParam}`);
+      const res = await fetch(`/api/v1/invoices/reports/customers/${params.id}?year=${year}${storeParam}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       const result = await res.json();
       if (result.success) {
         setData(result.data);
