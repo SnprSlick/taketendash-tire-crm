@@ -19,17 +19,56 @@ export class MechanicService {
     cursor?: any;
     where?: any;
     orderBy?: any;
+    storeId?: string;
+    allowedStoreIds?: string[];
   }) {
-    const { skip, take, cursor, where, orderBy } = params;
+    const { skip, take, cursor, where, orderBy, storeId, allowedStoreIds } = params;
+    
+    const finalWhere = { ...where };
+
+    if (storeId || (allowedStoreIds && allowedStoreIds.length > 0)) {
+      const invoiceWhere: any = {};
+      if (storeId) {
+        invoiceWhere.storeId = storeId;
+      } else if (allowedStoreIds) {
+        invoiceWhere.storeId = { in: allowedStoreIds };
+      }
+
+      // We need to find invoices that match the store criteria
+      // Since we can't join in findMany, we fetch invoice numbers first
+      // Optimization: If we are filtering by mechanicName (which is common in details view),
+      // we could potentially optimize, but for now let's fetch invoice numbers.
+      // Warning: This could be heavy if there are many invoices.
+      // A better approach for large datasets would be raw query or adding storeId to MechanicLabor table.
+      
+      const invoices = await this.prisma.invoice.findMany({
+        where: invoiceWhere,
+        select: { invoiceNumber: true }
+      });
+      
+      const invoiceNumbers = invoices.map(i => i.invoiceNumber);
+      
+      if (finalWhere.invoiceNumber) {
+        // If invoiceNumber is already in where (e.g. search), we need to intersect
+        // But search usually uses 'contains', so this is tricky.
+        // For now, let's assume 'AND' logic.
+        finalWhere.invoiceNumber = { in: invoiceNumbers, ...finalWhere.invoiceNumber };
+      } else {
+        finalWhere.invoiceNumber = { in: invoiceNumbers };
+      }
+    } else if (allowedStoreIds && allowedStoreIds.length === 0) {
+       return { data: [], total: 0 };
+    }
+
     const [data, total] = await Promise.all([
       this.prisma.mechanicLabor.findMany({
         skip,
         take,
         cursor,
-        where,
+        where: finalWhere,
         orderBy: orderBy || { createdAt: 'desc' },
       }),
-      this.prisma.mechanicLabor.count({ where }),
+      this.prisma.mechanicLabor.count({ where: finalWhere }),
     ]);
 
     return { data, total };
@@ -72,7 +111,19 @@ export class MechanicService {
     return this.prisma.mechanicLabor.deleteMany({});
   }
 
-  async getMechanicSummary() {
+  async getMechanicSummary(storeId?: string, allowedStoreIds?: string[]) {
+    let whereClause = Prisma.empty;
+
+    if (storeId) {
+      whereClause = Prisma.sql`AND i.store_id = ${storeId}`;
+    } else if (allowedStoreIds) {
+      if (allowedStoreIds.length > 0) {
+        whereClause = Prisma.sql`AND i.store_id IN (${Prisma.join(allowedStoreIds)})`;
+      } else {
+        whereClause = Prisma.sql`AND 1=0`;
+      }
+    }
+
     const summary = await this.prisma.$queryRaw<any[]>`
       SELECT 
         ml.mechanic_name as "mechanicName",
@@ -90,6 +141,9 @@ export class MechanicService {
       LEFT JOIN employees e ON LOWER(ml.mechanic_name) = LOWER(CONCAT(e."firstName", ' ', e."lastName"))
       LEFT JOIN "_EmployeeToStore" es ON e.id = es."A"
       LEFT JOIN stores s ON es."B" = s.id
+      LEFT JOIN invoices i ON ml.invoice_number = i.invoice_number
+      WHERE 1=1
+      ${whereClause}
       GROUP BY ml.mechanic_name
       ORDER BY ml.mechanic_name ASC
     `;

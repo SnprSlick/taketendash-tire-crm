@@ -31,8 +31,20 @@ export class MechanicController {
   }
 
   @Get('summary')
-  async getSummary() {
-    return this.mechanicService.getMechanicSummary();
+  async getSummary(@Query('storeId') storeId?: string, @User() user?: any) {
+    let allowedStoreIds: string[] | undefined;
+    
+    if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
+      if (storeId) {
+        if (!user.stores.includes(storeId)) {
+          throw new ForbiddenException('You do not have access to this store');
+        }
+      } else {
+        allowedStoreIds = user.stores;
+      }
+    }
+
+    return this.mechanicService.getMechanicSummary(storeId, allowedStoreIds);
   }
 
   @Get('analytics')
@@ -60,11 +72,24 @@ export class MechanicController {
     @Query('limit') limit?: string,
     @Query('search') search?: string,
     @Query('mechanicName') mechanicName?: string,
+    @Query('storeId') storeId?: string,
+    @User() user?: any
   ) {
     const take = limit ? parseInt(limit) : 50;
     const skip = page ? (parseInt(page) - 1) * take : 0;
     
     let where: any = {};
+    let allowedStoreIds: string[] | undefined;
+
+    if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
+      if (storeId) {
+        if (!user.stores.includes(storeId)) {
+          throw new ForbiddenException('You do not have access to this store');
+        }
+      } else {
+        allowedStoreIds = user.stores;
+      }
+    }
 
     if (mechanicName) {
         where.mechanicName = mechanicName;
@@ -84,6 +109,8 @@ export class MechanicController {
       take,
       where,
       orderBy: { createdAt: 'desc' },
+      storeId,
+      allowedStoreIds
     });
   }
 

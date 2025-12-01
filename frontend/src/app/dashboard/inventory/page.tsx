@@ -56,13 +56,17 @@ export default function InventoryPage() {
   const [meta, setMeta] = useState({ total: 0, totalPages: 0 });
 
   useEffect(() => {
-    fetchStats();
-    fetchLocations();
-  }, []);
+    if (token) {
+      fetchStats();
+      fetchLocations();
+    }
+  }, [token]);
 
   useEffect(() => {
-    fetchInventory();
-  }, [filters]);
+    if (token) {
+      fetchInventory();
+    }
+  }, [filters, token]);
 
   const fetchStats = async () => {
     try {

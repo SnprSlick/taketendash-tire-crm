@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ChevronDown, ChevronRight, FileText, User, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { useStore } from '../../contexts/store-context';
 import { useAuth } from '@/contexts/auth-context';
 
 const formatCurrency = (value: number | string) => {
@@ -71,6 +72,7 @@ type SortDirection = 'asc' | 'desc';
 
 export default function MechanicTable() {
   const { token } = useAuth();
+  const { selectedStoreId } = useStore();
   const [summaryData, setSummaryData] = useState<MechanicSummary[]>([]);
   const [detailsData, setDetailsData] = useState<Record<string, GroupedMechanic>>({});
   const [loading, setLoading] = useState(true);
@@ -92,13 +94,17 @@ export default function MechanicTable() {
     if (token) {
       fetchSummary();
     }
-  }, [token]);
+  }, [token, selectedStoreId]);
 
   const fetchSummary = async () => {
     if (!token) return;
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/v1/mechanic/summary?t=${new Date().getTime()}`, {
+      const url = selectedStoreId 
+        ? `http://localhost:3001/api/v1/mechanic/summary?storeId=${selectedStoreId}&t=${new Date().getTime()}`
+        : `http://localhost:3001/api/v1/mechanic/summary?t=${new Date().getTime()}`;
+
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -127,6 +133,10 @@ export default function MechanicTable() {
         limit: '5000',
         mechanicName: mechanicName
       });
+
+      if (selectedStoreId) {
+        params.append('storeId', selectedStoreId);
+      }
       
       const response = await fetch(`http://localhost:3001/api/v1/mechanic?${params}`, {
         headers: {
