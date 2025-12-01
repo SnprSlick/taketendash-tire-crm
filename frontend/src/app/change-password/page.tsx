@@ -10,11 +10,23 @@ export default function ChangePasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { token, login, user } = useAuth();
+  const { token, login, user, isLoading: authLoading } = useAuth();
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (authLoading) {
+      return;
+    }
 
     if (newPassword !== confirmPassword) {
       setError('New passwords do not match');
@@ -33,6 +45,8 @@ export default function ChangePasswordPage() {
 
     setLoading(true);
     const cleanToken = token.replace(/"/g, '');
+    console.log('Token length:', cleanToken.length);
+    console.log('Token start:', cleanToken.substring(0, 10));
 
     try {
       const res = await fetch('/api/v1/users/change-password', {

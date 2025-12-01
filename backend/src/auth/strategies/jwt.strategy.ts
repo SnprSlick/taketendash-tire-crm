@@ -17,6 +17,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     try {
       return await this.authService.validateJwtPayload(payload);
     } catch (error) {
+      console.error('JwtStrategy validation error:', error);
       throw new UnauthorizedException('Invalid token');
     }
   }
