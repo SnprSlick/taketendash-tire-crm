@@ -46,8 +46,8 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
         window.location.href = '/change-password';
       } else if (user?.role === 'SALESPERSON') {
         // Redirect Salesperson to their specific report
-        const salespersonReportPath = user.employeeId 
-          ? `/dashboard/sales/reports/salesperson/${user.employeeId}`
+        const salespersonReportPath = user.employeeName 
+          ? `/dashboard/sales/reports/salesperson/${encodeURIComponent(user.employeeName)}`
           : '/dashboard/sales/reports'; // Fallback if no employee linked
         
         // Allow access to their report page and profile/settings
@@ -202,8 +202,8 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
               />
             )}
             <NavItem
-              href={isSalesperson && user?.employeeId 
-                ? `/dashboard/sales/reports/salesperson/${user.employeeId}`
+              href={isSalesperson && user?.employeeName 
+                ? `/dashboard/sales/reports/salesperson/${encodeURIComponent(user.employeeName)}`
                 : "/dashboard/sales/reports"
               }
               icon={<FileText className="w-4 h-4" />}

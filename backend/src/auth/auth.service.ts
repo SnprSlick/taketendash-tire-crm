@@ -27,6 +27,7 @@ export interface AuthResponse {
     stores: string[]; // Store IDs
     mustChangePassword: boolean;
     employeeId?: string;
+    employeeName?: string;
   };
 }
 
@@ -95,6 +96,7 @@ export class AuthService {
         stores: user.stores.map(s => s.id),
         mustChangePassword: user.mustChangePassword,
         employeeId: user.employeeId,
+        employeeName: user.employee ? `${user.employee.firstName} ${user.employee.lastName}` : undefined,
       },
     };
   }
@@ -125,6 +127,7 @@ export class AuthService {
       scopes: user.scopes,
       stores: user.stores.map(s => s.id),
       employeeId: user.employeeId,
+      employeeName: user.employee ? `${user.employee.firstName} ${user.employee.lastName}` : undefined,
     };
   }
 

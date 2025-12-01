@@ -11,6 +11,8 @@ interface User {
   scopes: string[];
   stores: string[];
   mustChangePassword: boolean;
+  employeeId?: string;
+  employeeName?: string;
 }
 
 interface AuthContextType {
