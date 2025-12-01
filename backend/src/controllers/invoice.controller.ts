@@ -1074,7 +1074,21 @@ export class InvoiceController {
          }
       }
 
-      this.logger.log(`Getting details for salesperson: ${salespersonName}, year: ${yearStr}, storeId: ${storeId}, user: ${user?.name}`);
+      this.logger.log(`Getting details for salesperson: ${salespersonName}, year: ${yearStr}, storeId: ${storeId}, user: ${user?.username}`);
+      
+      // Restrict Salesperson to their own report
+      if (user && user.role === 'SALESPERSON') {
+         if (!user.employeeName) {
+             this.logger.warn(`Salesperson ${user.username} has no linked employee record`);
+             throw new ForbiddenException('Salesperson account not linked to employee record');
+         }
+         
+         if (user.employeeName.toUpperCase() !== salespersonName.toUpperCase()) {
+             this.logger.warn(`Salesperson ${user.username} (${user.employeeName}) tried to view report for ${salespersonName}`);
+             throw new ForbiddenException('You can only view your own report');
+         }
+      }
+
       const year = parseInt(yearStr) || new Date().getFullYear();
       const startDate = new Date(year, 0, 1);
       const endDate = new Date(year, 11, 31, 23, 59, 59);

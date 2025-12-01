@@ -36,11 +36,13 @@ export default function SalespersonDetailPage() {
   const { token } = useAuth();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
   const [year, setYear] = useState(new Date().getFullYear().toString());
 
   const fetchSalespersonDetails = useCallback(async () => {
     if (!params?.name) return;
     setLoading(true);
+    setError(null);
     try {
       // Decode the name for the URL
       const encodedName = encodeURIComponent(params.name as string);
@@ -61,9 +63,13 @@ export default function SalespersonDetailPage() {
         setData(result);
       } else if (result.success) {
         setData(result.data);
+      } else if (result.message) {
+        console.error('API Error:', result.message);
+        setError(result.message);
       }
     } catch (error) {
       console.error('Failed to fetch salesperson details', error);
+      setError('Failed to fetch data');
     } finally {
       setLoading(false);
     }
@@ -97,7 +103,9 @@ export default function SalespersonDetailPage() {
     return (
       <DashboardLayout title="Salesperson Details">
         <div className="text-center py-12">
-          <h2 className="text-xl font-semibold text-slate-700">Salesperson not found</h2>
+          <h2 className="text-xl font-semibold text-slate-700">
+            {error || 'Salesperson not found'}
+          </h2>
           <button 
             onClick={() => router.back()}
             className="mt-4 text-blue-600 hover:underline"

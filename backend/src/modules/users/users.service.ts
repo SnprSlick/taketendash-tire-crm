@@ -73,7 +73,12 @@ export class UsersService {
   }
 
   async searchEmployees(query: string): Promise<any[]> {
-    return this.prisma.employee.findMany({
+    console.log('UsersService.searchEmployees called with:', query);
+    
+    const count = await this.prisma.employee.count();
+    console.log('Total employees in DB:', count);
+
+    const results = await this.prisma.employee.findMany({
       where: {
         OR: [
           { firstName: { contains: query, mode: 'insensitive' } },
@@ -90,6 +95,8 @@ export class UsersService {
         role: true
       }
     });
+    console.log('UsersService.searchEmployees results:', results);
+    return results;
   }
 
   async approveUser(id: string): Promise<User> {

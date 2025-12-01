@@ -70,13 +70,26 @@ export default function EditUserModal({ user, isOpen, onClose, onSave, onResetPa
 
       setSearchingEmployees(true);
       try {
-        const cleanToken = token?.replace(/"/g, '');
-        const res = await fetch(`/api/v1/users/search-employees?q=${encodeURIComponent(employeeSearch)}`, {
+        const cleanToken = token ? token.replace(/"/g, '') : '';
+        if (!cleanToken) {
+          console.error('No token available for search');
+          return;
+        }
+        console.log('Searching employees with token:', cleanToken ? 'Present' : 'Missing', 'Query:', employeeSearch);
+        console.log('Token first 10 chars:', cleanToken?.substring(0, 10));
+        const url = `/api/v1/users/search-employees?q=${encodeURIComponent(employeeSearch)}`;
+        console.log('Fetching URL:', url);
+
+        const res = await fetch(url, {
           headers: { Authorization: `Bearer ${cleanToken}` }
         });
+        console.log('Search response status:', res.status);
         if (res.ok) {
           const data = await res.json();
+          console.log('Search results:', data);
           setEmployeeResults(data);
+        } else {
+          console.error('Search failed:', await res.text());
         }
       } catch (error) {
         console.error('Failed to search employees', error);

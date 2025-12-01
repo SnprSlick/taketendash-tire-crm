@@ -14,6 +14,7 @@ export class UsersController {
   @Roles('ADMINISTRATOR')
   searchEmployees(@Request() req) {
     const query = req.query.q as string;
+    console.log('Searching employees with query:', query);
     return this.usersService.searchEmployees(query || '');
   }
 
