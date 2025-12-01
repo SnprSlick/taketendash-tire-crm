@@ -1034,12 +1034,13 @@ export class InvoiceController {
       const totalCommission = commissionStats[0]?.total_commission || 0;
 
       // 5. Labor/Parts Breakdown
+      // Use invoice_line_items for accurate breakdown as mechanic_labor only tracks mechanic-assigned items
       const laborStats: any[] = await this.prisma.$queryRaw`
         SELECT 
-          SUM(ml.labor) as total_labor,
-          SUM(ml.parts) as total_parts
+          SUM(ili.labor_cost) as total_labor,
+          SUM(ili.parts_cost) as total_parts
         FROM invoices i
-        JOIN mechanic_labor ml ON i.invoice_number = ml.invoice_number
+        JOIN invoice_line_items ili ON i.id = ili.invoice_id
         WHERE i.salesperson = ${decodedName}
           AND i.invoice_date >= ${startDate}
           AND i.invoice_date <= ${endDate}

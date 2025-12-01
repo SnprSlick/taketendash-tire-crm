@@ -7,6 +7,7 @@ export const metadata = {
   description: 'Comprehensive CRM system for tire and auto service companies',
 };
 
+// Force rebuild
 export default function RootLayout({
   children,
 }: {
