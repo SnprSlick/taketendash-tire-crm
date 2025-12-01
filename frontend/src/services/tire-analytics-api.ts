@@ -44,7 +44,7 @@ export interface FilterOptions {
 class TireAnalyticsApiService {
   private baseUrl = '/api/v1/analytics/tires';
 
-  private async fetch<T>(endpoint: string, params?: any): Promise<T> {
+  private async fetch<T>(endpoint: string, params?: any, token?: string): Promise<T> {
     const url = new URL(endpoint, 'http://localhost'); // Dummy base for relative URLs
     if (params) {
       Object.keys(params).forEach(key => {
@@ -61,23 +61,31 @@ class TireAnalyticsApiService {
     // Construct the final relative URL
     const finalUrl = `${this.baseUrl}${endpoint}${url.search}`;
 
-    const response = await fetch(finalUrl);
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(finalUrl, { headers });
     if (!response.ok) {
       throw new Error(`API Error: ${response.statusText}`);
     }
     return response.json();
   }
 
-  async getAnalytics(filter: TireAnalyticsFilter): Promise<TireAnalyticsResult[]> {
-    return this.fetch<TireAnalyticsResult[]>('', filter);
+  async getAnalytics(filter: TireAnalyticsFilter, token?: string): Promise<TireAnalyticsResult[]> {
+    return this.fetch<TireAnalyticsResult[]>('', filter, token);
   }
 
-  async getOptions(): Promise<FilterOptions> {
-    return this.fetch<FilterOptions>('/options');
+  async getOptions(token?: string): Promise<FilterOptions> {
+    return this.fetch<FilterOptions>('/options', undefined, token);
   }
 
-  async getTrends(filter: TireAnalyticsFilter): Promise<TireTrendResult[]> {
-    return this.fetch<TireTrendResult[]>('/trends', filter);
+  async getTrends(filter: TireAnalyticsFilter, token?: string): Promise<TireTrendResult[]> {
+    return this.fetch<TireTrendResult[]>('/trends', filter, token);
   }
 }
 

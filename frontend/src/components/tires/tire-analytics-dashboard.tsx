@@ -3,10 +3,12 @@ import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import tireAnalyticsApi, { FilterOptions, TireAnalyticsFilter, TireAnalyticsResult, TireTrendResult } from '../../services/tire-analytics-api';
 import { TireFilterBar } from './tire-filter-bar';
+import { useAuth } from '@/contexts/auth-context';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#8dd1e1', '#a4de6c', '#d0ed57'];
 
 export const TireAnalyticsDashboard: React.FC = () => {
+  const { token } = useAuth();
   const [filter, setFilter] = useState<TireAnalyticsFilter>({
     groupBy: 'brand',
     startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
@@ -19,16 +21,21 @@ export const TireAnalyticsDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadOptions();
-  }, []);
+    if (token) {
+      loadOptions();
+    }
+  }, [token]);
 
   useEffect(() => {
-    loadData();
-  }, [filter]);
+    if (token) {
+      loadData();
+    }
+  }, [filter, token]);
 
   const loadOptions = async () => {
+    if (!token) return;
     try {
-      const opts = await tireAnalyticsApi.getOptions();
+      const opts = await tireAnalyticsApi.getOptions(token);
       // Ensure Unknown is filtered out (in case backend isn't updated yet)
       opts.brands = opts.brands.filter(b => b !== 'Unknown' && b !== '');
       setOptions(opts);
@@ -39,12 +46,13 @@ export const TireAnalyticsDashboard: React.FC = () => {
   };
 
   const loadData = async () => {
+    if (!token) return;
     setLoading(true);
     setError(null);
     try {
       const [results, trends] = await Promise.all([
-        tireAnalyticsApi.getAnalytics(filter),
-        tireAnalyticsApi.getTrends(filter)
+        tireAnalyticsApi.getAnalytics(filter, token),
+        tireAnalyticsApi.getTrends(filter, token)
       ]);
       setData(results);
       processTrendData(trends);
