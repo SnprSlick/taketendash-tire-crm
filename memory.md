@@ -198,5 +198,14 @@
     - Updated `InvoiceController.getSalespersonDetails` and `getSalespersonCommissions` to check if the provided name is an ID (CUID format).
     - If it is an ID, it looks up the employee name from the database and uses that for the report query.
     - This handles cases where the frontend might navigate using the ID instead of the name.
+  - [x] Fix salesperson report access control (restrict to own report)
+    - Updated `InvoiceController` to enforce that users with `SALESPERSON` role can only access the report matching their linked `employeeName`.
+    - Added `ForbiddenException` if a salesperson tries to access another salesperson's report.
+  - [x] Fix "Salesperson not found" error handling and display
+    - Updated `SalespersonDetailPage` to display API error messages (e.g., "Salesperson not found", "You can only view your own report") instead of a generic "Salesperson not found" state when data is missing.
+    - Added error state management to the component.
+  - [x] Fix "authentication required" error on salesperson report page by ensuring token is available before fetching
+    - Updated `SalespersonDetailPage` to include `token` in `useCallback` dependencies and `useEffect` conditions.
+    - This prevents the API call from firing with a null token during initial page load or hydration.
 
 ## Next Steps

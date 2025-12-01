@@ -40,7 +40,7 @@ export default function SalespersonDetailPage() {
   const [year, setYear] = useState(new Date().getFullYear().toString());
 
   const fetchSalespersonDetails = useCallback(async () => {
-    if (!params?.name) return;
+    if (!params?.name || !token) return;
     setLoading(true);
     setError(null);
     try {
@@ -73,13 +73,13 @@ export default function SalespersonDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [params?.name, year, selectedStoreId]);
+  }, [params?.name, year, selectedStoreId, token]);
 
   useEffect(() => {
-    if (params?.name) {
+    if (params?.name && token) {
       fetchSalespersonDetails();
     }
-  }, [fetchSalespersonDetails, params?.name]);
+  }, [fetchSalespersonDetails, params?.name, token]);
 
   const formatCurrency = (val: number | string) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(val));
