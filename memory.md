@@ -207,5 +207,7 @@
   - [x] Fix "authentication required" error on salesperson report page by ensuring token is available before fetching
     - Updated `SalespersonDetailPage` to include `token` in `useCallback` dependencies and `useEffect` conditions.
     - This prevents the API call from firing with a null token during initial page load or hydration.
+  - [x] Fix "authentication required" error on customer report page
+    - Applied similar fix to `CustomerDetailPage` to ensure token is available before fetching.
 
 ## Next Steps
