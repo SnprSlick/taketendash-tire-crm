@@ -173,3 +173,7 @@
   - **Sales Reports Table Alignment**:
     - **Issue**: "Labor" and "Parts" columns were missing from the Salespeople report table header, causing misalignment.
     - **Fix**: Added `SortableHeader` for "Labor" and "Parts" in `SalesReportsPage`.
+  - **Tires Page 401 & Navigation**:
+    - **Issue**: Tires page was returning 401 Unauthorized. Navigation buttons were left-aligned.
+    - **Fix**: Updated `TireAnalyticsApiService` to warn if token is missing. Updated `TireAnalyticsDashboard` to log token status and ensure `loadData` is called with a valid token.
+    - **UI**: Centered navigation buttons in `DashboardLayout`.
