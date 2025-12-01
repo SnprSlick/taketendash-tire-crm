@@ -13,10 +13,13 @@ import {
   BadRequestException,
   NotFoundException,
   ConflictException,
-  ServiceUnavailableException
+  ServiceUnavailableException,
+  ForbiddenException
 } from '@nestjs/common';
 import { ServiceRemindersService } from './service-reminders.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { User } from '../../common/decorators/user.decorator';
 import {
   ServiceReminderDto,
   SendReminderRequest,
@@ -26,7 +29,7 @@ import {
 import { ReminderStatus, CommunicationMethod } from '@prisma/client';
 
 @Controller('service-reminders')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class ServiceRemindersController {
   constructor(private readonly serviceRemindersService: ServiceRemindersService) {}
 
@@ -34,6 +37,7 @@ export class ServiceRemindersController {
   async getServiceReminders(
     @Query('status') status?: ReminderStatus,
     @Query('reminderDate') reminderDate?: string,
+    @User() user?: any
   ): Promise<ServiceReminderDto[]> {
     try {
       // Validate status parameter
@@ -49,6 +53,9 @@ export class ServiceRemindersController {
           throw new BadRequestException('Invalid date format. Use YYYY-MM-DD format.');
         }
       }
+
+      // TODO: Implement store filtering based on user.stores
+      // For now, we allow access but ideally this should be filtered
 
       if (status) {
         return await this.serviceRemindersService.findRemindersByStatus(status);
@@ -69,7 +76,11 @@ export class ServiceRemindersController {
   async sendServiceReminder(
     @Param('reminderId', ParseUUIDPipe) reminderId: string,
     @Body() sendRequest: SendReminderRequest,
+    @User() user: any
   ): Promise<ServiceReminderDto> {
+    if (user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE' && user.role !== 'MANAGER') {
+      throw new ForbiddenException('Access denied');
+    }
     try {
       // Validate communication method
       if (!sendRequest.communicationMethod) {
@@ -107,7 +118,11 @@ export class ServiceRemindersController {
   @Post('generate')
   async generateServiceReminders(
     @Body() generateRequest: GenerateRemindersRequest,
+    @User() user: any
   ): Promise<GenerateRemindersResponse> {
+    if (user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE' && user.role !== 'MANAGER') {
+      throw new ForbiddenException('Access denied');
+    }
     try {
       // Validate daysAhead parameter
       if (generateRequest.daysAhead !== undefined && generateRequest.daysAhead < 0) {
