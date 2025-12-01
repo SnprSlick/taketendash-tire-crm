@@ -44,9 +44,23 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
         window.location.href = '/login';
       } else if (user?.mustChangePassword) {
         window.location.href = '/change-password';
+      } else if (user?.role === 'STORE_MANAGER') {
+        // Restrict access for Store Manager
+        const restrictedPaths = [
+          '/stores',
+          '/insights',
+          '/dashboard/reconciliation',
+          '/dashboard/inventory',
+          '/brands',
+          '/tire-master'
+        ];
+        
+        if (restrictedPaths.some(path => pathname.startsWith(path))) {
+          window.location.href = '/dashboard/sales';
+        }
       }
     }
-  }, [isLoading, isAuthenticated, user]);
+  }, [isLoading, isAuthenticated, user, pathname]);
 
   // Filter stores based on user access
   const allowedStores = stores.filter(store => 
@@ -151,18 +165,22 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
       <nav className="bg-white/90 backdrop-blur-sm border-b border-slate-200/50 shadow-sm">
         <div className={`${containerClass} mx-auto px-4 sm:px-6 lg:px-8`}>
           <div className="flex space-x-1">
-            <NavItem
-              href="/stores"
-              icon={<Store className="w-4 h-4" />}
-              label="Stores"
-              active={isActive('/stores')}
-            />
-            <NavItem
-              href="/insights"
-              icon={<BarChart3 className="w-4 h-4" />}
-              label="Insights"
-              active={isActive('/insights')}
-            />
+            {!hasRole('STORE_MANAGER') && (
+              <NavItem
+                href="/stores"
+                icon={<Store className="w-4 h-4" />}
+                label="Stores"
+                active={isActive('/stores')}
+              />
+            )}
+            {!hasRole('STORE_MANAGER') && (
+              <NavItem
+                href="/insights"
+                icon={<BarChart3 className="w-4 h-4" />}
+                label="Insights"
+                active={isActive('/insights')}
+              />
+            )}
             <NavItem
               href="/dashboard/sales"
               icon={<TrendingUp className="w-4 h-4" />}
@@ -193,48 +211,58 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
               label="Large Accounts"
               active={isActive('/accounts/large-accounts')}
             /> */}
-            <NavItem
-              href="/dashboard/reconciliation"
-              icon={<ClipboardCheck className="w-4 h-4" />}
-              label="Reconciliation"
-              active={isActive('/dashboard/reconciliation')}
-            />
+            {!hasRole('STORE_MANAGER') && (
+              <NavItem
+                href="/dashboard/reconciliation"
+                icon={<ClipboardCheck className="w-4 h-4" />}
+                label="Reconciliation"
+                active={isActive('/dashboard/reconciliation')}
+              />
+            )}
             <NavItem
               href="/mechanic"
               icon={<Wrench className="w-4 h-4" />}
               label="Mechanic"
               active={isActive('/mechanic')}
             />
-            <NavItem
-              href="/dashboard/inventory"
-              icon={<Package className="w-4 h-4" />}
-              label="Inventory"
-              active={isActive('/dashboard/inventory') && !isActive('/dashboard/inventory/analytics')}
-            />
-            <NavItem
-              href="/dashboard/inventory/analytics"
-              icon={<TrendingUp className="w-4 h-4" />}
-              label="Restock"
-              active={isActive('/dashboard/inventory/analytics')}
-            />
-            <NavItem
-              href="/brands"
-              icon={<Tag className="w-4 h-4" />}
-              label="Brands"
-              active={isActive('/brands')}
-            />
+            {!hasRole('STORE_MANAGER') && (
+              <NavItem
+                href="/dashboard/inventory"
+                icon={<Package className="w-4 h-4" />}
+                label="Inventory"
+                active={isActive('/dashboard/inventory') && !isActive('/dashboard/inventory/analytics')}
+              />
+            )}
+            {!hasRole('STORE_MANAGER') && (
+              <NavItem
+                href="/dashboard/inventory/analytics"
+                icon={<TrendingUp className="w-4 h-4" />}
+                label="Restock"
+                active={isActive('/dashboard/inventory/analytics')}
+              />
+            )}
+            {!hasRole('STORE_MANAGER') && (
+              <NavItem
+                href="/brands"
+                icon={<Tag className="w-4 h-4" />}
+                label="Brands"
+                active={isActive('/brands')}
+              />
+            )}
             <NavItem
               href="/tires"
               icon={<Disc className="w-4 h-4" />}
               label="Tires"
               active={isActive('/tires')}
             />
-            <NavItem
-              href="/tire-master"
-              icon={<Database className="w-4 h-4" />}
-              label="Config"
-              active={isActive('/tire-master')}
-            />
+            {!hasRole('STORE_MANAGER') && (
+              <NavItem
+                href="/tire-master"
+                icon={<Database className="w-4 h-4" />}
+                label="Config"
+                active={isActive('/tire-master')}
+              />
+            )}
             {hasRole('ADMINISTRATOR') && (
               <NavItem
                 href="/dashboard/admin/users"
