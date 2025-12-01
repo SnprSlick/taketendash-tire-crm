@@ -177,3 +177,10 @@
     - **Issue**: Tires page was returning 401 Unauthorized. Navigation buttons were left-aligned.
     - **Fix**: Updated `TireAnalyticsApiService` to warn if token is missing. Updated `TireAnalyticsDashboard` to log token status and ensure `loadData` is called with a valid token.
     - **UI**: Centered navigation buttons in `DashboardLayout`.
+
+- [x] **Salesperson Access Control**:
+  - [x] Updated `User` model to link to `Employee` (Salesperson).
+  - [x] Updated `UsersService` and `UsersController` to support linking employees.
+  - [x] Updated `AuthService` to return `employeeId` in login response.
+  - [x] Updated `CreateUserModal` and `EditUserModal` to allow searching and linking employees.
+  - [x] Updated `DashboardLayout` to restrict Salesperson navigation to their specific report page.
