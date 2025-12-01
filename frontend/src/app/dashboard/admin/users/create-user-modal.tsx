@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, User, Lock, Mail, Shield, Store } from 'lucide-react';
 
 interface Store {
