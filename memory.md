@@ -114,4 +114,6 @@
     - Updated `LargeAccountsController` to restrict write operations and filter by Account Manager.
   - **Frontend**:
     - `DashboardLayout` already filters the store selector based on user access.
+  - **Fixes**:
+    - Fixed TypeScript error in `StoreController` where required `@User()` parameter followed optional `@Query()` parameters.
 - **Result**: Backend now strictly enforces access control based on user roles and assigned stores.
