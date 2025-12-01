@@ -209,5 +209,7 @@
     - This prevents the API call from firing with a null token during initial page load or hydration.
   - [x] Fix "authentication required" error on customer report page
     - Applied similar fix to `CustomerDetailPage` to ensure token is available before fetching.
+  - [x] Fix "authentication required" error on invoice detail page
+    - Applied similar fix to `InvoiceDetailPage` to ensure token is available before fetching.
 
 ## Next Steps
