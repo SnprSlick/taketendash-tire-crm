@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import DashboardLayout from '../../../../../components/dashboard/dashboard-layout';
+import { useAuth } from '@/contexts/auth-context';
 import { 
   ArrowLeft, 
   FileText, 
@@ -17,26 +18,32 @@ import {
 export default function InvoiceDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { token } = useAuth();
   const [loading, setLoading] = useState(true);
   const [invoice, setInvoice] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (params?.invoiceNumber) {
+    if (params?.invoiceNumber && token) {
       fetchInvoice();
     }
-  }, [params?.invoiceNumber]);
+  }, [params?.invoiceNumber, token]);
 
   const fetchInvoice = async () => {
-    if (!params?.invoiceNumber) return;
+    if (!params?.invoiceNumber || !token) return;
     setLoading(true);
     try {
       // The invoice number might contain special characters, so we encode it
       const encodedNumber = encodeURIComponent(params.invoiceNumber as string);
-      const res = await fetch(`/api/v1/invoices/${encodedNumber}`);
+      const res = await fetch(`/api/v1/invoices/${encodedNumber}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       
       if (!res.ok) {
         if (res.status === 404) throw new Error('Invoice not found');
+        if (res.status === 401) throw new Error('Authentication required');
         throw new Error('Failed to fetch invoice');
       }
 
