@@ -97,3 +97,21 @@
   - Create User model (if not fully robust).
   - Create Login/Register pages.
   - Create Admin Dashboard for managing users.
+
+### RBAC and Store Filtering (Completed)
+- **Goal**: Ensure users can only access data for their assigned stores (unless Admin/Corporate).
+- **Implementation**:
+  - **Backend**:
+    - Created `@User()` decorator to extract user from request.
+    - Updated `StoreController` to filter stores by user assignment.
+    - Updated `InvoiceController` to filter invoices and reports by store access.
+    - Updated `MechanicController` to filter mechanic analytics by store access.
+    - Updated `SalesAnalyticsController` to filter sales analytics by store access.
+    - Updated `TireAnalyticsController` to filter tire analytics by store access.
+    - Updated `InventoryController` to filter inventory analytics by store access.
+    - Updated `ReconciliationController` to restrict access to Admin/Corporate and filter batches.
+    - Updated `ServiceRemindersController` to restrict generation/sending to authorized roles.
+    - Updated `LargeAccountsController` to restrict write operations and filter by Account Manager.
+  - **Frontend**:
+    - `DashboardLayout` already filters the store selector based on user access.
+- **Result**: Backend now strictly enforces access control based on user roles and assigned stores.
