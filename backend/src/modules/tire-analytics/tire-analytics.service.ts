@@ -7,37 +7,9 @@ import { Prisma, TireQuality } from '@prisma/client';
 export class TireAnalyticsService {
   constructor(private prisma: PrismaService) {}
 
-  async getTireAnalytics(filter: TireAnalyticsFilterDto) {
+  async getTireAnalytics(filter: TireAnalyticsFilterDto, allowedStoreIds?: string[]) {
     const { startDate, endDate, brands, qualities, types, sizes, storeId, groupBy } = filter;
 
-    const where: Prisma.InvoiceLineItemWhereInput = {
-      invoice: {
-        status: 'ACTIVE', // Only active invoices
-        ...(startDate && endDate ? {
-          invoiceDate: {
-            gte: new Date(startDate),
-            lte: new Date(endDate),
-          }
-        } : {}),
-        ...(storeId ? { storeId } : {}),
-      },
-      tireMasterProduct: {
-        isTire: true, // Only tires
-        ...(brands?.length ? { brand: { in: brands } } : {}),
-        ...(qualities?.length ? { quality: { in: qualities } } : {}),
-        ...(types?.length ? { type: { in: types } } : {}),
-        ...(sizes?.length ? { size: { in: sizes } } : {}),
-      }
-    };
-
-    // We need to aggregate sales data
-    // Since Prisma doesn't support complex multi-level grouping with relations easily in one go,
-    // we might need to fetch and aggregate or use raw query.
-    // For performance on large datasets, raw query is often better, but let's try Prisma's groupBy first if possible.
-    // Prisma groupBy on InvoiceLineItem doesn't allow joining with TireMasterProduct for grouping keys directly in the same way SQL does.
-    
-    // Let's use raw query for flexibility and performance here.
-    
     const startDateObj = startDate ? new Date(startDate) : new Date(new Date().setDate(new Date().getDate() - 30));
     const endDateObj = endDate ? new Date(endDate) : new Date();
 
@@ -67,9 +39,17 @@ export class TireAnalyticsService {
       sizeFilter = `AND p."size" IN (${sizes.map(() => `$${paramIndex++}`).join(',')})`;
       params.push(...sizes);
     }
+    
     if (storeId) {
       storeFilter = `AND i.store_id = $${paramIndex++}`;
       params.push(storeId);
+    } else if (allowedStoreIds) {
+      if (allowedStoreIds.length > 0) {
+        storeFilter = `AND i.store_id IN (${allowedStoreIds.map(() => `$${paramIndex++}`).join(',')})`;
+        params.push(...allowedStoreIds);
+      } else {
+        storeFilter = `AND 1=0`;
+      }
     }
 
     // Determine grouping
@@ -126,8 +106,13 @@ export class TireAnalyticsService {
     }));
   }
 
-  async getFilterOptions() {
+  async getFilterOptions(allowedStoreIds?: string[]) {
     // Return available brands, types, qualities, sizes for the frontend filters
+    const storeWhere: any = {};
+    if (allowedStoreIds) {
+      storeWhere.id = { in: allowedStoreIds };
+    }
+
     const [brands, types, sizes, stores] = await Promise.all([
       this.prisma.tireMasterProduct.findMany({
         where: { 
@@ -151,6 +136,7 @@ export class TireAnalyticsService {
         orderBy: { size: 'asc' }
       }),
       this.prisma.store.findMany({
+        where: storeWhere,
         select: { id: true, name: true, code: true },
         orderBy: { name: 'asc' }
       })
@@ -165,7 +151,7 @@ export class TireAnalyticsService {
     };
   }
 
-  async getTireSalesTrends(filter: TireAnalyticsFilterDto) {
+  async getTireSalesTrends(filter: TireAnalyticsFilterDto, allowedStoreIds?: string[]) {
     const { startDate, endDate, brands, qualities, types, sizes, storeId, groupBy } = filter;
 
     const startDateObj = startDate ? new Date(startDate) : new Date(new Date().setDate(new Date().getDate() - 30));
@@ -197,9 +183,17 @@ export class TireAnalyticsService {
       sizeFilter = `AND p."size" IN (${sizes.map(() => `$${paramIndex++}`).join(',')})`;
       params.push(...sizes);
     }
+    
     if (storeId) {
       storeFilter = `AND i.store_id = $${paramIndex++}`;
       params.push(storeId);
+    } else if (allowedStoreIds) {
+      if (allowedStoreIds.length > 0) {
+        storeFilter = `AND i.store_id IN (${allowedStoreIds.map(() => `$${paramIndex++}`).join(',')})`;
+        params.push(...allowedStoreIds);
+      } else {
+        storeFilter = `AND 1=0`;
+      }
     }
 
     // Determine grouping
