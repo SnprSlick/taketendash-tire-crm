@@ -149,6 +149,15 @@
   - **Store Detail Page Analytics**:
     - **Issue**: Analytics and stats were not populating on the Store Detail page, although technicians were visible.
     - **Fix**: Updated `StoreDetailPage` to include `token` in the `useEffect` dependency array and ensure API calls are only made when `token` is available. This prevents race conditions where the fetch might occur before the token is ready.
+    - **Enhancement**: Updated default view to "Year to Date" (YTD).
+    - **Enhancement**: Updated backend `getAnalytics` to aggregate data by month when the date range exceeds 180 days (e.g., YTD view), ensuring the chart displays monthly breakpoints instead of daily noise.
   - **Sales & Reconciliation Pages**:
     - **Issue**: Similar issues where data fetching might fail or return 401 if token wasn't ready.
     - **Fix**: Updated `SalesDashboardPage`, `SalesReportsPage`, and `ReconciliationPage` to include `token` in dependency arrays and check for its existence before fetching.
+
+### Role-Based Access Control (RBAC) Refinement
+- **Store Manager Restrictions**:
+  - **Requirement**: Store Managers should only see Analytics, Reports, Mechanics, and Tires. All other pages (Stores, Insights, Reconciliation, Inventory, Restock, Brands, Config) should be hidden and inaccessible.
+  - **Implementation**:
+    - **Navigation**: Updated `DashboardLayout` to conditionally render `NavItem` components based on `user.role`. Hidden items for `STORE_MANAGER` role.
+    - **Route Protection**: Added logic in `DashboardLayout`'s `useEffect` to redirect `STORE_MANAGER` users to `/dashboard/sales` if they attempt to access restricted paths (`/stores`, `/insights`, `/dashboard/reconciliation`, `/dashboard/inventory`, `/brands`, `/tire-master`).
