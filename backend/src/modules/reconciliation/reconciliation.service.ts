@@ -501,13 +501,23 @@ export class ReconciliationService {
     });
   }
 
-  async getBatchDetails(id: string) {
+  async getBatchDetails(id: string, allowedStoreIds?: string[]) {
     const batch = await this.prisma.reconciliationBatch.findUnique({
       where: { id }
     });
 
+    const where: any = { batchId: id };
+    
+    if (allowedStoreIds) {
+      if (allowedStoreIds.length > 0) {
+        where.matchedInvoice = { storeId: { in: allowedStoreIds } };
+      } else {
+        return { batch, records: [] };
+      }
+    }
+
     const records = await this.prisma.reconciliationRecord.findMany({
-      where: { batchId: id },
+      where,
       include: {
         matchedInvoice: {
           select: {
