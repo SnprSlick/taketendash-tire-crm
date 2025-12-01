@@ -190,5 +190,13 @@
     - Updated `AuthService` to return `employeeName`
     - Updated `AuthContext` to include `employeeName`
     - Updated `DashboardLayout` to use `employeeName` for redirection URL
+  - [x] Fix salesperson report access to restrict to own report
+    - Updated `DashboardLayout` to redirect Salespeople away from generic reports page.
+    - Updated `AuthContext` to validate token and refresh user data on mount, ensuring `employeeName` is up to date.
+    - Added fallback to `firstName lastName` if `employeeName` is missing in `DashboardLayout`.
+  - [x] Fix salesperson report lookup by ID
+    - Updated `InvoiceController.getSalespersonDetails` and `getSalespersonCommissions` to check if the provided name is an ID (CUID format).
+    - If it is an ID, it looks up the employee name from the database and uses that for the report query.
+    - This handles cases where the frontend might navigate using the ID instead of the name.
 
 ## Next Steps
