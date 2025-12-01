@@ -117,3 +117,7 @@
   - **Fixes**:
     - Fixed TypeScript error in `StoreController` where required `@User()` parameter followed optional `@Query()` parameters.
 - **Result**: Backend now strictly enforces access control based on user roles and assigned stores.
+
+### UI Improvements
+- **Logout**: Added a logout button to the user dropdown and improved its accessibility.
+- **Z-Index Fix**: Fixed an issue where the user dropdown was hidden behind other elements by adjusting the header's z-index.
