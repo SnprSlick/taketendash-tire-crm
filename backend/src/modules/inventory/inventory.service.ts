@@ -117,12 +117,26 @@ export class InventoryService {
     };
   }
 
-  async getLocations() {
+  async getLocations(allowedStoreIds?: string[]) {
+    const where: any = { 
+      isActive: true,
+      tireMasterCode: { not: '1' } // Exclude Corporate Store 1
+    };
+
+    if (allowedStoreIds && allowedStoreIds.length > 0) {
+      // We need to find the tireMasterCodes for these stores
+      const allowedStores = await this.prisma.store.findMany({
+        where: { id: { in: allowedStoreIds } },
+        select: { code: true }
+      });
+      const allowedCodes = allowedStores.map(s => s.code);
+      where.tireMasterCode = { in: allowedCodes };
+    } else if (allowedStoreIds && allowedStoreIds.length === 0) {
+      return [];
+    }
+
     const locations = await this.prisma.tireMasterLocation.findMany({
-      where: { 
-        isActive: true,
-        tireMasterCode: { not: '1' } // Exclude Corporate Store 1
-      },
+      where,
       orderBy: { tireMasterCode: 'asc' }
     });
 
@@ -140,6 +154,7 @@ export class InventoryService {
   async getSalesAnalytics(params: { 
     days?: number; 
     storeId?: string; 
+    allowedStoreIds?: string[];
     minVelocity?: number;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
@@ -152,6 +167,7 @@ export class InventoryService {
     const { 
       days = 30, 
       storeId, 
+      allowedStoreIds,
       minVelocity = 0,
       sortBy = 'dailyVelocity',
       sortOrder = 'desc',
@@ -165,14 +181,13 @@ export class InventoryService {
     startDate.setDate(startDate.getDate() - days);
 
     let salesData: Array<{ productId: string; totalSold: number }>;
+    let targetStoreId = storeId;
 
     if (storeId) {
       // Translate TireMasterLocation ID (storeId) to Store ID
       const location = await this.prisma.tireMasterLocation.findUnique({
         where: { id: storeId }
       });
-
-      let targetStoreId = storeId; // Default to passed ID if translation fails (fallback)
 
       if (location) {
         const stores = await this.prisma.$queryRaw<Array<{ id: string }>>`SELECT id FROM stores WHERE code = ${location.tireMasterCode} LIMIT 1`;
@@ -193,6 +208,23 @@ export class InventoryService {
         GROUP BY ili."tire_master_product_id"
         HAVING SUM(ili.quantity) > 0
       `;
+    } else if (allowedStoreIds) {
+      if (allowedStoreIds.length > 0) {
+        salesData = await this.prisma.$queryRaw`
+          SELECT 
+            ili."tire_master_product_id" as "productId", 
+            SUM(ili.quantity) as "totalSold"
+          FROM "invoice_line_items" ili
+          JOIN "invoices" i ON ili."invoice_id" = i.id
+          WHERE i."invoice_date" >= ${startDate}
+          AND i."store_id" IN (${Prisma.join(allowedStoreIds)})
+          AND ili."tire_master_product_id" IS NOT NULL
+          GROUP BY ili."tire_master_product_id"
+          HAVING SUM(ili.quantity) > 0
+        `;
+      } else {
+        return [];
+      }
     } else {
       salesData = await this.prisma.$queryRaw`
         SELECT 
@@ -214,7 +246,7 @@ export class InventoryService {
     }
 
     // Fetch detailed sales per store for these products
-    const detailedSales: Array<{ productId: string; storeId: string; totalSold: number }> = await this.prisma.$queryRaw`
+    let detailedSalesQuery = Prisma.sql`
       SELECT 
         ili."tire_master_product_id" as "productId", 
         i."store_id" as "storeId",
@@ -223,8 +255,17 @@ export class InventoryService {
       JOIN "invoices" i ON ili."invoice_id" = i.id
       WHERE i."invoice_date" >= ${startDate}
       AND ili."tire_master_product_id" IN (${Prisma.join(productIds)})
-      GROUP BY ili."tire_master_product_id", i."store_id"
     `;
+
+    if (storeId) {
+      detailedSalesQuery = Prisma.sql`${detailedSalesQuery} AND i."store_id" = ${targetStoreId}`;
+    } else if (allowedStoreIds && allowedStoreIds.length > 0) {
+      detailedSalesQuery = Prisma.sql`${detailedSalesQuery} AND i."store_id" IN (${Prisma.join(allowedStoreIds)})`;
+    }
+
+    detailedSalesQuery = Prisma.sql`${detailedSalesQuery} GROUP BY ili."tire_master_product_id", i."store_id"`;
+
+    const detailedSales: Array<{ productId: string; storeId: string; totalSold: number }> = await this.prisma.$queryRaw(detailedSalesQuery);
 
     // Fetch daily sales history only if requested (or we can move this to a separate method)
     // For now, we will remove it from the main list query to improve performance
