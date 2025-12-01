@@ -27,6 +27,8 @@ interface SalespersonReport {
   profit_margin: number;
   avg_ticket: number;
   avg_profit_per_unit: number;
+  total_labor: number;
+  total_parts: number;
 }
 
 interface CustomerReport {
@@ -335,6 +337,8 @@ export default function SalesReportsPage() {
                           <td className="px-6 py-4 font-medium text-slate-900">{row.salesperson}</td>
                           <td className="px-6 py-4 text-right text-slate-600">{row.invoice_count}</td>
                           <td className="px-6 py-4 text-right font-medium text-slate-900">{formatCurrency(row.total_revenue)}</td>
+                          <td className="px-6 py-4 text-right text-slate-600">{formatCurrency(row.total_labor || 0)}</td>
+                          <td className="px-6 py-4 text-right text-slate-600">{formatCurrency(row.total_parts || 0)}</td>
                           <td className="px-6 py-4 text-right text-green-600">{formatCurrency(row.total_profit)}</td>
                           <td className="px-6 py-4 text-right">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

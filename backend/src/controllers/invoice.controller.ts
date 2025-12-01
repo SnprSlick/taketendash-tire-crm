@@ -629,7 +629,7 @@ export class InvoiceController {
         orderByClause = Prisma.sql`ORDER BY ${Prisma.raw(sortColumn)} ${Prisma.raw(orderDirection)}`;
       }
 
-      const report = await this.prisma.$queryRaw`
+      const report: any[] = await this.prisma.$queryRaw`
         SELECT 
           i.salesperson,
           COUNT(DISTINCT i.id)::int as invoice_count,
@@ -656,7 +656,33 @@ export class InvoiceController {
         ${orderByClause}
       `;
 
-      return { success: true, data: report };
+      // Fetch labor/parts breakdown separately to avoid join explosion
+      const laborStats: any[] = await this.prisma.$queryRaw`
+        SELECT 
+          i.salesperson,
+          SUM(ml.labor) as total_labor,
+          SUM(ml.parts) as total_parts
+        FROM invoices i
+        JOIN mechanic_labor ml ON i.invoice_number = ml.invoice_number
+        WHERE i.invoice_date >= ${startDate} 
+          AND i.invoice_date <= ${endDate} 
+          AND i.status = 'ACTIVE'::"InvoiceStatus"
+          ${searchCondition}
+          ${storeCondition}
+        GROUP BY i.salesperson
+      `;
+
+      // Merge labor stats into report
+      const mergedReport = report.map(r => {
+        const stats = laborStats.find(s => s.salesperson === r.salesperson);
+        return {
+          ...r,
+          total_labor: stats ? Number(stats.total_labor) : 0,
+          total_parts: stats ? Number(stats.total_parts) : 0
+        };
+      });
+
+      return { success: true, data: mergedReport };
     } catch (error) {
       this.logger.error('Failed to get salesperson report', error);
       throw new BadRequestException('Failed to generate salesperson report');
@@ -1007,12 +1033,31 @@ export class InvoiceController {
       `;
       const totalCommission = commissionStats[0]?.total_commission || 0;
 
+      // 5. Labor/Parts Breakdown
+      const laborStats: any[] = await this.prisma.$queryRaw`
+        SELECT 
+          SUM(ml.labor) as total_labor,
+          SUM(ml.parts) as total_parts
+        FROM invoices i
+        JOIN mechanic_labor ml ON i.invoice_number = ml.invoice_number
+        WHERE i.salesperson = ${decodedName}
+          AND i.invoice_date >= ${startDate}
+          AND i.invoice_date <= ${endDate}
+          AND i.status = 'ACTIVE'::"InvoiceStatus"
+          ${storeCondition}
+      `;
+      
+      const totalLabor = laborStats[0]?.total_labor ? Number(laborStats[0].total_labor) : 0;
+      const totalParts = laborStats[0]?.total_parts ? Number(laborStats[0].total_parts) : 0;
+
       return {
         salesperson: decodedName,
         monthlyStats,
         recentInvoices,
         topCustomers,
-        totalCommission
+        totalCommission,
+        totalLabor,
+        totalParts
       };
     } catch (error) {
       this.logger.error(`Failed to get details for salesperson ${name}`, error);

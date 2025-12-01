@@ -12,7 +12,9 @@ import {
   ShoppingCart, 
   ArrowLeft,
   Award,
-  Users
+  Users,
+  Wrench,
+  Package
 } from 'lucide-react';
 import {
   BarChart,
@@ -104,7 +106,7 @@ export default function SalespersonDetailPage() {
     );
   }
 
-  const { salesperson, monthlyStats, recentInvoices, topCustomers, totalCommission } = data;
+  const { salesperson, monthlyStats, recentInvoices, topCustomers, totalCommission, totalLabor, totalParts } = data;
 
   // Calculate totals from monthly stats
   const totalRevenue = monthlyStats.reduce((sum: number, m: any) => sum + Number(m.total_revenue || 0), 0);
@@ -216,6 +218,35 @@ export default function SalespersonDetailPage() {
               <span className="text-xs font-medium text-slate-500 uppercase">Avg Ticket</span>
             </div>
             <div className="text-2xl font-bold text-slate-800">{formatCurrency(avgTicket)}</div>
+          </div>
+        </div>
+
+        {/* Revenue Breakdown */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <Wrench className="w-6 h-6 text-blue-600" />
+              </div>
+              <span className="text-xs font-medium text-slate-500 uppercase">Labor Revenue</span>
+            </div>
+            <div className="text-2xl font-bold text-slate-800">{formatCurrency(totalLabor || 0)}</div>
+            <div className="text-sm text-slate-500 mt-1">
+              {totalRevenue > 0 ? ((Number(totalLabor || 0) / totalRevenue) * 100).toFixed(1) : 0}% of Total Revenue
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 bg-indigo-50 rounded-lg">
+                <Package className="w-6 h-6 text-indigo-600" />
+              </div>
+              <span className="text-xs font-medium text-slate-500 uppercase">Parts Revenue</span>
+            </div>
+            <div className="text-2xl font-bold text-slate-800">{formatCurrency(totalParts || 0)}</div>
+            <div className="text-sm text-slate-500 mt-1">
+              {totalRevenue > 0 ? ((Number(totalParts || 0) / totalRevenue) * 100).toFixed(1) : 0}% of Total Revenue
+            </div>
           </div>
         </div>
 
