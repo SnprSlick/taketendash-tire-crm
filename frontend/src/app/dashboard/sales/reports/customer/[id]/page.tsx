@@ -27,7 +27,6 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { useStore } from '@/contexts/store-context';
 
 export default function CustomerDetailPage() {
   const params = useParams();
