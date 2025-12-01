@@ -37,9 +37,9 @@ export class StoreController {
 
   @Get('analytics/comparison')
   async getComparisonAnalytics(
+    @User() user: any,
     @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @User() user: any
+    @Query('endDate') endDate?: string
   ) {
     try {
       const start = startDate ? new Date(startDate) : undefined;
@@ -91,9 +91,9 @@ export class StoreController {
   @Get(':id/stats')
   async getStoreStats(
     @Param('id') id: string,
+    @User() user: any,
     @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @User() user: any
+    @Query('endDate') endDate?: string
   ) {
     try {
       // Check access
@@ -122,9 +122,9 @@ export class StoreController {
   @Get(':id/analytics')
   async getStoreAnalytics(
     @Param('id') id: string,
+    @User() user: any,
     @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @User() user: any
+    @Query('endDate') endDate?: string
   ) {
     try {
       // Check access
