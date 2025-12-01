@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/auth-context';
 import DashboardLayout from '@/components/dashboard/dashboard-layout';
 import StoreCard from '@/components/stores/store-card';
 import StoreComparisonCharts from '@/components/stores/store-comparison-charts';
@@ -21,6 +22,7 @@ interface Store {
 }
 
 export default function StoresPage() {
+  const { token } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
   const [comparisonData, setComparisonData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,11 +36,17 @@ export default function StoresPage() {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!token) return;
+
       try {
         setLoading(true);
         
         // Fetch Stores (only once ideally, but okay here)
-        const res = await fetch('http://localhost:3001/api/v1/stores');
+        const res = await fetch('http://localhost:3001/api/v1/stores', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         const data = await res.json();
         
         if (data.success) {
@@ -52,7 +60,11 @@ export default function StoresPage() {
         if (dateRange.startDate) params.append('startDate', dateRange.startDate.toISOString());
         if (dateRange.endDate) params.append('endDate', dateRange.endDate.toISOString());
 
-        const compRes = await fetch(`http://localhost:3001/api/v1/stores/analytics/comparison?${params.toString()}`);
+        const compRes = await fetch(`http://localhost:3001/api/v1/stores/analytics/comparison?${params.toString()}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         const compData = await compRes.json();
         
         if (compData.success) {
@@ -68,7 +80,7 @@ export default function StoresPage() {
     };
 
     fetchData();
-  }, [dateRange]);
+  }, [dateRange, token]);
 
   return (
     <DashboardLayout>

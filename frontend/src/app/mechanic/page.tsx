@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuth } from '@/contexts/auth-context';
 import DashboardLayout from '@/components/dashboard/dashboard-layout';
 import MechanicTable from '@/components/mechanic/mechanic-table';
 import MechanicImport from '@/components/mechanic/mechanic-import';
@@ -8,6 +9,7 @@ import MechanicAnalytics from '@/components/mechanic/mechanic-analytics';
 import { Wrench, Upload, Table as TableIcon, Trash2, BarChart2 } from 'lucide-react';
 
 export default function MechanicPage() {
+  const { token } = useAuth();
   const [activeTab, setActiveTab] = useState<'view' | 'import' | 'analytics'>('view');
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -24,6 +26,9 @@ export default function MechanicPage() {
     try {
       const response = await fetch('http://localhost:3001/api/v1/mechanic/clear', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       if (!response.ok) {

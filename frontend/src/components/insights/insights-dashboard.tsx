@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AlertTriangle, TrendingUp, TrendingDown, Package, Users, DollarSign, ArrowRight, BarChart3 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useAuth } from '@/contexts/auth-context';
 
 interface RestockAlert {
   type: string;
@@ -111,6 +112,7 @@ interface TopTire {
 }
 
 export function InsightsDashboard() {
+  const { token } = useAuth();
   const COLORS = ['#06b6d4', '#eab308', '#84cc16'];
   const [restockAlerts, setRestockAlerts] = useState<RestockAlert[]>([]);
   const [deadStock, setDeadStock] = useState<DeadStock[]>([]);
@@ -126,14 +128,16 @@ export function InsightsDashboard() {
 
   useEffect(() => {
     const fetchInsights = async () => {
+      if (!token) return;
       try {
+        const headers = { 'Authorization': `Bearer ${token}` };
         const [deadStockRes, utilRes, marginRes, attachRes, transfersRes, topTiresRes] = await Promise.all([
-          fetch('http://localhost:3001/api/v1/insights/inventory/dead-stock'),
-          fetch('http://localhost:3001/api/v1/insights/workforce/utilization'),
-          fetch('http://localhost:3001/api/v1/insights/margin/leakage'),
-          fetch('http://localhost:3001/api/v1/insights/margin/attachment'),
-          fetch('http://localhost:3001/api/v1/insights/inventory/transfers'),
-          fetch('http://localhost:3001/api/v1/insights/inventory/top-tires')
+          fetch('http://localhost:3001/api/v1/insights/inventory/dead-stock', { headers }),
+          fetch('http://localhost:3001/api/v1/insights/workforce/utilization', { headers }),
+          fetch('http://localhost:3001/api/v1/insights/margin/leakage', { headers }),
+          fetch('http://localhost:3001/api/v1/insights/margin/attachment', { headers }),
+          fetch('http://localhost:3001/api/v1/insights/inventory/transfers', { headers }),
+          fetch('http://localhost:3001/api/v1/insights/inventory/top-tires', { headers })
         ]);
 
         if (deadStockRes.ok) setDeadStock(await deadStockRes.json());
@@ -150,24 +154,29 @@ export function InsightsDashboard() {
     };
 
     fetchInsights();
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     const fetchRestockAlerts = async () => {
+      if (!token) return;
       try {
         const url = new URL('http://localhost:3001/api/v1/insights/inventory/restock');
         if (daysOutOfStockThreshold) {
           url.searchParams.append('daysOutOfStockThreshold', daysOutOfStockThreshold.toString());
         }
         url.searchParams.append('outlookDays', outlookDays.toString());
-        const res = await fetch(url.toString());
+        const res = await fetch(url.toString(), {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         if (res.ok) setRestockAlerts(await res.json());
       } catch (error) {
         console.error('Failed to fetch restock alerts:', error);
       }
     };
     fetchRestockAlerts();
-  }, [daysOutOfStockThreshold, outlookDays]);
+  }, [daysOutOfStockThreshold, outlookDays, token]);
 
   if (loading) {
     return <div className="p-8 text-center">Loading insights...</div>;

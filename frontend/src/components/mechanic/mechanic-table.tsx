@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ChevronDown, ChevronRight, FileText, User, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
 
 const formatCurrency = (value: number | string) => {
   const num = typeof value === 'string' ? parseFloat(value) : value;
@@ -69,6 +70,7 @@ type SortKey = 'mechanicName' | 'totalParts' | 'totalLabor' | 'totalGrossProfit'
 type SortDirection = 'asc' | 'desc';
 
 export default function MechanicTable() {
+  const { token } = useAuth();
   const [summaryData, setSummaryData] = useState<MechanicSummary[]>([]);
   const [detailsData, setDetailsData] = useState<Record<string, GroupedMechanic>>({});
   const [loading, setLoading] = useState(true);
@@ -87,13 +89,20 @@ export default function MechanicTable() {
   const [loadingMechanic, setLoadingMechanic] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchSummary();
-  }, []);
+    if (token) {
+      fetchSummary();
+    }
+  }, [token]);
 
   const fetchSummary = async () => {
+    if (!token) return;
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/v1/mechanic/summary?t=${new Date().getTime()}`);
+      const response = await fetch(`http://localhost:3001/api/v1/mechanic/summary?t=${new Date().getTime()}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch summary');
       }
@@ -119,7 +128,11 @@ export default function MechanicTable() {
         mechanicName: mechanicName
       });
       
-      const response = await fetch(`http://localhost:3001/api/v1/mechanic?${params}`);
+      const response = await fetch(`http://localhost:3001/api/v1/mechanic?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       const result = await response.json();
       
       // Group by invoice

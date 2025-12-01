@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { useStore } from '../../contexts/store-context';
+import { useAuth } from '@/contexts/auth-context';
 
 interface MechanicAnalyticsData {
   mechanicName: string;
@@ -24,6 +25,7 @@ type SortDirection = 'asc' | 'desc';
 
 export default function MechanicAnalytics() {
   const { selectedStoreId } = useStore();
+  const { token } = useAuth();
   const [data, setData] = useState<MechanicAnalyticsData[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>('profitPerHour');
@@ -32,13 +34,19 @@ export default function MechanicAnalytics() {
   const [showNonMechanics, setShowNonMechanics] = useState(false);
 
   useEffect(() => {
+    if (!token) return;
+
     const timestamp = new Date().getTime();
     const url = selectedStoreId 
       ? `http://localhost:3001/api/v1/mechanic/analytics?storeId=${selectedStoreId}&_t=${timestamp}`
       : `http://localhost:3001/api/v1/mechanic/analytics?_t=${timestamp}`;
 
     setLoading(true);
-    fetch(url)
+    fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
       .then(res => res.json())
       .then(data => {
         setData(data);
@@ -48,7 +56,7 @@ export default function MechanicAnalytics() {
         console.error(err);
         setLoading(false);
       });
-  }, [selectedStoreId]);
+  }, [selectedStoreId, token]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {

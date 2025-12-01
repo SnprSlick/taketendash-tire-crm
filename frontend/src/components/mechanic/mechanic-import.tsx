@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Upload, AlertCircle, CheckCircle } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
 
 export default function MechanicImport({ onImportSuccess }: { onImportSuccess: () => void }) {
+  const { token } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -26,6 +28,9 @@ export default function MechanicImport({ onImportSuccess }: { onImportSuccess: (
       // Use absolute URL to avoid proxy issues during development
       const response = await fetch('http://localhost:3001/api/v1/mechanic/import', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData,
       });
 
