@@ -38,16 +38,13 @@ export default function ChangePasswordPage() {
       return;
     }
 
-    if (!token) {
-      setError('Authentication session missing. Please login again.');
+    if (!token || token === 'undefined' || token === 'null') {
+      setError('Authentication session missing or invalid. Please login again.');
       return;
     }
 
     setLoading(true);
     const cleanToken = token.replace(/"/g, '');
-    console.log('Token length:', cleanToken.length);
-    console.log('Token start:', cleanToken.substring(0, 10));
-
     try {
       const res = await fetch('/api/v1/users/change-password', {
         method: 'POST',

@@ -29,6 +29,10 @@ export default function LoginPage() {
         throw new Error(data.message || 'Login failed');
       }
 
+      if (!data.access_token) {
+        throw new Error('No access token received');
+      }
+
       login(data.access_token, data.user);
     } catch (err: any) {
       setError(err.message);

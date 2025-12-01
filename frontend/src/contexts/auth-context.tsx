@@ -36,14 +36,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
 
-    if (storedToken && storedUser) {
+    if (storedToken && storedUser && storedToken !== 'undefined' && storedToken !== 'null') {
       setToken(storedToken);
       setUser(JSON.parse(storedUser));
+    } else {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
     }
     setIsLoading(false);
   }, []);
 
   const login = (newToken: string, newUser: User) => {
+    if (newToken === 'undefined' || newToken === 'null') {
+      console.error('Attempted to store invalid token:', newToken);
+      return;
+    }
     setToken(newToken);
     setUser(newUser);
     localStorage.setItem('token', newToken);
