@@ -164,7 +164,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
       {/* Navigation */}
       <nav className="bg-white/90 backdrop-blur-sm border-b border-slate-200/50 shadow-sm">
         <div className={`${containerClass} mx-auto px-4 sm:px-6 lg:px-8`}>
-          <div className="flex space-x-1">
+          <div className="flex justify-center space-x-1">
             {!hasRole('STORE_MANAGER') && (
               <NavItem
                 href="/stores"

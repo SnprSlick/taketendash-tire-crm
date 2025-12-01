@@ -61,12 +61,14 @@ class TireAnalyticsApiService {
     // Construct the final relative URL
     const finalUrl = `${this.baseUrl}${endpoint}${url.search}`;
 
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+    } else {
+      console.warn('TireAnalyticsApiService: No token provided for request to', finalUrl);
     }
 
     const response = await fetch(finalUrl, { headers });

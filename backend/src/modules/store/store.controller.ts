@@ -96,8 +96,12 @@ export class StoreController {
     @Query('endDate') endDate?: string
   ) {
     try {
+      this.logger.log(`Getting stats for store ${id} user ${user.id} role ${user.role}`);
+      this.logger.log(`User stores: ${JSON.stringify(user.stores)}`);
+      
       // Check access
       if (user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE' && !user.stores.includes(id)) {
+        this.logger.warn(`Access denied for user ${user.id} to store ${id}`);
         throw new ForbiddenException('You do not have access to this store');
       }
 
@@ -127,6 +131,8 @@ export class StoreController {
     @Query('endDate') endDate?: string
   ) {
     try {
+      this.logger.log(`Getting analytics for store ${id} user ${user.id}`);
+      
       // Check access
       if (user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE' && !user.stores.includes(id)) {
         throw new ForbiddenException('You do not have access to this store');

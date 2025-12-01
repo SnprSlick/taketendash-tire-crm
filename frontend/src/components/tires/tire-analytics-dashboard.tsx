@@ -28,7 +28,10 @@ export const TireAnalyticsDashboard: React.FC = () => {
 
   useEffect(() => {
     if (token) {
+      console.log('TireAnalyticsDashboard: Loading data with token');
       loadData();
+    } else {
+      console.log('TireAnalyticsDashboard: No token available');
     }
   }, [filter, token]);
 
