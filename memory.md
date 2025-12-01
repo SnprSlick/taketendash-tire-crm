@@ -146,3 +146,6 @@
   - **Inventory Page 401**:
     - **Issue**: Inventory page was returning 401 Unauthorized.
     - **Fix**: Updated `InventoryPage` to ensure API calls are only made when `token` is available (added check in `useEffect`).
+  - **Store Detail Page Analytics**:
+    - **Issue**: Analytics and stats were not populating on the Store Detail page, although technicians were visible.
+    - **Fix**: Updated `StoreDetailPage` to include `token` in the `useEffect` dependency array and ensure API calls are only made when `token` is available. This prevents race conditions where the fetch might occur before the token is ready.
