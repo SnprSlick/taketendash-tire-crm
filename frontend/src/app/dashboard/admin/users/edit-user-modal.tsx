@@ -22,6 +22,7 @@ interface EditUserModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (userId: string, data: { role: string; storeIds: string[] }) => Promise<void>;
+  onResetPassword: (userId: string) => Promise<void>;
   availableStores: Store[];
 }
 
@@ -34,10 +35,11 @@ const ROLES = [
   'MECHANIC',
 ];
 
-export default function EditUserModal({ user, isOpen, onClose, onSave, availableStores }: EditUserModalProps) {
+export default function EditUserModal({ user, isOpen, onClose, onSave, onResetPassword, availableStores }: EditUserModalProps) {
   const [role, setRole] = useState(user.role);
   const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>(user.stores.map(s => s.id));
   const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -57,6 +59,18 @@ export default function EditUserModal({ user, isOpen, onClose, onSave, available
       console.error('Failed to save user', error);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!confirm('Are you sure you want to reset this user\'s password?')) return;
+    setResetting(true);
+    try {
+      await onResetPassword(user.id);
+    } catch (error) {
+      console.error('Failed to reset password', error);
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -127,20 +141,29 @@ export default function EditUserModal({ user, isOpen, onClose, onSave, available
           </div>
         </div>
 
-        <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+        <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-between gap-3">
           <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+            onClick={handleResetPassword}
+            disabled={resetting}
+            className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
           >
-            Cancel
+            {resetting ? 'Resetting...' : 'Reset Password'}
           </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
-          >
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

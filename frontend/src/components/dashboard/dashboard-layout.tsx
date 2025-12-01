@@ -39,10 +39,14 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
   const { user, logout, hasRole, isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      window.location.href = '/login';
+    if (!isLoading) {
+      if (!isAuthenticated) {
+        window.location.href = '/login';
+      } else if (user?.mustChangePassword) {
+        window.location.href = '/change-password';
+      }
     }
-  }, [isLoading, isAuthenticated]);
+  }, [isLoading, isAuthenticated, user]);
 
   // Filter stores based on user access
   const allowedStores = stores.filter(store => 

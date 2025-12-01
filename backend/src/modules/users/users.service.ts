@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { User, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
@@ -58,6 +58,45 @@ export class UsersService {
         }
       },
       include: { stores: true }
+    });
+  }
+
+  async resetPassword(id: string): Promise<{ tempPassword: string }> {
+    const tempPassword = Math.random().toString(36).slice(-8);
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+    
+    await this.prisma.user.update({
+      where: { id },
+      data: { 
+        password: hashedPassword,
+        mustChangePassword: true 
+      },
+    });
+
+    return { tempPassword };
+  }
+
+  async bulkApprove(ids: string[]): Promise<void> {
+    await this.prisma.user.updateMany({
+      where: { id: { in: ids } },
+      data: { isApproved: true },
+    });
+  }
+
+  async changePassword(userId: string, oldPass: string, newPass: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+    
+    const isValid = await bcrypt.compare(oldPass, user.password);
+    if (!isValid) throw new UnauthorizedException('Invalid old password');
+
+    const hashedPassword = await bcrypt.hash(newPass, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { 
+        password: hashedPassword,
+        mustChangePassword: false 
+      }
     });
   }
 

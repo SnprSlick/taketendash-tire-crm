@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { Prisma } from '@prisma/client';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -34,10 +34,27 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto);
   }
 
+  @Post('change-password')
+  changePassword(@Request() req, @Body() body: any) {
+    return this.usersService.changePassword(req.user.id, body.oldPassword, body.newPassword);
+  }
+
+  @Post('bulk-approve')
+  @Roles('ADMINISTRATOR')
+  bulkApprove(@Body() body: { ids: string[] }) {
+    return this.usersService.bulkApprove(body.ids);
+  }
+
   @Post(':id/approve')
   @Roles('ADMINISTRATOR')
   approve(@Param('id') id: string) {
     return this.usersService.approveUser(id);
+  }
+
+  @Post(':id/reset-password')
+  @Roles('ADMINISTRATOR')
+  resetPassword(@Param('id') id: string) {
+    return this.usersService.resetPassword(id);
   }
 
   @Post(':id/role')

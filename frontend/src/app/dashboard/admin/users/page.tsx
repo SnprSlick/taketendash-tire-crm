@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../../../components/dashboard/dashboard-layout';
 import { useAuth } from '../../../../contexts/auth-context';
-import { Check, X, Shield, User, Search, Filter, Edit2, Trash2 } from 'lucide-react';
+import { Check, X, Shield, User, Search, Filter, Edit2, Trash2, Plus } from 'lucide-react';
 import EditUserModal from './edit-user-modal';
+import CreateUserModal from './create-user-modal';
 import { ROLE_SCOPES } from '../../../../../../backend/src/auth/constants'; // We can't import from backend directly in frontend usually, but let's see if we can duplicate or just hardcode scopes for now. Actually, let's just pass empty scopes for now as the backend handles defaults if not provided, or we need to fetch them.
 // Better to just hardcode the default scopes map here or fetch from an endpoint.
 // For now, I'll just use a simple map or let the backend handle it if I send empty scopes.
@@ -76,6 +77,7 @@ export default function AdminUsersPage() {
   
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [editingUser, setEditingUser] = useState<UserData | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     console.log('AdminUsersPage mounted. Token:', token);
@@ -119,6 +121,51 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleCreateUser = async (data: any) => {
+    const cleanToken = token?.replace(/"/g, '');
+    try {
+      const scopes = ROLE_SCOPES_MAP[data.role] || [];
+      // Create user
+      const res = await fetch('/api/v1/users', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${cleanToken}` 
+        },
+        body: JSON.stringify({
+          username: data.username,
+          password: data.password,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          role: data.role,
+          scopes,
+          isApproved: true // Admin created users are auto-approved
+        })
+      });
+
+      if (res.ok) {
+        const newUser = await res.json();
+        
+        // Assign stores if any
+        if (data.storeIds.length > 0) {
+          await fetch(`/api/v1/users/${newUser.id}/stores`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${cleanToken}` 
+            },
+            body: JSON.stringify({ storeIds: data.storeIds })
+          });
+        }
+        
+        fetchUsers();
+      }
+    } catch (error) {
+      console.error('Failed to create user', error);
+    }
+  };
+
   const handleApprove = async (id: string) => {
     const cleanToken = token?.replace(/"/g, '');
     try {
@@ -136,12 +183,44 @@ export default function AdminUsersPage() {
 
   const handleBulkApprove = async () => {
     if (selectedUserIds.length === 0) return;
+    const cleanToken = token?.replace(/"/g, '');
     
-    // Process sequentially for now, could be a bulk endpoint
-    for (const id of selectedUserIds) {
-      await handleApprove(id);
+    try {
+      const res = await fetch('/api/v1/users/bulk-approve', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${cleanToken}` 
+        },
+        body: JSON.stringify({ ids: selectedUserIds })
+      });
+
+      if (res.ok) {
+        fetchUsers();
+        setSelectedUserIds([]);
+      }
+    } catch (error) {
+      console.error('Failed to bulk approve users', error);
     }
-    setSelectedUserIds([]);
+  };
+
+  const handleResetPassword = async (userId: string) => {
+    const cleanToken = token?.replace(/"/g, '');
+    try {
+      const res = await fetch(`/api/v1/users/${userId}/reset-password`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${cleanToken}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        alert(`Password reset successful.\nTemporary Password: ${data.tempPassword}`);
+      } else {
+        alert('Failed to reset password');
+      }
+    } catch (error) {
+      console.error('Failed to reset password', error);
+      alert('An error occurred while resetting password');
+    }
   };
 
   const handleUpdateUser = async (userId: string, data: { role: string; storeIds: string[] }) => {
@@ -202,6 +281,13 @@ export default function AdminUsersPage() {
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold text-slate-900">User Management</h1>
           <div className="flex gap-4">
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Create User
+            </button>
             {selectedUserIds.length > 0 && (
               <button
                 onClick={handleBulkApprove}
@@ -318,9 +404,17 @@ export default function AdminUsersPage() {
             isOpen={!!editingUser}
             onClose={() => setEditingUser(null)}
             onSave={handleUpdateUser}
+            onResetPassword={handleResetPassword}
             availableStores={stores}
           />
         )}
+
+        <CreateUserModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSave={handleCreateUser}
+          availableStores={stores}
+        />
       </div>
     </DashboardLayout>
   );

@@ -49,7 +49,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('token', newToken);
     localStorage.setItem('user', JSON.stringify(newUser));
     // Use window.location to support both App Router and Pages Router
-    window.location.href = '/dashboard';
+    if (newUser.mustChangePassword) {
+      window.location.href = '/change-password';
+    } else {
+      window.location.href = '/dashboard';
+    }
   };
 
   const logout = () => {
