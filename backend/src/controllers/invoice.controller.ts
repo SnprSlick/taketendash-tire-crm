@@ -1097,9 +1097,8 @@ export class InvoiceController {
       if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
         if (user.role === 'SALESPERSON') {
           // Salespeople can see their own data across all stores
-          if (storeId) {
-            storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
-          }
+          // We explicitly ignore storeId for salespeople viewing their own report
+          storeCondition = Prisma.sql``;
         } else {
           if (storeId) {
             if (!user.stores.includes(storeId)) {
@@ -1272,9 +1271,8 @@ export class InvoiceController {
       if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
         if (user.role === 'SALESPERSON') {
           // Salespeople can see their own data across all stores
-          if (storeId) {
-            storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
-          }
+          // We explicitly ignore storeId for salespeople viewing their own report
+          storeCondition = Prisma.sql``;
         } else {
           if (storeId) {
             if (!user.stores.includes(storeId)) {
