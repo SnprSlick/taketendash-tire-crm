@@ -161,3 +161,15 @@
   - **Implementation**:
     - **Navigation**: Updated `DashboardLayout` to conditionally render `NavItem` components based on `user.role`. Hidden items for `STORE_MANAGER` role.
     - **Route Protection**: Added logic in `DashboardLayout`'s `useEffect` to redirect `STORE_MANAGER` users to `/dashboard/sales` if they attempt to access restricted paths (`/stores`, `/insights`, `/dashboard/reconciliation`, `/dashboard/inventory`, `/brands`, `/tire-master`).
+  - **Tire Analytics 401**:
+    - **Issue**: Tire analytics page was returning 401 Unauthorized.
+    - **Fix**: Updated `TireAnalyticsApiService` to accept an optional token in its methods. Updated `TireAnalyticsDashboard` to retrieve the token from `useAuth` and pass it to the service methods.
+  - **Inventory Analytics 401**:
+    - **Issue**: Inventory analytics page was returning 401 Unauthorized.
+    - **Fix**: Updated `InventoryAnalytics` component to include `token` in `useEffect` dependencies and ensure API calls are only made when `token` is available. Added `Authorization` header to `fetchLocations` and `fetchAnalytics`.
+  - **Sales Dashboard & Reports 401**:
+    - **Issue**: Sales dashboard and reports pages were returning 401 Unauthorized.
+    - **Fix**: Updated `SalesDashboardPage` and `SalesReportsPage` to include `token` in `useEffect` dependencies and ensure API calls are only made when `token` is available. Added `Authorization` header to `fetchAnalyticsData` and `fetchReport`.
+  - **Sales Reports Table Alignment**:
+    - **Issue**: "Labor" and "Parts" columns were missing from the Salespeople report table header, causing misalignment.
+    - **Fix**: Added `SortableHeader` for "Labor" and "Parts" in `SalesReportsPage`.
