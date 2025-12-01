@@ -126,3 +126,16 @@
 - **401 Unauthorized Error**: Fixed an issue where the Store Manager role (and others) received 401 errors on analytics endpoints.
   - **Cause**: Frontend API calls in `StoresPage`, `MechanicPage`, `MechanicAnalytics`, `MechanicTable`, `MechanicImport`, and `InsightsDashboard` were missing the `Authorization` header.
   - **Fix**: Updated all relevant components to retrieve the JWT token from `AuthContext` and include it in the `Authorization: Bearer <token>` header for all `fetch` requests.
+  - **Additional Fixes**: Extended the Authorization header fix to:
+    - `StoreDetailPage` (Store details, stats, analytics, employees)
+    - `SalesDashboardPage` (Sales analytics)
+    - `SalesReportsPage` (Detailed reports)
+    - `ReconciliationPage` (Stats, batches, upload, clear)
+    - `ReconciliationDetailPage` (Batch details, rescan)
+    - `InventoryPage` (Stats, locations, inventory list)
+    - `InventoryAnalytics` (Locations, analytics data, history)
+    - `TireMasterIntegrationPage` (Sync status)
+    - `TireMasterInventory` (Location inventory)
+    - `ReconciliationCenter` (Tire Master reconciliation)
+    - `SalespersonDetailPage` (Salesperson reports)
+    - `CustomerDetailPage` (Customer reports)
