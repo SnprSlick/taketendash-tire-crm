@@ -149,3 +149,6 @@
   - **Store Detail Page Analytics**:
     - **Issue**: Analytics and stats were not populating on the Store Detail page, although technicians were visible.
     - **Fix**: Updated `StoreDetailPage` to include `token` in the `useEffect` dependency array and ensure API calls are only made when `token` is available. This prevents race conditions where the fetch might occur before the token is ready.
+  - **Sales & Reconciliation Pages**:
+    - **Issue**: Similar issues where data fetching might fail or return 401 if token wasn't ready.
+    - **Fix**: Updated `SalesDashboardPage`, `SalesReportsPage`, and `ReconciliationPage` to include `token` in dependency arrays and check for its existence before fetching.
