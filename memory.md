@@ -186,3 +186,9 @@
   - [x] Updated `DashboardLayout` to restrict Salesperson navigation to their specific report page.
   - [x] Fix missing `useEffect` import in `CreateUserModal` component
   - [x] Fixed salesperson search in Create/Edit User modals by improving token handling and removing unnecessary quote replacement logic.
+  - [x] Fix salesperson redirection to use name instead of ID
+    - Updated `AuthService` to return `employeeName`
+    - Updated `AuthContext` to include `employeeName`
+    - Updated `DashboardLayout` to use `employeeName` for redirection URL
+
+## Next Steps
