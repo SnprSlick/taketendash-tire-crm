@@ -48,8 +48,8 @@ export default function StoreDetailPage() {
   
   // Date Range State
   const [dateRange, setDateRange] = useState<{ startDate: Date | null; endDate: Date | null }>({
-    startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
+    startDate: new Date(new Date().getFullYear(), 0, 1),
+    endDate: new Date()
   });
 
   useEffect(() => {

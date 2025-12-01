@@ -127,21 +127,30 @@ export class StoreService {
     const start = startDate || new Date(now.getFullYear(), now.getMonth(), 1);
     const end = endDate || new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-    // 1. Revenue Trend (Daily)
-    const trend: any[] = await this.prisma.$queryRaw`
+    const durationDays = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
+    let truncType = 'day';
+    
+    if (durationDays > 180) {
+      truncType = 'month';
+    } else if (durationDays > 32) {
+      truncType = 'week';
+    }
+
+    // 1. Revenue Trend (Dynamic Aggregation)
+    const trend: any[] = await this.prisma.$queryRawUnsafe(`
       SELECT 
-        TO_CHAR(i.invoice_date, 'YYYY-MM-DD') as date,
+        TO_CHAR(DATE_TRUNC('${truncType}', i.invoice_date), 'YYYY-MM-DD') as date,
         SUM(i.total_amount) as revenue,
         SUM(ili.gross_profit) as gross_profit
       FROM invoices i
       LEFT JOIN invoice_line_items ili ON i.id = ili.invoice_id
-      WHERE i.store_id = ${id}
-        AND i.invoice_date >= ${start}
-        AND i.invoice_date <= ${end}
+      WHERE i.store_id = $1
+        AND i.invoice_date >= $2
+        AND i.invoice_date <= $3
         AND i.status = 'ACTIVE'::"InvoiceStatus"
-      GROUP BY TO_CHAR(i.invoice_date, 'YYYY-MM-DD')
+      GROUP BY DATE_TRUNC('${truncType}', i.invoice_date)
       ORDER BY date ASC
-    `;
+    `, id, start, end);
 
     // 2. Category Breakdown
     const categories: any[] = await this.prisma.$queryRaw`
