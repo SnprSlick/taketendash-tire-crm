@@ -225,6 +225,127 @@ export class MechanicService {
     });
   }
 
+  async getMechanicDetails(
+    mechanicName: string,
+    storeId?: string,
+    allowedStoreIds?: string[],
+    startDate?: string,
+    endDate?: string
+  ) {
+    let whereClause = Prisma.sql`AND LOWER(ml.mechanic_name) = LOWER(${mechanicName})`;
+
+    if (storeId) {
+      whereClause = Prisma.sql`${whereClause} AND i.store_id = ${storeId}`;
+    } else if (allowedStoreIds) {
+      if (allowedStoreIds.length > 0) {
+        whereClause = Prisma.sql`${whereClause} AND i.store_id IN (${Prisma.join(allowedStoreIds)})`;
+      } else {
+        whereClause = Prisma.sql`${whereClause} AND 1=0`;
+      }
+    }
+
+    if (startDate) {
+      whereClause = Prisma.sql`${whereClause} AND ml.created_at >= ${new Date(startDate)}`;
+    }
+    if (endDate) {
+      whereClause = Prisma.sql`${whereClause} AND ml.created_at <= ${new Date(endDate)}`;
+    }
+
+    // 1. Get Summary Stats
+    const summary = await this.prisma.$queryRaw<any[]>`
+      SELECT 
+        SUM(ml.labor) as "totalLabor",
+        SUM(ml.parts) as "totalParts",
+        SUM(ml.gross_profit) as "totalGrossProfit",
+        COUNT(ml.id) as "itemCount",
+        MIN(ml.created_at) as "firstSeen",
+        MAX(ml.created_at) as "lastSeen",
+        SUM(CASE WHEN ml.labor > 0 AND NOT (ml.category ILIKE '%Service Truck Mileage%' OR ml.category ILIKE '%SRVT Service Truck%') THEN ml.quantity ELSE 0 END) as "totalBilledHours"
+      FROM mechanic_labor ml
+      LEFT JOIN invoices i ON ml.invoice_number = i.invoice_number
+      WHERE 1=1
+      ${whereClause}
+    `;
+
+    const stats = summary[0];
+    const firstSeen = stats.firstSeen ? new Date(stats.firstSeen) : new Date();
+    const lastSeen = stats.lastSeen ? new Date(stats.lastSeen) : new Date();
+    
+    // Use provided date range for business hours if available, otherwise use data range
+    const calcStart = startDate ? new Date(startDate) : firstSeen;
+    const calcEnd = endDate ? new Date(endDate) : lastSeen;
+    
+    const businessHours = this.calculateBusinessHours(calcStart, calcEnd);
+    const totalBilledHours = Number(stats.totalBilledHours) || 0;
+    const totalLabor = Number(stats.totalLabor) || 0;
+    const totalParts = Number(stats.totalParts) || 0;
+    const totalGrossProfit = Number(stats.totalGrossProfit) || 0;
+
+    const efficiency = businessHours > 0 ? (totalBilledHours / businessHours) * 100 : 0;
+
+    // 2. Get Recent Invoices
+    const invoices = await this.prisma.$queryRaw<any[]>`
+      SELECT 
+        ml.invoice_number as "invoiceNumber",
+        MAX(ml.created_at) as "date",
+        SUM(ml.labor) as "labor",
+        SUM(ml.parts) as "parts",
+        SUM(ml.gross_profit) as "grossProfit",
+        SUM(ml.quantity) as "hours",
+        STRING_AGG(DISTINCT ml.category, ', ') as "categories",
+        MAX(i.store_id) as "storeId"
+      FROM mechanic_labor ml
+      LEFT JOIN invoices i ON ml.invoice_number = i.invoice_number
+      WHERE 1=1
+      ${whereClause}
+      GROUP BY ml.invoice_number
+      ORDER BY MAX(ml.created_at) DESC
+      LIMIT 100
+    `;
+
+    // 3. Get Monthly Stats for Charts
+    const monthlyStats = await this.prisma.$queryRaw<any[]>`
+      SELECT 
+        DATE_TRUNC('month', ml.created_at) as "month",
+        SUM(ml.labor) as "labor",
+        SUM(ml.gross_profit) as "grossProfit",
+        SUM(CASE WHEN ml.labor > 0 AND NOT (ml.category ILIKE '%Service Truck Mileage%' OR ml.category ILIKE '%SRVT Service Truck%') THEN ml.quantity ELSE 0 END) as "billedHours"
+      FROM mechanic_labor ml
+      LEFT JOIN invoices i ON ml.invoice_number = i.invoice_number
+      WHERE 1=1
+      ${whereClause}
+      GROUP BY DATE_TRUNC('month', ml.created_at)
+      ORDER BY "month" ASC
+    `;
+
+    return {
+      summary: {
+        mechanicName,
+        totalLabor,
+        totalParts,
+        totalGrossProfit,
+        totalBilledHours,
+        businessHoursAvailable: businessHours,
+        efficiency,
+        laborPerHour: businessHours > 0 ? totalLabor / businessHours : 0,
+        profitPerHour: businessHours > 0 ? totalGrossProfit / businessHours : 0,
+      },
+      invoices: invoices.map(inv => ({
+        ...inv,
+        labor: Number(inv.labor),
+        parts: Number(inv.parts),
+        grossProfit: Number(inv.grossProfit),
+        hours: Number(inv.hours)
+      })),
+      chartData: monthlyStats.map(m => ({
+        month: m.month,
+        labor: Number(m.labor),
+        grossProfit: Number(m.grossProfit),
+        billedHours: Number(m.billedHours)
+      }))
+    };
+  }
+
   private calculateBusinessHours(start: Date, end: Date): number {
     let hours = 0;
     let current = new Date(start);
