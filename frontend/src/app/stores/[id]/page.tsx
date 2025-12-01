@@ -53,7 +53,7 @@ export default function StoreDetailPage() {
   });
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !token) return;
 
     const fetchData = async () => {
       try {
@@ -114,7 +114,7 @@ export default function StoreDetailPage() {
     };
 
     fetchData();
-  }, [id, dateRange]); // Re-fetch when dateRange changes
+  }, [id, dateRange, token]); // Re-fetch when dateRange or token changes
 
   if (loading) {
     return (
