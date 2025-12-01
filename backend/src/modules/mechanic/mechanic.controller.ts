@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, UseInterceptors, UploadedFile, BadRequestException, Query } from '@nestjs/common';
+import { Controller, Get, Post, Delete, UseInterceptors, UploadedFile, BadRequestException, Query, UseGuards, ForbiddenException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MechanicService } from './mechanic.service';
 import { diskStorage } from 'multer';
@@ -6,8 +6,12 @@ import { extname } from 'path';
 import * as fs from 'fs';
 import * as Papa from 'papaparse';
 import { CreateMechanicLaborDto } from './dto/create-mechanic-labor.dto';
+import { User } from '../../common/decorators/user.decorator';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
 
 @Controller('mechanic')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class MechanicController {
   constructor(private readonly mechanicService: MechanicService) {
     console.log('🔧 MechanicController initialized');
@@ -32,9 +36,22 @@ export class MechanicController {
   }
 
   @Get('analytics')
-  async getAnalytics(@Query('storeId') storeId?: string) {
+  async getAnalytics(@Query('storeId') storeId?: string, @User() user?: any) {
     console.log(`Fetching mechanic analytics${storeId ? ` for store ${storeId}` : ''}...`);
-    return this.mechanicService.getMechanicAnalytics(storeId);
+    
+    let allowedStoreIds: string[] | undefined;
+    
+    if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
+      if (storeId) {
+        if (!user.stores.includes(storeId)) {
+          throw new ForbiddenException('You do not have access to this store');
+        }
+      } else {
+        allowedStoreIds = user.stores;
+      }
+    }
+
+    return this.mechanicService.getMechanicAnalytics(storeId, allowedStoreIds);
   }
 
   @Get()

@@ -9,9 +9,10 @@ export class SalesDataService {
     private readonly redisService: RedisService,
   ) {}
 
-  async getSalesAnalytics(startDate?: Date, endDate?: Date): Promise<SalesAnalytics> {
-    // Create cache key based on date range
-    const cacheKey = `sales-analytics-${startDate?.toISOString() || 'all'}-${endDate?.toISOString() || 'all'}`;
+  async getSalesAnalytics(startDate?: Date, endDate?: Date, storeId?: string, allowedStoreIds?: string[]): Promise<SalesAnalytics> {
+    // Create cache key based on date range and store filters
+    const storeKey = storeId || (allowedStoreIds ? allowedStoreIds.sort().join(',') : 'all');
+    const cacheKey = `sales-analytics-${startDate?.toISOString() || 'all'}-${endDate?.toISOString() || 'all'}-${storeKey}`;
 
     // Try to get from cache first
     const cached = await this.redisService.getCachedAnalytics<SalesAnalytics>(cacheKey);
@@ -20,7 +21,7 @@ export class SalesDataService {
     }
 
     // Get fresh data
-    const analytics = await this.salesDataRepository.getSalesAnalytics(startDate, endDate);
+    const analytics = await this.salesDataRepository.getSalesAnalytics(startDate, endDate, storeId, allowedStoreIds);
 
     // Cache for 5 minutes
     await this.redisService.cacheAnalytics(cacheKey, analytics, 300);
@@ -28,26 +29,26 @@ export class SalesDataService {
     return analytics;
   }
 
-  async getTodaysAnalytics(): Promise<SalesAnalytics> {
+  async getTodaysAnalytics(storeId?: string, allowedStoreIds?: string[]): Promise<SalesAnalytics> {
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-    return this.getSalesAnalytics(startOfDay, endOfDay);
+    return this.getSalesAnalytics(startOfDay, endOfDay, storeId, allowedStoreIds);
   }
 
-  async getMonthToDateAnalytics(): Promise<SalesAnalytics> {
+  async getMonthToDateAnalytics(storeId?: string, allowedStoreIds?: string[]): Promise<SalesAnalytics> {
     const today = new Date();
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-    return this.getSalesAnalytics(startOfMonth, today);
+    return this.getSalesAnalytics(startOfMonth, today, storeId, allowedStoreIds);
   }
 
-  async getYearToDateAnalytics(): Promise<SalesAnalytics> {
+  async getYearToDateAnalytics(storeId?: string, allowedStoreIds?: string[]): Promise<SalesAnalytics> {
     const today = new Date();
     const startOfYear = new Date(today.getFullYear(), 0, 1);
 
-    return this.getSalesAnalytics(startOfYear, today);
+    return this.getSalesAnalytics(startOfYear, today, storeId, allowedStoreIds);
   }
 
   async getSalesByCustomer(customerId: string): Promise<SalesDataEntity[]> {

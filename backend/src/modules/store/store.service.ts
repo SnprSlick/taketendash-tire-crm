@@ -171,7 +171,7 @@ export class StoreService {
     };
   }
 
-  async getComparisonAnalytics(startDate?: Date, endDate?: Date) {
+  async getComparisonAnalytics(startDate?: Date, endDate?: Date, allowedStoreIds?: string[]) {
     const now = new Date();
     const start = startDate || new Date(now.getFullYear(), now.getMonth(), 1);
     const end = endDate || new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -183,6 +183,19 @@ export class StoreService {
       truncType = 'month';
     } else if (durationDays > 32) {
       truncType = 'week';
+    }
+
+    let storeFilter = '';
+    const params: any[] = [start, end];
+    
+    if (allowedStoreIds) {
+      if (allowedStoreIds.length === 0) {
+        return [];
+      }
+      // Create placeholders like $3, $4, $5
+      const placeholders = allowedStoreIds.map((_, i) => `$${i + 3}`).join(', ');
+      storeFilter = `AND i.store_id IN (${placeholders})`;
+      params.push(...allowedStoreIds);
     }
 
     // Get GP per store grouped by date truncation
@@ -197,9 +210,10 @@ export class StoreService {
       WHERE i.invoice_date >= $1
         AND i.invoice_date <= $2
         AND i.status = 'ACTIVE'::"InvoiceStatus"
+        ${storeFilter}
       GROUP BY DATE_TRUNC('${truncType}', i.invoice_date), s.name
       ORDER BY date ASC
-    `, start, end);
+    `, ...params);
 
     // Transform into format: { date: '2025-01-01', 'Store A': 100, 'Store B': 200 }
     const dateMap = new Map<string, any>();

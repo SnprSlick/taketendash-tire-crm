@@ -5,11 +5,16 @@ import {
   Param,
   Logger,
   BadRequestException,
-  NotFoundException
+  NotFoundException,
+  UseGuards,
+  ForbiddenException
 } from '@nestjs/common';
 // import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { User } from '../common/decorators/user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 
 /**
  * Invoice Controller
@@ -20,6 +25,7 @@ import { Prisma } from '@prisma/client';
 
 // @ApiTags('Invoices')
 @Controller('invoices')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class InvoiceController {
   private readonly logger = new Logger(InvoiceController.name);
 
@@ -47,7 +53,8 @@ export class InvoiceController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('sortBy') sortBy: string = 'invoiceDate',
-    @Query('sortOrder') sortOrder: string = 'desc'
+    @Query('sortOrder') sortOrder: string = 'desc',
+    @User() user?: any
   ) {
     try {
       // Validate and parse parameters
@@ -57,6 +64,22 @@ export class InvoiceController {
 
       // Build where clause
       const where: any = {};
+
+      // Access Control
+      if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
+        if (storeId) {
+          // Verify access to requested store
+          if (!user.stores.includes(storeId)) {
+            throw new ForbiddenException('You do not have access to this store');
+          }
+          where.storeId = storeId;
+        } else {
+          // Default to all allowed stores
+          where.storeId = { in: user.stores };
+        }
+      } else if (storeId) {
+        where.storeId = storeId;
+      }
 
       if (search) {
         where.OR = [
@@ -223,7 +246,10 @@ export class InvoiceController {
   // @ApiOperation({ summary: 'Get specific invoice by invoice number' })
   // @ApiResponse({ status: 200, description: 'Invoice retrieved successfully' })
   // @ApiResponse({ status: 404, description: 'Invoice not found' })
-  async getInvoiceByNumber(@Param('invoiceNumber') invoiceNumber: string) {
+  async getInvoiceByNumber(
+    @Param('invoiceNumber') invoiceNumber: string,
+    @User() user?: any
+  ) {
     try {
       const invoice: any = await this.prisma.invoice.findUnique({
         where: { invoiceNumber },
@@ -238,6 +264,13 @@ export class InvoiceController {
 
       if (!invoice) {
         throw new NotFoundException(`Invoice ${invoiceNumber} not found`);
+      }
+
+      // Access Control
+      if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
+        if (!user.stores.includes(invoice.storeId)) {
+          throw new ForbiddenException('You do not have access to this invoice');
+        }
       }
 
       // Calculate recon totals
@@ -361,7 +394,8 @@ export class InvoiceController {
   @Get('stats/sales')
   async getAnalyticsSummary(
     @Query('period') period: string = '30',
-    @Query('storeId') storeId?: string
+    @Query('storeId') storeId?: string,
+    @User() user?: any
   ) {
     try {
       const days = parseInt(period) || 30;
@@ -375,7 +409,17 @@ export class InvoiceController {
         status: 'ACTIVE'
       };
 
-      if (storeId) {
+      // Access Control
+      if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
+        if (storeId) {
+          if (!user.stores.includes(storeId)) {
+            throw new ForbiddenException('You do not have access to this store');
+          }
+          where.storeId = storeId;
+        } else {
+          where.storeId = { in: user.stores };
+        }
+      } else if (storeId) {
         where.storeId = storeId;
       }
 
@@ -404,7 +448,20 @@ export class InvoiceController {
       console.log('Step 2: Category Breakdown');
       // Updated to match Tire Analytics logic for identifying tires
       
-      const storeCondition = storeId ? Prisma.sql`AND i.store_id = ${storeId}` : Prisma.empty;
+      let storeCondition = Prisma.empty;
+      if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
+        if (storeId) {
+          storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
+        } else {
+          if (user.stores.length > 0) {
+            storeCondition = Prisma.sql`AND i.store_id IN (${Prisma.join(user.stores)})`;
+          } else {
+            storeCondition = Prisma.sql`AND 1=0`;
+          }
+        }
+      } else if (storeId) {
+        storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
+      }
 
       const categoryStats = await this.prisma.$queryRaw`
         SELECT 
@@ -441,7 +498,13 @@ export class InvoiceController {
         status: 'ACTIVE'
       };
 
-      if (storeId) {
+      if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
+        if (storeId) {
+          whereSalespeople.storeId = storeId;
+        } else {
+          whereSalespeople.storeId = { in: user.stores };
+        }
+      } else if (storeId) {
         whereSalespeople.storeId = storeId;
       }
 
@@ -597,7 +660,8 @@ export class InvoiceController {
     @Query('search') search?: string,
     @Query('storeId') storeId?: string,
     @Query('sortBy') sortBy: string = 'total_revenue',
-    @Query('sortOrder') sortOrder: string = 'desc'
+    @Query('sortOrder') sortOrder: string = 'desc',
+    @User() user?: any
   ) {
     try {
       const startDate = startDateStr ? new Date(startDateStr) : new Date(new Date().setFullYear(new Date().getFullYear() - 1));
@@ -616,7 +680,20 @@ export class InvoiceController {
 
       // Build store condition
       let storeCondition = Prisma.sql``;
-      if (storeId) {
+      if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
+        if (storeId) {
+          if (!user.stores.includes(storeId)) {
+            throw new ForbiddenException('You do not have access to this store');
+          }
+          storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
+        } else {
+          if (user.stores.length > 0) {
+            storeCondition = Prisma.sql`AND i.store_id IN (${Prisma.join(user.stores)})`;
+          } else {
+            storeCondition = Prisma.sql`AND 1=0`;
+          }
+        }
+      } else if (storeId) {
         storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
       }
 
@@ -701,7 +778,8 @@ export class InvoiceController {
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 20,
     @Query('sortBy') sortBy: string = 'total_revenue',
-    @Query('sortOrder') sortOrder: string = 'desc'
+    @Query('sortOrder') sortOrder: string = 'desc',
+    @User() user?: any
   ) {
     try {
       const startDate = startDateStr ? new Date(startDateStr) : new Date(new Date().setFullYear(new Date().getFullYear() - 1));
@@ -723,7 +801,20 @@ export class InvoiceController {
 
       // Build store condition
       let storeCondition = Prisma.sql``;
-      if (storeId) {
+      if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
+        if (storeId) {
+          if (!user.stores.includes(storeId)) {
+            throw new ForbiddenException('You do not have access to this store');
+          }
+          storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
+        } else {
+          if (user.stores.length > 0) {
+            storeCondition = Prisma.sql`AND i.store_id IN (${Prisma.join(user.stores)})`;
+          } else {
+            storeCondition = Prisma.sql`AND 1=0`;
+          }
+        }
+      } else if (storeId) {
         storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
       }
 
@@ -785,7 +876,8 @@ export class InvoiceController {
   @Get('reports/monthly')
   async getMonthlyReport(
     @Query('year') yearStr?: string,
-    @Query('storeId') storeId?: string
+    @Query('storeId') storeId?: string,
+    @User() user?: any
   ) {
     try {
       const year = parseInt(yearStr) || new Date().getFullYear();
@@ -793,7 +885,20 @@ export class InvoiceController {
       const endDate = new Date(year, 11, 31, 23, 59, 59);
 
       let storeCondition = Prisma.sql``;
-      if (storeId) {
+      if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
+        if (storeId) {
+          if (!user.stores.includes(storeId)) {
+            throw new ForbiddenException('You do not have access to this store');
+          }
+          storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
+        } else {
+          if (user.stores.length > 0) {
+            storeCondition = Prisma.sql`AND i.store_id IN (${Prisma.join(user.stores)})`;
+          } else {
+            storeCondition = Prisma.sql`AND 1=0`;
+          }
+        }
+      } else if (storeId) {
         storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
       }
 
@@ -830,7 +935,8 @@ export class InvoiceController {
   async getCustomerDetails(
     @Param('id') id: string,
     @Query('year') yearStr?: string,
-    @Query('storeId') storeId?: string
+    @Query('storeId') storeId?: string,
+    @User() user?: any
   ) {
     try {
       const year = parseInt(yearStr) || new Date().getFullYear();
@@ -838,7 +944,20 @@ export class InvoiceController {
       const endDate = new Date(year, 11, 31, 23, 59, 59);
 
       let storeCondition = Prisma.sql``;
-      if (storeId) {
+      if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
+        if (storeId) {
+          if (!user.stores.includes(storeId)) {
+            throw new ForbiddenException('You do not have access to this store');
+          }
+          storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
+        } else {
+          if (user.stores.length > 0) {
+            storeCondition = Prisma.sql`AND i.store_id IN (${Prisma.join(user.stores)})`;
+          } else {
+            storeCondition = Prisma.sql`AND 1=0`;
+          }
+        }
+      } else if (storeId) {
         storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
       }
 
@@ -937,7 +1056,8 @@ export class InvoiceController {
   async getSalespersonDetails(
     @Param('name') name: string,
     @Query('year') yearStr?: string,
-    @Query('storeId') storeId?: string
+    @Query('storeId') storeId?: string,
+    @User() user?: any
   ) {
     try {
       const decodedName = decodeURIComponent(name);
@@ -946,7 +1066,20 @@ export class InvoiceController {
       const endDate = new Date(year, 11, 31, 23, 59, 59);
 
       let storeCondition = Prisma.sql``;
-      if (storeId) {
+      if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
+        if (storeId) {
+          if (!user.stores.includes(storeId)) {
+            throw new ForbiddenException('You do not have access to this store');
+          }
+          storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
+        } else {
+          if (user.stores.length > 0) {
+            storeCondition = Prisma.sql`AND i.store_id IN (${Prisma.join(user.stores)})`;
+          } else {
+            storeCondition = Prisma.sql`AND 1=0`;
+          }
+        }
+      } else if (storeId) {
         storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
       }
 
@@ -1075,7 +1208,8 @@ export class InvoiceController {
     @Query('year') yearStr?: string,
     @Query('page') pageStr?: string,
     @Query('limit') limitStr?: string,
-    @Query('storeId') storeId?: string
+    @Query('storeId') storeId?: string,
+    @User() user?: any
   ) {
     try {
       const decodedName = decodeURIComponent(name);
@@ -1088,7 +1222,20 @@ export class InvoiceController {
       const endDate = new Date(year, 11, 31, 23, 59, 59);
 
       let storeCondition = Prisma.sql``;
-      if (storeId) {
+      if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
+        if (storeId) {
+          if (!user.stores.includes(storeId)) {
+            throw new ForbiddenException('You do not have access to this store');
+          }
+          storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
+        } else {
+          if (user.stores.length > 0) {
+            storeCondition = Prisma.sql`AND i.store_id IN (${Prisma.join(user.stores)})`;
+          } else {
+            storeCondition = Prisma.sql`AND 1=0`;
+          }
+        }
+      } else if (storeId) {
         storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
       }
 

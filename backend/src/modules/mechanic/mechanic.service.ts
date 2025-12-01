@@ -111,10 +111,18 @@ export class MechanicService {
     }));
   }
 
-  async getMechanicAnalytics(storeId?: string) {
-    const whereClause = storeId 
-      ? Prisma.sql`AND i.store_id = ${storeId}` 
-      : Prisma.empty;
+  async getMechanicAnalytics(storeId?: string, allowedStoreIds?: string[]) {
+    let whereClause = Prisma.empty;
+
+    if (storeId) {
+      whereClause = Prisma.sql`AND i.store_id = ${storeId}`;
+    } else if (allowedStoreIds) {
+      if (allowedStoreIds.length > 0) {
+        whereClause = Prisma.sql`AND i.store_id IN (${Prisma.join(allowedStoreIds)})`;
+      } else {
+        whereClause = Prisma.sql`AND 1=0`;
+      }
+    }
 
     const data = await this.prisma.$queryRaw<any[]>`
       SELECT 

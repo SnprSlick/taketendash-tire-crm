@@ -62,13 +62,34 @@ export class SalesDataRepository extends BaseRepository<SalesDataEntity> {
     });
   }
 
-  async getSalesAnalytics(startDate?: Date, endDate?: Date): Promise<SalesAnalytics> {
-    const whereClause = startDate && endDate ? {
-      salesDate: {
+  async getSalesAnalytics(startDate?: Date, endDate?: Date, storeId?: string, allowedStoreIds?: string[]): Promise<SalesAnalytics> {
+    const whereClause: any = {};
+
+    if (startDate && endDate) {
+      whereClause.salesDate = {
         gte: startDate,
         lte: endDate,
-      },
-    } : {};
+      };
+    }
+
+    if (storeId) {
+      whereClause.invoice = { storeId };
+    } else if (allowedStoreIds) {
+      if (allowedStoreIds.length > 0) {
+        whereClause.invoice = { storeId: { in: allowedStoreIds } };
+      } else {
+        // No access
+        return {
+          totalSales: 0,
+          totalRevenue: 0,
+          averageOrderValue: 0,
+          salesByCategory: [],
+          salesByEmployee: [],
+          salesByMonth: [],
+          recentSales: [],
+        };
+      }
+    }
 
     // Get all sales data for the period
     const salesData = await this.findMany({
