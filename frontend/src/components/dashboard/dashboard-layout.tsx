@@ -80,7 +80,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
       {/* Header */}
-      <header className="bg-white/95 backdrop-blur-sm shadow-lg border-b border-slate-200/50">
+      <header className="bg-white/95 backdrop-blur-sm shadow-lg border-b border-slate-200/50 relative z-50">
         <div className={`${containerClass} mx-auto px-4 sm:px-6 lg:px-8`}>
           <div className="flex justify-between items-center h-24">
             <div className="flex items-center space-x-4">
@@ -113,21 +113,28 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
                 <Bell className="w-5 h-5" />
                 <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
               </button>
-              <div className="flex items-center space-x-3">
+              
+              <div className="h-8 w-px bg-slate-200 mx-2"></div>
+
+              <div className="flex items-center space-x-3 group relative cursor-pointer">
                 <div className="text-right">
-                  <span className="text-sm font-medium text-slate-700">
+                  <span className="text-sm font-medium text-slate-700 group-hover:text-red-600 transition-colors">
                     {user ? `${user.firstName} ${user.lastName}` : 'Welcome back'}
                   </span>
                   <p className="text-xs text-slate-500">{user?.role || 'Guest'}</p>
                 </div>
-                <div className="relative group">
-                  <button className="w-10 h-10 bg-gradient-to-r from-red-500 to-slate-600 rounded-full flex items-center justify-center shadow-lg ring-2 ring-red-100">
+                <div className="relative">
+                  <button className="w-10 h-10 bg-gradient-to-r from-red-500 to-slate-600 rounded-full flex items-center justify-center shadow-lg ring-2 ring-red-100 group-hover:ring-red-200 transition-all">
                     <User className="w-5 h-5 text-white" />
                   </button>
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-200 py-1 hidden group-hover:block z-50">
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-200 py-1 hidden group-hover:block z-[100]">
+                    <div className="px-4 py-2 border-b border-slate-100">
+                      <p className="text-sm font-medium text-slate-900">{user?.firstName} {user?.lastName}</p>
+                      <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+                    </div>
                     <button 
                       onClick={logout}
-                      className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center"
+                      className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center transition-colors"
                     >
                       <LogOut className="w-4 h-4 mr-2" />
                       Sign out
