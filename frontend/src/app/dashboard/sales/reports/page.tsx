@@ -82,8 +82,10 @@ export default function SalesReportsPage() {
   }, [searchQuery]);
 
   useEffect(() => {
-    fetchReport();
-  }, [activeTab, period, page, debouncedSearch, sortField, sortDirection, selectedStoreId]);
+    if (token) {
+      fetchReport();
+    }
+  }, [activeTab, period, page, debouncedSearch, sortField, sortDirection, selectedStoreId, token]);
 
   const fetchReport = async () => {
     setLoading(true);

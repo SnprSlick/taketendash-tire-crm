@@ -46,8 +46,10 @@ export default function SalesDashboardPage() {
   const [selectedPeriod, setSelectedPeriod] = useState('365');
 
   useEffect(() => {
-    fetchAnalyticsData();
-  }, [selectedPeriod, selectedStoreId]);
+    if (token) {
+      fetchAnalyticsData();
+    }
+  }, [selectedPeriod, selectedStoreId, token]);
 
   const fetchAnalyticsData = async () => {
     try {

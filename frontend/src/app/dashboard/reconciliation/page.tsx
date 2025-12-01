@@ -16,8 +16,10 @@ export default function ReconciliationPage() {
   const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (token) {
+      fetchData();
+    }
+  }, [token]);
 
   const fetchData = async () => {
     try {
