@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   Car,
   Settings,
@@ -35,15 +35,14 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children, title = 'Tire CRM Dashboard', fullWidth = false }: DashboardLayoutProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const { stores, selectedStoreId, setSelectedStoreId, loading } = useStore();
   const { user, logout, hasRole, isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/login');
+      window.location.href = '/login';
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [isLoading, isAuthenticated]);
 
   // Filter stores based on user access
   const allowedStores = stores.filter(store => 
