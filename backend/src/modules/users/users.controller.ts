@@ -10,9 +10,16 @@ import { Roles } from '../../auth/decorators/roles.decorator';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @Get('search-employees')
+  @Roles('ADMINISTRATOR')
+  searchEmployees(@Request() req) {
+    const query = req.query.q as string;
+    return this.usersService.searchEmployees(query || '');
+  }
+
   @Post()
   @Roles('ADMINISTRATOR')
-  create(@Body() createUserDto: Prisma.UserCreateInput) {
+  create(@Body() createUserDto: any) {
     return this.usersService.create(createUserDto);
   }
 
@@ -30,7 +37,7 @@ export class UsersController {
 
   @Patch(':id')
   @Roles('ADMINISTRATOR')
-  update(@Param('id') id: string, @Body() updateUserDto: Prisma.UserUpdateInput) {
+  update(@Param('id') id: string, @Body() updateUserDto: any) {
     return this.usersService.update(id, updateUserDto);
   }
 

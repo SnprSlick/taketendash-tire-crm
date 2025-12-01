@@ -140,26 +140,15 @@ export default function AdminUsersPage() {
           email: data.email,
           role: data.role,
           scopes,
-          isApproved: true // Admin created users are auto-approved
+          isApproved: true, // Admin created users are auto-approved
+          stores: data.storeIds,
+          employeeId: data.employeeId
         })
       });
 
       if (res.ok) {
-        const newUser = await res.json();
-        
-        // Assign stores if any
-        if (data.storeIds.length > 0) {
-          await fetch(`/api/v1/users/${newUser.id}/stores`, {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${cleanToken}` 
-            },
-            body: JSON.stringify({ storeIds: data.storeIds })
-          });
-        }
-        
         fetchUsers();
+        setIsCreateModalOpen(false);
       }
     } catch (error) {
       console.error('Failed to create user', error);
@@ -223,28 +212,23 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleUpdateUser = async (userId: string, data: { role: string; storeIds: string[] }) => {
+  const handleUpdateUser = async (userId: string, data: { role: string; storeIds: string[]; employeeId?: string | null }) => {
     const cleanToken = token?.replace(/"/g, '');
     try {
-      // Update Role
       const scopes = ROLE_SCOPES_MAP[data.role] || [];
-      await fetch(`/api/v1/users/${userId}/role`, {
-        method: 'POST',
+      
+      await fetch(`/api/v1/users/${userId}`, {
+        method: 'PATCH',
         headers: { 
           'Content-Type': 'application/json',
           Authorization: `Bearer ${cleanToken}` 
         },
-        body: JSON.stringify({ role: data.role, scopes })
-      });
-
-      // Update Stores
-      await fetch(`/api/v1/users/${userId}/stores`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${cleanToken}` 
-        },
-        body: JSON.stringify({ storeIds: data.storeIds })
+        body: JSON.stringify({
+          role: data.role,
+          scopes,
+          stores: data.storeIds,
+          employeeId: data.employeeId
+        })
       });
 
       fetchUsers();
@@ -406,6 +390,7 @@ export default function AdminUsersPage() {
             onSave={handleUpdateUser}
             onResetPassword={handleResetPassword}
             availableStores={stores}
+            token={token}
           />
         )}
 
@@ -414,6 +399,7 @@ export default function AdminUsersPage() {
           onClose={() => setIsCreateModalOpen(false)}
           onSave={handleCreateUser}
           availableStores={stores}
+          token={token}
         />
       </div>
     </DashboardLayout>

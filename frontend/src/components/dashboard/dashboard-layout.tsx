@@ -44,6 +44,16 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
         window.location.href = '/login';
       } else if (user?.mustChangePassword) {
         window.location.href = '/change-password';
+      } else if (user?.role === 'SALESPERSON') {
+        // Redirect Salesperson to their specific report
+        const salespersonReportPath = user.employeeId 
+          ? `/dashboard/sales/reports/salesperson/${user.employeeId}`
+          : '/dashboard/sales/reports'; // Fallback if no employee linked
+        
+        // Allow access to their report page and profile/settings
+        if (pathname === '/' || pathname === '/dashboard' || pathname === '/dashboard/sales') {
+          window.location.href = salespersonReportPath;
+        }
       } else if (user?.role === 'STORE_MANAGER') {
         // Restrict access for Store Manager
         const restrictedPaths = [
@@ -90,6 +100,8 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
   }
 
   const containerClass = fullWidth ? "max-w-[98%]" : "max-w-7xl";
+  const isSalesperson = user?.role === 'SALESPERSON';
+  const isStoreManager = user?.role === 'STORE_MANAGER';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
@@ -165,7 +177,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
       <nav className="bg-white/90 backdrop-blur-sm border-b border-slate-200/50 shadow-sm">
         <div className={`${containerClass} mx-auto px-4 sm:px-6 lg:px-8`}>
           <div className="flex justify-center space-x-1">
-            {!hasRole('STORE_MANAGER') && (
+            {!isStoreManager && !isSalesperson && (
               <NavItem
                 href="/stores"
                 icon={<Store className="w-4 h-4" />}
@@ -173,7 +185,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
                 active={isActive('/stores')}
               />
             )}
-            {!hasRole('STORE_MANAGER') && (
+            {!isStoreManager && !isSalesperson && (
               <NavItem
                 href="/insights"
                 icon={<BarChart3 className="w-4 h-4" />}
@@ -181,16 +193,21 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
                 active={isActive('/insights')}
               />
             )}
+            {!isSalesperson && (
+              <NavItem
+                href="/dashboard/sales"
+                icon={<TrendingUp className="w-4 h-4" />}
+                label="Analytics"
+                active={isActive('/dashboard/sales')}
+              />
+            )}
             <NavItem
-              href="/dashboard/sales"
-              icon={<TrendingUp className="w-4 h-4" />}
-              label="Analytics"
-              active={isActive('/dashboard/sales')}
-            />
-            <NavItem
-              href="/dashboard/sales/reports"
+              href={isSalesperson && user?.employeeId 
+                ? `/dashboard/sales/reports/salesperson/${user.employeeId}`
+                : "/dashboard/sales/reports"
+              }
               icon={<FileText className="w-4 h-4" />}
-              label="Reports"
+              label={isSalesperson ? "My Report" : "Reports"}
               active={isActive('/dashboard/sales/reports')}
             />
             {/* <NavItem
@@ -211,7 +228,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
               label="Large Accounts"
               active={isActive('/accounts/large-accounts')}
             /> */}
-            {!hasRole('STORE_MANAGER') && (
+            {!isStoreManager && !isSalesperson && (
               <NavItem
                 href="/dashboard/reconciliation"
                 icon={<ClipboardCheck className="w-4 h-4" />}
@@ -219,13 +236,15 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
                 active={isActive('/dashboard/reconciliation')}
               />
             )}
-            <NavItem
-              href="/mechanic"
-              icon={<Wrench className="w-4 h-4" />}
-              label="Mechanic"
-              active={isActive('/mechanic')}
-            />
-            {!hasRole('STORE_MANAGER') && (
+            {!isSalesperson && (
+              <NavItem
+                href="/mechanic"
+                icon={<Wrench className="w-4 h-4" />}
+                label="Mechanic"
+                active={isActive('/mechanic')}
+              />
+            )}
+            {!isStoreManager && !isSalesperson && (
               <NavItem
                 href="/dashboard/inventory"
                 icon={<Package className="w-4 h-4" />}
@@ -233,7 +252,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
                 active={isActive('/dashboard/inventory') && !isActive('/dashboard/inventory/analytics')}
               />
             )}
-            {!hasRole('STORE_MANAGER') && (
+            {!isStoreManager && !isSalesperson && (
               <NavItem
                 href="/dashboard/inventory/analytics"
                 icon={<TrendingUp className="w-4 h-4" />}
@@ -241,7 +260,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
                 active={isActive('/dashboard/inventory/analytics')}
               />
             )}
-            {!hasRole('STORE_MANAGER') && (
+            {!isStoreManager && !isSalesperson && (
               <NavItem
                 href="/brands"
                 icon={<Tag className="w-4 h-4" />}
@@ -249,13 +268,15 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
                 active={isActive('/brands')}
               />
             )}
-            <NavItem
-              href="/tires"
-              icon={<Disc className="w-4 h-4" />}
-              label="Tires"
-              active={isActive('/tires')}
-            />
-            {!hasRole('STORE_MANAGER') && (
+            {!isSalesperson && (
+              <NavItem
+                href="/tires"
+                icon={<Disc className="w-4 h-4" />}
+                label="Tires"
+                active={isActive('/tires')}
+              />
+            )}
+            {!isStoreManager && !isSalesperson && (
               <NavItem
                 href="/tire-master"
                 icon={<Database className="w-4 h-4" />}

@@ -8,30 +8,87 @@ export class UsersService {
   constructor(private prisma: PrismaService) {}
 
   async findOne(email: string): Promise<User | null> {
-    return this.prisma.user.findUnique({ where: { email } });
-  }
-
-  async findById(id: string): Promise<User | null> {
-    return this.prisma.user.findUnique({ where: { id } });
-  }
-
-  async create(data: Prisma.UserCreateInput): Promise<User> {
-    const hashedPassword = await bcrypt.hash(data.password, 10);
-    return this.prisma.user.create({
-      data: {
-        ...data,
-        password: hashedPassword,
-      },
+    return this.prisma.user.findUnique({ 
+      where: { email },
+      include: { stores: true, employee: true }
     });
   }
 
-  async update(id: string, data: Prisma.UserUpdateInput): Promise<User> {
+  async findById(id: string): Promise<User | null> {
+    return this.prisma.user.findUnique({ 
+      where: { id },
+      include: { stores: true, employee: true }
+    });
+  }
+
+  async create(data: any): Promise<User> {
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+    
+    const createData: Prisma.UserCreateInput = {
+      username: data.username,
+      password: hashedPassword,
+      email: data.email,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      role: data.role,
+      scopes: data.scopes,
+      isApproved: data.isApproved,
+      stores: data.stores ? {
+        connect: data.stores.map((id: string) => ({ id }))
+      } : undefined,
+      employee: data.employeeId ? {
+        connect: { id: data.employeeId }
+      } : undefined
+    };
+
+    return this.prisma.user.create({
+      data: createData,
+    });
+  }
+
+  async update(id: string, data: any): Promise<User> {
     if (data.password && typeof data.password === 'string') {
       data.password = await bcrypt.hash(data.password, 10);
     }
+
+    const updateData: Prisma.UserUpdateInput = {
+      ...data,
+      stores: data.stores ? {
+        set: data.stores.map((id: string) => ({ id }))
+      } : undefined,
+      employee: data.employeeId ? {
+        connect: { id: data.employeeId }
+      } : data.employeeId === null ? {
+        disconnect: true
+      } : undefined
+    };
+    
+    // Remove fields that shouldn't be in updateData directly if they were processed
+    delete (updateData as any).employeeId;
+
     return this.prisma.user.update({
       where: { id },
-      data,
+      data: updateData,
+    });
+  }
+
+  async searchEmployees(query: string): Promise<any[]> {
+    return this.prisma.employee.findMany({
+      where: {
+        OR: [
+          { firstName: { contains: query, mode: 'insensitive' } },
+          { lastName: { contains: query, mode: 'insensitive' } },
+          { employeeId: { contains: query, mode: 'insensitive' } }
+        ]
+      },
+      take: 10,
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        employeeId: true,
+        role: true
+      }
     });
   }
 

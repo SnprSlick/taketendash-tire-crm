@@ -26,6 +26,7 @@ export interface AuthResponse {
     scopes: string[];
     stores: string[]; // Store IDs
     mustChangePassword: boolean;
+    employeeId?: string;
   };
 }
 
@@ -40,7 +41,7 @@ export class AuthService {
     console.log(`[AuthService] Validating user: '${username}'`);
     const user = await this.prisma.user.findUnique({
       where: { username },
-      include: { stores: true }
+      include: { stores: true, employee: true }
     });
 
     if (user) {
@@ -93,6 +94,7 @@ export class AuthService {
         scopes: user.scopes,
         stores: user.stores.map(s => s.id),
         mustChangePassword: user.mustChangePassword,
+        employeeId: user.employeeId,
       },
     };
   }
@@ -101,7 +103,7 @@ export class AuthService {
     console.log(`[AuthService] Validating JWT payload for sub: ${payload.sub}`);
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      include: { stores: true }
+      include: { stores: true, employee: true }
     });
 
     if (!user) {
@@ -122,6 +124,7 @@ export class AuthService {
       role: user.role,
       scopes: user.scopes,
       stores: user.stores.map(s => s.id),
+      employeeId: user.employeeId,
     };
   }
 
