@@ -185,6 +185,7 @@ export default function InventoryAnalytics() {
     }
     return { data, stores: sortedStores };
   };  const fetchLocations = async () => {
+    if (!token) return;
     try {
       const res = await fetch('/api/v1/inventory/locations', {
         headers: {
@@ -201,6 +202,7 @@ export default function InventoryAnalytics() {
   };
 
   const fetchAnalytics = useCallback(async () => {
+    if (!token) return;
     setLoading(true);
     setError(null);
     try {
@@ -235,15 +237,19 @@ export default function InventoryAnalytics() {
     } finally {
       setLoading(false);
     }
-  }, [search, size, storeId, minVelocity, days, outlook, sortBy, sortOrder, page, limit]);
+  }, [search, size, storeId, minVelocity, days, outlook, sortBy, sortOrder, page, limit, token]);
 
   useEffect(() => {
-    fetchLocations();
-  }, []);
+    if (token) {
+      fetchLocations();
+    }
+  }, [token]);
 
   useEffect(() => {
-    fetchAnalytics();
-  }, [fetchAnalytics]);
+    if (token) {
+      fetchAnalytics();
+    }
+  }, [fetchAnalytics, token]);
 
   const handleExpand = async (productId: string) => {
     if (expandedProductId === productId) {

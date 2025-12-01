@@ -88,6 +88,7 @@ export default function SalesReportsPage() {
   }, [activeTab, period, page, debouncedSearch, sortField, sortDirection, selectedStoreId, token]);
 
   const fetchReport = async () => {
+    if (!token) return;
     setLoading(true);
     try {
       let url = '';
@@ -286,6 +287,8 @@ export default function SalesReportsPage() {
                         <SortableHeader field="salesperson" label="Salesperson" />
                         <SortableHeader field="invoice_count" label="Invoices" align="right" />
                         <SortableHeader field="total_revenue" label="Revenue" align="right" />
+                        <SortableHeader field="total_labor" label="Labor" align="right" />
+                        <SortableHeader field="total_parts" label="Parts" align="right" />
                         <SortableHeader field="total_profit" label="Gross Profit" align="right" />
                         <SortableHeader field="profit_margin" label="Margin" align="right" />
                         <SortableHeader field="avg_ticket" label="Avg Ticket" align="right" />

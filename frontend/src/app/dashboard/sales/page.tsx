@@ -52,6 +52,7 @@ export default function SalesDashboardPage() {
   }, [selectedPeriod, selectedStoreId, token]);
 
   const fetchAnalyticsData = async () => {
+    if (!token) return;
     try {
       setLoading(true);
       setError(null);
