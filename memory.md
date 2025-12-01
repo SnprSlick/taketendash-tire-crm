@@ -214,5 +214,14 @@
   - [x] Fix salesperson data visibility (allow viewing data across all stores)
     - Updated `InvoiceController.getSalespersonDetails` and `getSalespersonCommissions` to bypass store restriction for `SALESPERSON` role when no specific store is requested.
     - This allows salespeople to see their total performance across all stores they have sales in, rather than just their assigned store.
+    - **Fix**: Updated `InvoiceController` to explicitly ignore the `storeId` query parameter for `SALESPERSON` role when viewing their own report. This ensures that even if the frontend sends a default store ID, the backend queries all stores for that salesperson's data.
+  - [x] Remove "Back to Reports" button for Salesperson role
+    - Updated `SalespersonDetailPage` to hide the "Back to Reports" button if the user has the `SALESPERSON` role.
+    - This prevents confusion as salespeople do not have access to the main reports list.
+  - [x] Fix customer detail view for Salesperson role
+    - Updated `InvoiceController.getCustomerDetails` to:
+      - Ignore `storeId` filter for `SALESPERSON` role (showing cross-store history).
+      - Add `salesperson` filter for `SALESPERSON` role (showing only sales made by that salesperson to the customer).
+    - This ensures salespeople see the complete history of their relationship with the customer, matching the requirement "statistics from the salesperson and that customer".
 
 ## Next Steps

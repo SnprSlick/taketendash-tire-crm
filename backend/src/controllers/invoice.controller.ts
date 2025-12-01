@@ -944,7 +944,16 @@ export class InvoiceController {
       const endDate = new Date(year, 11, 31, 23, 59, 59);
 
       let storeCondition = Prisma.sql``;
-      if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
+      let salespersonCondition = Prisma.sql``;
+
+      if (user && user.role === 'SALESPERSON') {
+        // For salespeople, we want to see THEIR sales to this customer across ALL stores
+        if (user.employeeName) {
+            salespersonCondition = Prisma.sql`AND i.salesperson = ${user.employeeName}`;
+        }
+        // We explicitly ignore storeId for salespeople to show cross-store history
+        storeCondition = Prisma.sql``;
+      } else if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
         if (storeId) {
           if (!user.stores.includes(storeId)) {
             throw new ForbiddenException('You do not have access to this store');
@@ -994,6 +1003,7 @@ export class InvoiceController {
           AND i.invoice_date <= ${endDate} 
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${storeCondition}
+          ${salespersonCondition}
         GROUP BY TO_CHAR(i.invoice_date, 'YYYY-MM'), TO_CHAR(i.invoice_date, 'Month')
         ORDER BY month_key
       `;
@@ -1013,6 +1023,7 @@ export class InvoiceController {
         WHERE i.customer_id = ${id} 
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${storeCondition}
+          ${salespersonCondition}
         GROUP BY i.id
         ORDER BY i.invoice_date DESC
         LIMIT 20
@@ -1029,6 +1040,7 @@ export class InvoiceController {
         WHERE i.customer_id = ${id} 
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${storeCondition}
+          ${salespersonCondition}
         GROUP BY ili.category
         ORDER BY total_revenue DESC
         LIMIT 5
