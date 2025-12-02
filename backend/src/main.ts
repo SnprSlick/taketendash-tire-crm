@@ -9,8 +9,6 @@ async function bootstrap() {
   console.log('🔧 Starting TakeTenDash backend...');
 
   const app = await NestFactory.create(AppModule, {
-
-  const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug'],
   });
 
