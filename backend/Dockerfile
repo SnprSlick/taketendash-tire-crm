@@ -1,9 +1,9 @@
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
 # Install OpenSSL for Prisma
-RUN apk add --no-cache openssl libc6-compat
+RUN apt-get update -y && apt-get install -y openssl
 
 COPY package*.json ./
 COPY prisma ./prisma/
@@ -15,12 +15,12 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
 
 # Install OpenSSL for Prisma
-RUN apk add --no-cache openssl libc6-compat
+RUN apt-get update -y && apt-get install -y openssl
 
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
