@@ -10,7 +10,15 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async onModuleInit() {
-    const dbUrl = process.env.DATABASE_URL;
+    let dbUrl = process.env.DATABASE_URL;
+    
+    // Append connection timeout if not present to handle cold starts
+    if (dbUrl && !dbUrl.includes('connect_timeout')) {
+      const separator = dbUrl.includes('?') ? '&' : '?';
+      dbUrl = `${dbUrl}${separator}connect_timeout=30`;
+      process.env.DATABASE_URL = dbUrl; // Update env for Prisma Client
+    }
+
     console.log('Prisma connecting to DB:', dbUrl ? dbUrl.replace(/:[^:@]*@/, ':****@') : 'undefined');
     await this.$connect();
   }
