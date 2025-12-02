@@ -4,8 +4,17 @@ import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
 import { PrismaService } from './prisma/prisma.service';
 import { json, urlencoded } from 'express';
+import * as dns from 'dns';
 
 async function bootstrap() {
+  // Force IPv4 DNS resolution to avoid issues with Railway internal networking
+  try {
+    dns.setDefaultResultOrder('ipv4first');
+    console.log('🔧 DNS resolution set to prefer IPv4');
+  } catch (e) {
+    console.warn('⚠️ Could not set DNS result order:', e.message);
+  }
+
   console.log('🔧 Starting TakeTenDash backend...');
 
   const app = await NestFactory.create(AppModule, {
