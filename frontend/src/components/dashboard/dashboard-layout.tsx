@@ -41,6 +41,8 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
   useEffect(() => {
     if (user) {
       console.log('DashboardLayout User:', user);
+      console.log('User Stores:', user.stores);
+      console.log('All Stores:', stores);
     }
     if (!isLoading) {
       if (!isAuthenticated) {
@@ -55,6 +57,15 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
         // Allow access to their report page and profile/settings
         if (pathname === '/' || pathname === '/dashboard' || pathname === '/dashboard/sales' || pathname === '/dashboard/sales/reports') {
           window.location.href = salespersonReportPath;
+        }
+      } else if (user?.role === 'MECHANIC') {
+        // Redirect Mechanic to their specific dashboard
+        const displayName = user.employeeName || `${user.firstName} ${user.lastName}`;
+        const mechanicDashboardPath = `/dashboard/mechanic/${encodeURIComponent(displayName)}`;
+        
+        // Allow access to their dashboard and profile/settings
+        if (pathname === '/' || pathname === '/dashboard' || pathname === '/mechanic' || pathname.startsWith('/dashboard/sales')) {
+          window.location.href = mechanicDashboardPath;
         }
       } else if (user?.role === 'STORE_MANAGER') {
         // Restrict access for Store Manager
@@ -78,8 +89,19 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
   const allowedStores = stores.filter(store => 
     user?.role === 'ADMINISTRATOR' || 
     user?.role === 'CORPORATE' || 
-    user?.stores.includes(store.id)
+    user?.role === 'WHOLESALE' ||
+    (user?.stores && user.stores.includes(store.id))
   );
+
+  const isCorporateLevel = user?.role === 'ADMINISTRATOR' || user?.role === 'CORPORATE' || user?.role === 'WHOLESALE';
+  const allStoresLabel = isCorporateLevel ? 'Corporate' : 'All Stores';
+
+  // Auto-select store if user only has access to one
+  useEffect(() => {
+    if (user && !isCorporateLevel && allowedStores.length === 1 && selectedStoreId !== allowedStores[0].id) {
+      setSelectedStoreId(allowedStores[0].id);
+    }
+  }, [user, isCorporateLevel, allowedStores, selectedStoreId, setSelectedStoreId]);
 
   const isActive = (href: string) => {
     if (href === '/dashboard/sales') {
@@ -103,7 +125,10 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
 
   const containerClass = fullWidth ? "max-w-[98%]" : "max-w-7xl";
   const isSalesperson = user?.role === 'SALESPERSON';
+  const isMechanic = user?.role === 'MECHANIC';
   const isStoreManager = user?.role === 'STORE_MANAGER';
+  const isCorporate = user?.role === 'CORPORATE';
+  const isWholesale = user?.role === 'WHOLESALE';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
@@ -123,19 +148,27 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
             </div>
             <div className="flex items-center space-x-4">
               <div className="hidden md:block">
-                <select
-                  value={selectedStoreId || ''}
-                  onChange={(e) => setSelectedStoreId(e.target.value || null)}
-                  className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                  disabled={loading}
-                >
-                  <option value="">All Stores</option>
-                  {allowedStores.map(store => (
-                    <option key={store.id} value={store.id}>
-                      {store.name}
-                    </option>
-                  ))}
-                </select>
+                {(allowedStores.length > 1 || isCorporateLevel) ? (
+                  <select
+                    value={selectedStoreId || ''}
+                    onChange={(e) => setSelectedStoreId(e.target.value || null)}
+                    className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    disabled={loading}
+                  >
+                    <option value="">{allStoresLabel}</option>
+                    {allowedStores.map(store => (
+                      <option key={store.id} value={store.id}>
+                        {store.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  allowedStores.length === 1 && (
+                    <div className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700">
+                      {allowedStores[0].name}
+                    </div>
+                  )
+                )}
               </div>
               <button className="relative p-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200">
                 <Bell className="w-5 h-5" />
@@ -144,31 +177,38 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
               
               <div className="h-8 w-px bg-slate-200 mx-2"></div>
 
-              <div className="flex items-center space-x-3 group relative cursor-pointer">
-                <div className="text-right">
-                  <span className="text-sm font-medium text-slate-700 group-hover:text-red-600 transition-colors">
+              <div className="flex items-center space-x-4">
+                {!isStoreManager && !isSalesperson && !isMechanic && !isCorporate && !isWholesale && (
+                  <a 
+                    href="/tire-master"
+                    className={`hidden md:flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium transition-all shadow-sm ${isActive('/tire-master') ? 'text-red-600 border-red-200 bg-red-50' : 'text-slate-700 hover:bg-red-50 hover:text-red-600 hover:border-red-200'}`}
+                  >
+                    <Database className="w-4 h-4" />
+                    <span>Config</span>
+                  </a>
+                )}
+                {hasRole('ADMINISTRATOR') && (
+                  <a 
+                    href="/dashboard/admin/users"
+                    className={`hidden md:flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium transition-all shadow-sm ${isActive('/dashboard/admin') ? 'text-red-600 border-red-200 bg-red-50' : 'text-slate-700 hover:bg-red-50 hover:text-red-600 hover:border-red-200'}`}
+                  >
+                    <Shield className="w-4 h-4" />
+                    <span>Admin</span>
+                  </a>
+                )}
+                <div className="text-right hidden sm:block">
+                  <span className="block text-sm font-medium text-slate-700">
                     {user ? `${user.firstName} ${user.lastName}` : 'Welcome back'}
                   </span>
                   <p className="text-xs text-slate-500">{user?.role || 'Guest'}</p>
                 </div>
-                <div className="relative">
-                  <button className="w-10 h-10 bg-gradient-to-r from-red-500 to-slate-600 rounded-full flex items-center justify-center shadow-lg ring-2 ring-red-100 group-hover:ring-red-200 transition-all">
-                    <User className="w-5 h-5 text-white" />
-                  </button>
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-200 py-1 hidden group-hover:block z-[100]">
-                    <div className="px-4 py-2 border-b border-slate-100">
-                      <p className="text-sm font-medium text-slate-900">{user?.firstName} {user?.lastName}</p>
-                      <p className="text-xs text-slate-500 truncate">{user?.email}</p>
-                    </div>
-                    <button 
-                      onClick={logout}
-                      className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center transition-colors"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Sign out
-                    </button>
-                  </div>
-                </div>
+                <button 
+                  onClick={logout}
+                  className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all shadow-sm"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign out</span>
+                </button>
               </div>
             </div>
           </div>
@@ -179,7 +219,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
       <nav className="bg-white/90 backdrop-blur-sm border-b border-slate-200/50 shadow-sm">
         <div className={`${containerClass} mx-auto px-4 sm:px-6 lg:px-8`}>
           <div className="flex justify-center space-x-1">
-            {!isStoreManager && !isSalesperson && (
+            {!isStoreManager && !isSalesperson && !isMechanic && !isWholesale && (
               <NavItem
                 href="/stores"
                 icon={<Store className="w-4 h-4" />}
@@ -187,7 +227,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
                 active={isActive('/stores')}
               />
             )}
-            {!isStoreManager && !isSalesperson && (
+            {!isStoreManager && !isSalesperson && !isMechanic && (
               <NavItem
                 href="/insights"
                 icon={<BarChart3 className="w-4 h-4" />}
@@ -195,7 +235,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
                 active={isActive('/insights')}
               />
             )}
-            {!isSalesperson && (
+            {!isSalesperson && !isMechanic && !isWholesale && (
               <NavItem
                 href="/dashboard/sales"
                 icon={<TrendingUp className="w-4 h-4" />}
@@ -203,6 +243,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
                 active={isActive('/dashboard/sales')}
               />
             )}
+            {!isMechanic && !isWholesale && (
             <NavItem
               href={isSalesperson
                 ? `/dashboard/sales/reports/salesperson/${encodeURIComponent(user?.employeeName || `${user?.firstName} ${user?.lastName}`)}`
@@ -212,6 +253,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
               label={isSalesperson ? "My Report" : "Reports"}
               active={isActive('/dashboard/sales/reports')}
             />
+            )}
             {/* <NavItem
               href="/appointments"
               icon={<Calendar className="w-4 h-4" />}
@@ -230,7 +272,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
               label="Large Accounts"
               active={isActive('/accounts/large-accounts')}
             /> */}
-            {!isStoreManager && !isSalesperson && (
+            {!isStoreManager && !isSalesperson && !isMechanic && !isWholesale && (
               <NavItem
                 href="/dashboard/reconciliation"
                 icon={<ClipboardCheck className="w-4 h-4" />}
@@ -238,15 +280,18 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
                 active={isActive('/dashboard/reconciliation')}
               />
             )}
-            {!isSalesperson && (
+            {!isSalesperson && !isWholesale && (
               <NavItem
-                href="/mechanic"
+                href={isMechanic 
+                  ? `/dashboard/mechanic/${encodeURIComponent(user?.employeeName || `${user?.firstName} ${user?.lastName}`)}`
+                  : "/mechanic"
+                }
                 icon={<Wrench className="w-4 h-4" />}
-                label="Mechanic"
-                active={isActive('/mechanic')}
+                label={isMechanic ? "My Dashboard" : "Mechanic"}
+                active={isActive('/mechanic') || isActive('/dashboard/mechanic')}
               />
             )}
-            {!isStoreManager && !isSalesperson && (
+            {!isStoreManager && !isSalesperson && !isMechanic && !isWholesale && (
               <NavItem
                 href="/dashboard/inventory"
                 icon={<Package className="w-4 h-4" />}
@@ -254,7 +299,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
                 active={isActive('/dashboard/inventory') && !isActive('/dashboard/inventory/analytics')}
               />
             )}
-            {!isStoreManager && !isSalesperson && (
+            {!isStoreManager && !isSalesperson && !isMechanic && (
               <NavItem
                 href="/dashboard/inventory/analytics"
                 icon={<TrendingUp className="w-4 h-4" />}
@@ -262,7 +307,7 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
                 active={isActive('/dashboard/inventory/analytics')}
               />
             )}
-            {!isStoreManager && !isSalesperson && (
+            {!isStoreManager && !isSalesperson && !isMechanic && !isWholesale && (
               <NavItem
                 href="/brands"
                 icon={<Tag className="w-4 h-4" />}
@@ -270,28 +315,12 @@ export default function DashboardLayout({ children, title = 'Tire CRM Dashboard'
                 active={isActive('/brands')}
               />
             )}
-            {!isSalesperson && (
+            {!isSalesperson && !isMechanic && (
               <NavItem
                 href="/tires"
                 icon={<Disc className="w-4 h-4" />}
                 label="Tires"
                 active={isActive('/tires')}
-              />
-            )}
-            {!isStoreManager && !isSalesperson && (
-              <NavItem
-                href="/tire-master"
-                icon={<Database className="w-4 h-4" />}
-                label="Config"
-                active={isActive('/tire-master')}
-              />
-            )}
-            {hasRole('ADMINISTRATOR') && (
-              <NavItem
-                href="/dashboard/admin/users"
-                icon={<Shield className="w-4 h-4" />}
-                label="Admin"
-                active={isActive('/dashboard/admin')}
               />
             )}
           </div>

@@ -24,7 +24,10 @@ const StoreContext = createContext<StoreContextType>({
 
 export const useStore = () => useContext(StoreContext);
 
+import { useAuth } from './auth-context';
+
 export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
+  const { token } = useAuth();
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,16 +39,24 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
       setSelectedStoreId(savedStoreId);
     }
 
-    fetch('/api/v1/stores')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          setStores(data.data);
+    if (token) {
+      fetch('/api/v1/stores', {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
       })
-      .catch(err => console.error('Failed to fetch stores', err))
-      .finally(() => setLoading(false));
-  }, []);
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setStores(data.data);
+          }
+        })
+        .catch(err => console.error('Failed to fetch stores', err))
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
+  }, [token]);
 
   const handleSetStore = (id: string | null) => {
     setSelectedStoreId(id);

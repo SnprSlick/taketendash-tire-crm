@@ -33,7 +33,7 @@ export default function SalespersonDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { selectedStoreId } = useStore();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -143,13 +143,17 @@ export default function SalespersonDetailPage() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <button 
-            onClick={() => router.back()}
-            className="flex items-center text-slate-500 hover:text-slate-700 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Reports
-          </button>
+          {user?.role !== 'SALESPERSON' ? (
+            <button 
+              onClick={() => router.back()}
+              className="flex items-center text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Reports
+            </button>
+          ) : (
+            <div></div>
+          )}
           <select 
             value={year}
             onChange={(e) => setYear(e.target.value)}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
 import { useStore } from '../../contexts/store-context';
 import { useAuth } from '@/contexts/auth-context';
 
@@ -24,6 +25,7 @@ type SortKey = 'mechanicName' | 'businessHoursAvailable' | 'totalBilledHours' | 
 type SortDirection = 'asc' | 'desc';
 
 export default function MechanicAnalytics() {
+  const router = useRouter();
   const { selectedStoreId } = useStore();
   const { token } = useAuth();
   const [data, setData] = useState<MechanicAnalyticsData[]>([]);
@@ -272,7 +274,15 @@ export default function MechanicAnalytics() {
             <tbody className="bg-white divide-y divide-gray-200">
               {sortedData.map((item) => (
                 <tr key={item.mechanicName} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.mechanicName}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 group">
+                    <button 
+                      onClick={() => router.push(`/dashboard/mechanic/${encodeURIComponent(item.mechanicName)}`)}
+                      className="hover:text-indigo-600 hover:underline flex items-center"
+                    >
+                      {item.mechanicName}
+                      <ExternalLink size={12} className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
                     {new Date(item.firstSeen).toLocaleDateString()} - {new Date(item.lastSeen).toLocaleDateString()}
                   </td>

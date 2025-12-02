@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, UseInterceptors, UploadedFile, BadRequestException, Query, UseGuards, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Delete, UseInterceptors, UploadedFile, BadRequestException, Query, UseGuards, ForbiddenException, Param } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MechanicService } from './mechanic.service';
 import { diskStorage } from 'multer';
@@ -64,6 +64,34 @@ export class MechanicController {
     }
 
     return this.mechanicService.getMechanicAnalytics(storeId, allowedStoreIds);
+  }
+
+  @Get('details/:name')
+  async getMechanicDetails(
+    @Param('name') name: string,
+    @Query('storeId') storeId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @User() user?: any
+  ) {
+    const decodedName = decodeURIComponent(name);
+    console.log(`Fetching details for mechanic: ${decodedName}`);
+
+    let allowedStoreIds: string[] | undefined;
+    
+    if (user && user.role === 'MECHANIC') {
+      allowedStoreIds = undefined;
+    } else if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
+      if (storeId) {
+        if (!user.stores.includes(storeId)) {
+          throw new ForbiddenException('You do not have access to this store');
+        }
+      } else {
+        allowedStoreIds = user.stores;
+      }
+    }
+
+    return this.mechanicService.getMechanicDetails(decodedName, storeId, allowedStoreIds, startDate, endDate);
   }
 
   @Get()

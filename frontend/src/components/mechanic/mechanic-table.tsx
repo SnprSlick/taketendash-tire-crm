@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ChevronDown, ChevronRight, FileText, User, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ChevronDown, ChevronRight, FileText, User, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
 import { useStore } from '../../contexts/store-context';
 import { useAuth } from '@/contexts/auth-context';
 
@@ -71,6 +72,7 @@ type SortKey = 'mechanicName' | 'totalParts' | 'totalLabor' | 'totalGrossProfit'
 type SortDirection = 'asc' | 'desc';
 
 export default function MechanicTable() {
+  const router = useRouter();
   const { token } = useAuth();
   const { selectedStoreId } = useStore();
   const [summaryData, setSummaryData] = useState<MechanicSummary[]>([]);
@@ -419,9 +421,18 @@ export default function MechanicTable() {
                         <ChevronRight size={16} />
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900 flex items-center">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900 flex items-center group">
                       <User size={16} className="mr-2 text-indigo-600" />
-                      {mechanic.mechanicName}
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/dashboard/mechanic/${encodeURIComponent(mechanic.mechanicName)}`);
+                        }}
+                        className="hover:text-indigo-600 hover:underline flex items-center"
+                      >
+                        {mechanic.mechanicName}
+                        <ExternalLink size={12} className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </button>
                       <span className="ml-2 text-xs font-normal text-gray-500">({mechanic.itemCount} items)</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">

@@ -121,6 +121,14 @@
 ### UI Improvements
 - **Logout**: Added a logout button to the user dropdown and improved its accessibility.
 - **Z-Index Fix**: Fixed an issue where the user dropdown was hidden behind other elements by adjusting the header's z-index.
+- **Header Update**: Changed "Sign Out" from a dropdown item to a permanent button in the header for better visibility and accessibility.
+- **Header Update**: Moved "Config" and "Admin" buttons to the header (left of Sign Out).
+- **Store Selector**:
+  - **Fix**: Updated `DashboardLayout` to correctly label the "All Stores" option.
+    - For Admin/Corporate/Wholesale roles: Labeled as "Corporate".
+    - For other roles (e.g., Store Manager): Labeled as "All Stores".
+  - **Logic**: Ensured `allowedStores` filter includes `WHOLESALE` role.
+  - **Functionality**: Verified that selecting a store filters data on dashboard pages via `StoreContext` and `storeId` query parameter.
 
 ### Bug Fixes
 - **401 Unauthorized Error**: Fixed an issue where the Store Manager role (and others) received 401 errors on analytics endpoints.
@@ -177,6 +185,9 @@
     - **Issue**: Tires page was returning 401 Unauthorized. Navigation buttons were left-aligned.
     - **Fix**: Updated `TireAnalyticsApiService` to warn if token is missing. Updated `TireAnalyticsDashboard` to log token status and ensure `loadData` is called with a valid token.
     - **UI**: Centered navigation buttons in `DashboardLayout`.
+  - [x] **Corporate Role Restrictions**:
+    - [x] Hide 'Config' page from Corporate role
+- [x] Restrict Wholesale role navigation to Restock, Insights, and Tires in `DashboardLayout`.
 
 - [x] **Salesperson Access Control**:
   - [x] Updated `User` model to link to `Employee` (Salesperson).
@@ -224,4 +235,43 @@
       - Add `salesperson` filter for `SALESPERSON` role (showing only sales made by that salesperson to the customer).
     - This ensures salespeople see the complete history of their relationship with the customer, matching the requirement "statistics from the salesperson and that customer".
 
-## Next Steps
+- [x] **Mechanic Dashboard (New Feature)**:
+  - [x] Created detailed mechanic dashboard page (`/dashboard/mechanic/[name]`).
+    - Features: Efficiency Gauge, Key Metrics (Labor, Parts, GP, Hours), Performance Charts, Recent Jobs Table.
+  - [x] Updated `MechanicController` and `MechanicService` with `getMechanicDetails` endpoint.
+    - Returns summary stats, invoices, and chart data filtered by mechanic name and store access.
+  - [x] Updated `DashboardLayout` for Mechanic role:
+    - Redirects `MECHANIC` role to their specific dashboard.
+    - Shows "My Dashboard" link for mechanics.
+    - Hides other navigation items.
+  - [x] Updated `MechanicTable` and `MechanicAnalytics` to link mechanic names to the new dashboard.
+  - [x] Fixed TypeScript error in `MechanicService` where `totalParts` was used before declaration.
+  - [x] Fixed mechanic login redirection to specific dashboard
+    - Updated `AuthContext` to redirect mechanics to their dashboard upon login.
+    - Updated `DashboardLayout` to strictly redirect mechanics away from other dashboard pages (including `/dashboard/sales`).
+  - [x] Fixed mechanic name matching logic
+    - Updated `MechanicService.getMechanicDetails` to handle name variations (e.g., "Andrew R Sparks" vs "Andrew Sparks").
+    - Implemented fallback search: if exact match fails, searches for a mechanic name containing the last name and first name of the requested user.
+    - This resolves the issue where assigned mechanics saw no data due to slight name discrepancies between the user account and the mechanic labor records.
+  - [x] Fix mechanic dashboard data discrepancy (allow mechanics to view data across all stores)
+    - Updated `MechanicController.getMechanicDetails` to bypass store restriction for `MECHANIC` role.
+    - This allows mechanics to see their total performance across all stores, resolving discrepancies with the admin view which aggregates all stores.
+  - [x] Fix mechanic dashboard data discrepancy (efficiency, labor/hr, profit/hr) by aligning calculation logic with Admin Panel (using active period instead of requested range).
+  - [x] Fix mechanic dashboard data discrepancy (set default view to All Time)
+    - Updated `MechanicDashboardPage` to default to "All Time" view to match Admin Panel logic.
+    - Added "All Time" option to the date range dropdown.
+    - Updated `fetchMechanicDetails` to handle "all" date range by not sending `startDate` filter.
+
+- [x] **UI Improvements**:
+  - [x] Header: Changed "Sign Out" to a permanent button.
+  - [x] Header: Moved "Config" and "Admin" buttons to the header (left of Sign Out).
+  - [x] Store Selector:
+    - [x] Hide selector if user only has access to one store.
+    - [x] Auto-select the single store for restricted users.
+    - [x] Ensure "All Stores" vs "Corporate" label is correct based on role.
+    - [x] Ensure selector shows all assigned stores for multi-store users.
+    - [x] Fix store selector for multi-store users
+      - Updated `StoreContext` to include Authorization header in `/api/v1/stores` fetch request.
+      - This ensures that `stores` are correctly fetched and filtered by the backend based on the user's access.
+      - `DashboardLayout` relies on `stores` from `StoreContext` to populate the dropdown.
+  - [x] Login Page: Replaced lock icon with application logo.

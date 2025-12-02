@@ -95,6 +95,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Use window.location to support both App Router and Pages Router
     if (newUser.mustChangePassword) {
       window.location.href = '/change-password';
+    } else if (newUser.role === 'SALESPERSON') {
+      const displayName = newUser.employeeName || `${newUser.firstName} ${newUser.lastName}`;
+      window.location.href = `/dashboard/sales/reports/salesperson/${encodeURIComponent(displayName)}`;
+    } else if (newUser.role === 'MECHANIC') {
+      const displayName = newUser.employeeName || `${newUser.firstName} ${newUser.lastName}`;
+      window.location.href = `/dashboard/mechanic/${encodeURIComponent(displayName)}`;
     } else {
       window.location.href = '/dashboard';
     }

@@ -251,6 +251,64 @@ export class MechanicService {
       whereClause = Prisma.sql`${whereClause} AND ml.created_at <= ${new Date(endDate)}`;
     }
 
+    // Check if exact match exists
+    const exactCount = await this.prisma.mechanicLabor.count({
+        where: { mechanicName: { equals: mechanicName, mode: 'insensitive' } }
+    });
+
+    let targetName = mechanicName;
+
+    if (exactCount === 0) {
+        // Try to find a better match
+        // Assume name is "First Last" or "First Middle Last"
+        const parts = mechanicName.split(' ').filter(p => p.length > 0);
+        if (parts.length >= 2) {
+            const firstName = parts[0];
+            const lastName = parts[parts.length - 1];
+            
+            const candidates = await this.prisma.mechanicLabor.findMany({
+                select: { mechanicName: true },
+                distinct: ['mechanicName'],
+                where: {
+                    mechanicName: {
+                        contains: lastName,
+                        mode: 'insensitive'
+                    }
+                }
+            });
+            
+            // Find candidate that also contains first name
+            const match = candidates.find(c => 
+                c.mechanicName.toLowerCase().includes(firstName.toLowerCase())
+            );
+            
+            if (match) {
+                targetName = match.mechanicName;
+                console.log(`Mechanic name mismatch. Requested: "${mechanicName}", Found: "${targetName}"`);
+                
+                // Update whereClause with the found name
+                whereClause = Prisma.sql`AND LOWER(ml.mechanic_name) = LOWER(${targetName})`;
+                
+                if (storeId) {
+                  whereClause = Prisma.sql`${whereClause} AND i.store_id = ${storeId}`;
+                } else if (allowedStoreIds) {
+                  if (allowedStoreIds.length > 0) {
+                    whereClause = Prisma.sql`${whereClause} AND i.store_id IN (${Prisma.join(allowedStoreIds)})`;
+                  } else {
+                    whereClause = Prisma.sql`${whereClause} AND 1=0`;
+                  }
+                }
+
+                if (startDate) {
+                  whereClause = Prisma.sql`${whereClause} AND ml.created_at >= ${new Date(startDate)}`;
+                }
+                if (endDate) {
+                  whereClause = Prisma.sql`${whereClause} AND ml.created_at <= ${new Date(endDate)}`;
+                }
+            }
+        }
+    }
+
     // 1. Get Summary Stats
     const summary = await this.prisma.$queryRaw<any[]>`
       SELECT 
@@ -271,9 +329,10 @@ export class MechanicService {
     const firstSeen = stats.firstSeen ? new Date(stats.firstSeen) : new Date();
     const lastSeen = stats.lastSeen ? new Date(stats.lastSeen) : new Date();
     
-    // Use provided date range for business hours if available, otherwise use data range
-    const calcStart = startDate ? new Date(startDate) : firstSeen;
-    const calcEnd = endDate ? new Date(endDate) : lastSeen;
+    // Use actual data range for business hours to match Admin Panel logic (Active Period Efficiency)
+    // This prevents "Year to Date" views from penalizing mechanics who started mid-year
+    const calcStart = firstSeen;
+    const calcEnd = lastSeen;
     
     const businessHours = this.calculateBusinessHours(calcStart, calcEnd);
     const totalBilledHours = Number(stats.totalBilledHours) || 0;
@@ -320,7 +379,7 @@ export class MechanicService {
 
     return {
       summary: {
-        mechanicName,
+        mechanicName: targetName,
         totalLabor,
         totalParts,
         totalGrossProfit,

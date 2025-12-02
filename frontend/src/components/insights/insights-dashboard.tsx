@@ -122,7 +122,7 @@ export function InsightsDashboard() {
   const [transfers, setTransfers] = useState<TransferOpportunity[]>([]);
   const [topTires, setTopTires] = useState<Record<string, TopTire[]>>({});
   const [loading, setLoading] = useState(true);
-  const [daysOutOfStockThreshold, setDaysOutOfStockThreshold] = useState<number | null>(null);
+  const [daysOutOfStockThreshold, setDaysOutOfStockThreshold] = useState<number | null>(90);
   const [outlookDays, setOutlookDays] = useState(30);
   const [expandedTransferIndex, setExpandedTransferIndex] = useState<number | null>(null);
 

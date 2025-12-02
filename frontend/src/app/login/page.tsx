@@ -45,8 +45,12 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-2xl shadow-xl border border-slate-200">
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-red-600 rounded-xl flex items-center justify-center shadow-lg mb-4">
-            <Lock className="h-8 w-8 text-white" />
+          <div className="mx-auto flex justify-center mb-6">
+            <img 
+              src="https://taketentire.com/wp-content/uploads/2022/03/Take-Ten.png.webp" 
+              alt="Take Ten Tire" 
+              className="h-24 w-auto object-contain"
+            />
           </div>
           <h2 className="text-3xl font-bold text-slate-900">10Manage</h2>
           <p className="mt-2 text-slate-600">Sign in to your account</p>

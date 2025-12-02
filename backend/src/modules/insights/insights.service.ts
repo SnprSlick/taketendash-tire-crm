@@ -122,8 +122,11 @@ export class InsightsService {
 
     // Filter by days out of stock if threshold provided
     if (daysOutOfStockThreshold > 0) {
-      // User request: "It should be items less than x days. So OOS < 30 days for less than 30 days for example"
-      return analysis.filter(item => item.quantity <= 0 && item.daysOutOfStock < daysOutOfStockThreshold);
+      // Return items that are OOS within threshold OR items that are Low Stock (about to go out)
+      return analysis.filter(item => 
+        (item.quantity <= 0 && item.daysOutOfStock < daysOutOfStockThreshold) ||
+        (item.quantity > 0 && item.status === 'Low Stock')
+      );
     }
 
     return analysis;
