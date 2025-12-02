@@ -39,8 +39,8 @@ export class RedisService implements OnModuleDestroy {
 
     this.client.on('error', (error) => {
       this.logger.error('Redis client error:', error);
-      if (error instanceof AggregateError || error.errors) {
-        this.logger.error('AggregateError details:', JSON.stringify(error.errors, null, 2));
+      if (error instanceof AggregateError || (error as any).errors) {
+        this.logger.error('AggregateError details:', JSON.stringify((error as any).errors, null, 2));
       }
     });
 
