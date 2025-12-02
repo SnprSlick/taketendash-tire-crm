@@ -27,6 +27,7 @@
 - **Dashboard**: Created `InsightsDashboard` frontend using Tailwind CSS.
 - **Metrics**:
   - **Restock Alerts**: Identify items with low quantity. Updated filter to show items out of stock for < 30/60/90/365 days (recent OOS). Added velocity-based outlook (30/60/90/180 days).
+  - **Urgent Actions**: Updated logic to include both "Low Stock" (about to go out) and "Recently Out of Stock" (OOS < 90 days) items when the 90-day OOS filter is active. Defaulted the view to this 90-day outlook.
   - **Cross-Store Transfers**: Added logic to suggest moving inventory from overstocked stores to stores with demand. Implemented "Even Inventory" logic (sets of 2 or balancing odd quantities).
   - **Overstock Alerts**: Identify items with high quantity and low sales.
   - **Labor Efficiency**: Analyze technician utilization.
