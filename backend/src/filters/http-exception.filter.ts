@@ -55,8 +55,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
       error,
     };
 
-    // Add stack trace in development
-    if (process.env.NODE_ENV === 'development' && exception instanceof Error) {
+    // Add stack trace in development OR for debugging
+    // if (process.env.NODE_ENV === 'development' && exception instanceof Error) {
+    if (exception instanceof Error) {
       errorResponse.stack = exception.stack;
     }
 

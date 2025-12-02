@@ -40,34 +40,36 @@ export class AuthService {
 
   async validateUser(username: string, password: string): Promise<any> {
     console.log(`[AuthService] Validating user: '${username}'`);
-    const user = await this.prisma.user.findUnique({
-      where: { username },
-      include: { stores: true, employee: true }
-    });
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { username },
+        include: { stores: true, employee: true }
+      });
 
-    if (user) {
-      console.log(`[AuthService] User found: ${user.username} (ID: ${user.id})`);
-      console.log(`[AuthService] User approved: ${user.isApproved}`);
-      console.log(`[AuthService] Stored password hash length: ${user.password.length}`);
-      console.log(`[AuthService] Received password length: ${password.length}`);
-      
-      const isValid = await bcrypt.compare(password, user.password);
-      console.log(`[AuthService] Password valid: ${isValid}`);
-      
-      if (isValid) {
-        if (!user.isApproved) {
-            console.log('[AuthService] User not approved');
-            throw new UnauthorizedException('Account not approved by administrator');
+      if (user) {
+        console.log(`[AuthService] User found: ${user.username} (ID: ${user.id})`);
+        // ... rest of the logic
+        const isValid = await bcrypt.compare(password, user.password);
+        console.log(`[AuthService] Password valid: ${isValid}`);
+        
+        if (isValid) {
+          if (!user.isApproved) {
+              console.log('[AuthService] User not approved');
+              throw new UnauthorizedException('Account not approved by administrator');
+          }
+          const { password, ...result } = user;
+          return result;
+        } else {
+          console.log('[AuthService] Password mismatch');
         }
-        const { password, ...result } = user;
-        return result;
       } else {
-        console.log('[AuthService] Password mismatch');
+          console.log(`[AuthService] User not found: '${username}'`);
       }
-    } else {
-        console.log(`[AuthService] User not found: '${username}'`);
+      return null;
+    } catch (error) {
+      console.error('[AuthService] Error validating user:', error);
+      throw error;
     }
-    return null;
   }
 
   async login(loginDto: LoginDto): Promise<AuthResponse> {
