@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, TrendingUp, TrendingDown, Package, Users, DollarSign, ArrowRight, BarChart3 } from 'lucide-react';
+import { AlertTriangle, TrendingUp, TrendingDown, Package, Users, DollarSign, ArrowRight, BarChart3, X } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useAuth } from '@/contexts/auth-context';
@@ -19,6 +19,9 @@ interface RestockAlert {
   message: string;
   status: string;
   suggestedOrder: number;
+  lastSaleDate?: string;
+  soldInLast90Days?: number;
+  minStockLevel?: number;
 }
 
 interface DeadStock {
@@ -125,6 +128,10 @@ export function InsightsDashboard() {
   const [daysOutOfStockThreshold, setDaysOutOfStockThreshold] = useState<number | null>(90);
   const [outlookDays, setOutlookDays] = useState(30);
   const [expandedTransferIndex, setExpandedTransferIndex] = useState<number | null>(null);
+  const [showAllRestockModal, setShowAllRestockModal] = useState(false);
+  const [showOOSOnly, setShowOOSOnly] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [selectedSize, setSelectedSize] = useState<string>('ALL');
 
   useEffect(() => {
     const fetchInsights = async () => {
@@ -177,6 +184,41 @@ export function InsightsDashboard() {
     };
     fetchRestockAlerts();
   }, [daysOutOfStockThreshold, outlookDays, token]);
+
+  const getAlertStyle = (status: string) => {
+    if (status === 'Out of Stock') {
+      return {
+        container: 'border-red-200 bg-red-50',
+        icon: 'text-red-600',
+        title: 'text-red-800',
+        text: 'text-red-700',
+        badge: 'border-red-300 bg-white text-red-700'
+      };
+    }
+    // Low Stock -> Yellow
+    return {
+      container: 'border-yellow-200 bg-yellow-50',
+      icon: 'text-yellow-600',
+      title: 'text-yellow-800',
+      text: 'text-yellow-700',
+      badge: 'border-yellow-300 bg-white text-yellow-700'
+    };
+  };
+
+  const sortedAlerts = [...restockAlerts]
+    .filter(alert => {
+      // Filter Rule: If OOS, only show if suggested order is at least 6
+      if (alert.currentStock <= 0 && alert.suggestedOrder < 6) return false;
+      
+      // Filter Rule: If supply exceeds outlook days, do not include
+      if (alert.daysOfSupply > outlookDays) return false;
+
+      return true;
+    })
+    .sort((a, b) => {
+      // Sort by Suggested Order Descending
+      return b.suggestedOrder - a.suggestedOrder;
+    });
 
   if (loading) {
     return <div className="p-8 text-center">Loading insights...</div>;
@@ -366,40 +408,70 @@ export function InsightsDashboard() {
               </div>
             </div>
             <div className="p-6 space-y-4">
-              {restockAlerts.filter(a => a.status === 'Low Stock').slice(0, 5).map((alert) => (
-                <div key={alert.productId} className="relative w-full rounded-lg border border-red-200 p-4 bg-red-50">
-                  <div className="flex items-start gap-4">
-                    <Package className="h-4 w-4 text-red-600 mt-1" />
-                    <div className="flex-1">
-                      <h5 className="mb-1 font-medium leading-none tracking-tight text-red-800">
-                        {alert.productName}
-                      </h5>
-                      <div className="text-xs text-red-700 mb-1">
-                        SKU: {alert.sku} {alert.manufacturerCode ? `• PN: ${alert.manufacturerCode}` : ''}
-                      </div>
-                      <div className="text-sm text-red-700 flex justify-between items-center mt-2">
-                        {alert.currentStock === 0 ? (
-                          <span className="font-semibold">Out of Stock ({alert.daysOutOfStock} days)</span>
-                        ) : (
-                          <span>{Math.round(alert.daysOfSupply)} days supply left ({alert.currentStock} units)</span>
-                        )}
-                        <span className="inline-flex items-center rounded-full border border-red-300 bg-white px-2.5 py-0.5 text-xs font-semibold text-red-700">
-                          Suggested Order: {alert.suggestedOrder}
-                        </span>
-                      </div>
-                      <div className="text-xs text-red-600 mt-1">
-                        {alert.storeName} • Velocity: {alert.dailyVelocity.toFixed(2)}/day
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {restockAlerts.filter(a => a.status === 'Low Stock').length === 0 && (
-                <div className="text-center text-gray-500 py-4">No urgent restock alerts for this outlook.</div>
-              )}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b">
+                    <tr>
+                      <th className="px-4 py-3">Product</th>
+                      <th className="px-4 py-3">Store</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Velocity</th>
+                      <th className="px-4 py-3">Last Sold</th>
+                      <th className="px-4 py-3 text-center">Order</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedAlerts.slice(0, 5).map((alert) => {
+                      const styles = getAlertStyle(alert.status);
+                      return (
+                        <tr key={alert.productId} className={`border-b ${styles.container}`}>
+                          <td className="px-4 py-3">
+                            <div className={`font-medium ${styles.title}`}>{alert.productName}</div>
+                            <div className={`text-xs ${styles.text}`}>
+                              {alert.sku} {alert.manufacturerCode ? `• ${alert.manufacturerCode}` : ''}
+                            </div>
+                          </td>
+                          <td className={`px-4 py-3 ${styles.text}`}>{alert.storeName}</td>
+                          <td className="px-4 py-3">
+                            {alert.currentStock <= 0 ? (
+                              <span className={`font-semibold ${styles.text}`}>Out of Stock ({alert.daysOutOfStock}d)</span>
+                            ) : (
+                              <span className={styles.text}>{Math.round(alert.daysOfSupply)}d supply</span>
+                            )}
+                          </td>
+                          <td className={`px-4 py-3 ${styles.text}`}>{alert.dailyVelocity.toFixed(2)}/day</td>
+                          <td className={`px-4 py-3 ${styles.text}`}>
+                            {alert.lastSaleDate ? (
+                              <div>
+                                <div>{new Date(alert.lastSaleDate).toLocaleDateString()}</div>
+                                {alert.soldInLast90Days !== undefined && (
+                                  <div className="text-xs opacity-75">{alert.soldInLast90Days} in 90d</div>
+                                )}
+                              </div>
+                            ) : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${styles.badge}`}>
+                              {alert.suggestedOrder}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {sortedAlerts.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="text-center text-gray-500 py-4">No urgent restock alerts for this outlook.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
               {restockAlerts.length > 5 && (
-                <button className="w-full inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-gray-100 h-10 px-4 py-2 text-gray-600">
-                  View All {restockAlerts.length} Alerts <ArrowRight className="ml-2 h-4 w-4" />
+                <button 
+                  onClick={() => setShowAllRestockModal(true)}
+                  className="w-full inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-gray-100 h-10 px-4 py-2 text-gray-600"
+                >
+                  View All {sortedAlerts.length} Alerts <ArrowRight className="ml-2 h-4 w-4" />
                 </button>
               )}
             </div>
@@ -758,6 +830,216 @@ export function InsightsDashboard() {
           </div>
         </div>
       </div>
+
+      {/* All Restock Alerts Modal */}
+      {showAllRestockModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-7xl max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex flex-col gap-4 p-6 border-b border-gray-100">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">All Restock Alerts</h3>
+                  <p className="text-sm text-gray-500">
+                    {sortedAlerts.length} items require attention based on current outlook settings.
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setShowAllRestockModal(false)}
+                  className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-wrap items-center gap-4">
+                {/* Group Filter */}
+                <div className="flex items-center gap-2">
+                  <label htmlFor="modal-category" className="text-sm text-gray-600">Group:</label>
+                  <select 
+                    id="modal-category"
+                    className="text-xs border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 py-1"
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                  >
+                    <option value="ALL">All Groups</option>
+                    {Array.from(new Set(restockAlerts.map(a => a.type))).sort().map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Size Filter */}
+                <div className="flex items-center gap-2">
+                  <label htmlFor="modal-size" className="text-sm text-gray-600">Size:</label>
+                  <select 
+                    id="modal-size"
+                    className="text-xs border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 py-1"
+                    value={selectedSize}
+                    onChange={(e) => setSelectedSize(e.target.value)}
+                  >
+                    <option value="ALL">All Sizes</option>
+                    {Array.from(new Set(restockAlerts.map(a => a.size).filter(Boolean))).sort().map(size => (
+                      <option key={size as string} value={size as string}>{size}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Outlook Filter */}
+                <div className="flex items-center gap-2">
+                  <label htmlFor="modal-outlook" className="text-sm text-gray-600">Outlook:</label>
+                  <select 
+                    id="modal-outlook"
+                    className="text-xs border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 py-1"
+                    value={outlookDays}
+                    onChange={(e) => setOutlookDays(Number(e.target.value))}
+                  >
+                    <option value="30">30 Days</option>
+                    <option value="60">60 Days</option>
+                    <option value="90">90 Days</option>
+                    <option value="180">180 Days</option>
+                  </select>
+                </div>
+
+                {/* OOS Toggle */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="oos-toggle"
+                    checked={showOOSOnly}
+                    onChange={(e) => setShowOOSOnly(e.target.checked)}
+                    className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                  />
+                  <label htmlFor="oos-toggle" className="text-sm text-gray-700">Out of Stock Only</label>
+                </div>
+              </div>
+            </div>
+            
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b">
+                    <tr>
+                      <th className="px-4 py-3">Product Details</th>
+                      <th className="px-4 py-3">Store Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const filteredAlerts = sortedAlerts.filter(alert => {
+                        const categoryMatch = selectedCategory === 'ALL' || alert.type === selectedCategory;
+                        const sizeMatch = selectedSize === 'ALL' || alert.size === selectedSize;
+                        const oosMatch = !showOOSOnly || alert.currentStock <= 0;
+                        return categoryMatch && sizeMatch && oosMatch;
+                      });
+
+                      const groupedAlerts = filteredAlerts.reduce((acc, alert) => {
+                        if (!acc[alert.sku]) {
+                          acc[alert.sku] = [];
+                        }
+                        acc[alert.sku].push(alert);
+                        return acc;
+                      }, {} as Record<string, RestockAlert[]>);
+
+                      // Sort groups by max suggested order
+                      const sortedGroups = Object.entries(groupedAlerts).sort(([, alertsA], [, alertsB]) => {
+                        const maxOrderA = Math.max(...alertsA.map(a => a.suggestedOrder));
+                        const maxOrderB = Math.max(...alertsB.map(a => a.suggestedOrder));
+                        return maxOrderB - maxOrderA;
+                      });
+
+                      return sortedGroups.map(([sku, alerts]) => {
+                        const firstAlert = alerts[0];
+                        return (
+                          <tr key={sku} className="border-b hover:bg-gray-50">
+                            {/* Product Info Column */}
+                            <td className="px-4 py-4 align-top w-1/3">
+                              <div className="font-medium text-gray-900 text-base">{firstAlert.productName}</div>
+                              <div className="text-sm text-gray-500 mt-1">
+                                <span className="font-semibold">SKU:</span> {sku}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                <span className="font-semibold">Brand:</span> {firstAlert.brand}
+                              </div>
+                              {firstAlert.size && (
+                                <div className="text-sm text-gray-500">
+                                  <span className="font-semibold">Size:</span> {firstAlert.size}
+                                </div>
+                              )}
+                              <div className="text-xs text-gray-400 mt-2">
+                                {firstAlert.manufacturerCode}
+                              </div>
+                            </td>
+
+                            {/* Store Status Column */}
+                            <td className="px-4 py-4 align-top">
+                              <div className="grid gap-3">
+                                {alerts.map(alert => {
+                                  const styles = getAlertStyle(alert.status);
+                                  return (
+                                    <div key={alert.storeName} className={`flex items-center justify-between p-3 rounded-lg border ${styles.container}`}>
+                                      <div className="flex-1">
+                                        <div className="font-semibold text-gray-900">{alert.storeName}</div>
+                                        <div className="text-xs text-gray-600 mt-0.5">
+                                          Velocity: {alert.dailyVelocity.toFixed(2)}/day
+                                        </div>
+                                        <div className="text-xs text-gray-500 mt-0.5">
+                                          Last Sold: {alert.lastSaleDate ? new Date(alert.lastSaleDate).toLocaleDateString() : 'Never'}
+                                          {alert.soldInLast90Days !== undefined && ` (${alert.soldInLast90Days} in 90d)`}
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="flex flex-col items-end gap-1">
+                                        <div className="flex items-center gap-2">
+                                          <span className={`text-sm font-medium ${
+                                            alert.currentStock <= 0 ? 'text-red-600' : 'text-gray-900'
+                                          }`}>
+                                            {alert.currentStock <= 0 ? 'Out of Stock' : `${alert.currentStock} In Stock`}
+                                          </span>
+                                          <span className={`text-xs px-2 py-0.5 rounded-full ${styles.badge}`}>
+                                            {alert.currentStock <= 0 ? `${alert.daysOutOfStock}d OOS` : `${Math.round(alert.daysOfSupply)}d Supply`}
+                                          </span>
+                                        </div>
+                                        
+                                        {alert.suggestedOrder > 0 && (
+                                          <div className="flex items-center gap-1 text-sm font-bold text-indigo-600">
+                                            <span>Order: {alert.suggestedOrder}</span>
+                                            {alert.minStockLevel && <span className="text-xs font-normal text-gray-500">(Min: {alert.minStockLevel})</span>}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                    {sortedAlerts.filter(alert => (!showOOSOnly || alert.currentStock <= 0) && (selectedCategory === 'ALL' || alert.type === selectedCategory) && (selectedSize === 'ALL' || alert.size === selectedSize)).length === 0 && (
+                      <tr>
+                        <td colSpan={2} className="text-center text-gray-500 py-8">No urgent restock alerts found matching criteria.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <div className="p-6 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-end">
+              <button
+                onClick={() => setShowAllRestockModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 bg-white border border-gray-300 rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

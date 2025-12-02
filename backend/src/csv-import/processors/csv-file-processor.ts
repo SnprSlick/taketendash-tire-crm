@@ -62,7 +62,7 @@ export class CsvFileProcessor {
       batchSize = 100,
       skipEmptyLines = true,
       encoding = 'utf8',
-      maxFileSize = 500 * 1024 * 1024, // 500MB default
+      maxFileSize = 2 * 1024 * 1024 * 1024, // 2GB default
       progressCallback
     } = options;
 

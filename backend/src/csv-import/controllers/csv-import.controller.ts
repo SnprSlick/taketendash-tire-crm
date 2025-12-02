@@ -82,7 +82,8 @@ export class CsvImportController {
   @UseInterceptors(FileInterceptor('file'))
   async uploadAndImport(
     @UploadedFile() file: any,
-    @Body('options') options?: string
+    @Body('options') options?: string,
+    @Body('duplicateHandling') duplicateHandling?: string
   ) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
@@ -93,23 +94,36 @@ export class CsvImportController {
       throw new BadRequestException('Only CSV files are allowed');
     }
 
-    // Validate file size (500MB max)
-    if (file.size > 500 * 1024 * 1024) {
-      throw new BadRequestException('File size cannot exceed 500MB');
+    // Validate file size (2GB max)
+    if (file.size > 2 * 1024 * 1024 * 1024) {
+      throw new BadRequestException('File size cannot exceed 2GB');
     }
 
     this.logger.log(`=== UPDATED CODE: Processing uploaded file: ${file.originalname} ===`);
+    this.logger.log(`File details: path=${file.path}, size=${file.size}, mimetype=${file.mimetype}`);
     this.logger.log(`File buffer available: ${file.buffer ? file.buffer.length + ' bytes' : 'undefined'}`);
 
-        // Handle file path - create temporary file if file.path is undefined
+    // Handle file path - create temporary file if file.path is undefined
     let filePath = file.path;
     if (!filePath) {
+      if (!file.buffer) {
+        this.logger.error('File upload failed: Both file path and buffer are missing');
+        throw new BadRequestException('File upload failed: Could not access file content');
+      }
+
       const tempDir = path.join(process.cwd(), 'uploads', 'csv');
       if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
       }
       filePath = path.join(tempDir, file.originalname);
       fs.writeFileSync(filePath, file.buffer);
+      this.logger.log(`Created temporary file from buffer: ${filePath}`);
+    } else {
+      // Verify the file exists at the path
+      if (!fs.existsSync(filePath)) {
+        this.logger.error(`File path provided but file does not exist: ${filePath}`);
+        throw new BadRequestException('File upload failed: File not found on server');
+      }
     }
 
     // Parse options
@@ -122,15 +136,25 @@ export class CsvImportController {
       }
     }
 
-    // Call service
-    const result = await this.csvImportService.importCsv({
-      filePath,
-      fileName: file.originalname,
-      userId: 'system', // TODO: Get from auth
-      ...importOptions
-    });
+    // Merge direct body parameters
+    if (duplicateHandling) {
+      importOptions.duplicateHandling = duplicateHandling;
+    }
 
-    return result;
+    // Call service
+    try {
+      const result = await this.csvImportService.importCsv({
+        filePath,
+        fileName: file.originalname,
+        userId: 'system', // TODO: Get from auth
+        ...importOptions
+      });
+
+      return result;
+    } catch (error) {
+      this.logger.error(`Import service failed: ${error.message}`, error.stack);
+      throw new BadRequestException(`Import failed: ${error.message}`);
+    }
   }
 
   @Post('inventory')

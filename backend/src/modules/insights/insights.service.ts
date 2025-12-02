@@ -11,10 +11,15 @@ export class InsightsService {
   async getInventoryRiskAnalysis(storeId?: string, outlookDays: number = 30, daysOutOfStockThreshold: number = 0) {
     const lookbackDays = 180;
     
-    // Build store filter
+    // Build store filter for main query and CTEs
     let storeFilter = Prisma.sql``;
+    let invoiceStoreFilter = Prisma.sql``;
+    let inventoryStoreFilter = Prisma.sql``;
+    
     if (storeId) {
-      storeFilter = Prisma.sql`AND s.id = ${storeId}`;
+      storeFilter = Prisma.sql`AND inv.store_id = ${storeId}`;
+      invoiceStoreFilter = Prisma.sql`AND i.store_id = ${storeId}`;
+      inventoryStoreFilter = Prisma.sql`AND s.id = ${storeId}`;
     }
 
     // Query to get product inventory and sales velocity
@@ -33,19 +38,9 @@ export class InsightsService {
       soldLast90Days: number;
       dailyVelocity: number;
       lastSaleDate: Date | null;
+      soldInLast90Days: number;
     }>>`
-      WITH SalesHistory AS (
-        SELECT
-          ili."tire_master_product_id" as product_id,
-          i."store_id",
-          SUM(ili.quantity) as total_sold,
-          MAX(i."invoice_date") as last_sale_date
-        FROM "invoice_line_items" ili
-        JOIN "invoices" i ON ili."invoice_id" = i.id
-        WHERE i."invoice_date" >= NOW() - INTERVAL '180 days'
-        GROUP BY ili."tire_master_product_id", i."store_id"
-      ),
-      Inventory AS (
+      WITH Inventory AS (
         SELECT
           tmi."productId" as product_id,
           s.id as store_id,
@@ -54,6 +49,41 @@ export class InsightsService {
         FROM "tire_master_inventory" tmi
         JOIN "tire_master_locations" tml ON tmi."locationId" = tml.id
         JOIN "stores" s ON tml."tireMasterCode" = s.code
+        WHERE 1=1 ${inventoryStoreFilter}
+      ),
+      LastSales AS (
+        SELECT
+          ili."tire_master_product_id" as product_id,
+          i."store_id",
+          MAX(i."invoice_date") as last_sale_date
+        FROM "invoice_line_items" ili
+        JOIN "invoices" i ON ili."invoice_id" = i.id
+        WHERE i."invoice_date" >= NOW() - INTERVAL '365 days'
+        ${invoiceStoreFilter}
+        GROUP BY ili."tire_master_product_id", i."store_id"
+      ),
+      Sales180 AS (
+        SELECT
+          ili."tire_master_product_id" as product_id,
+          i."store_id",
+          SUM(ili.quantity) as total_sold_180
+        FROM "invoice_line_items" ili
+        JOIN "invoices" i ON ili."invoice_id" = i.id
+        WHERE i."invoice_date" >= NOW() - INTERVAL '180 days'
+        ${invoiceStoreFilter}
+        GROUP BY ili."tire_master_product_id", i."store_id"
+      ),
+      SalesPrior AS (
+        SELECT
+          ls.product_id,
+          ls.store_id,
+          SUM(ili.quantity) as sold_90_days_prior
+        FROM LastSales ls
+        JOIN "invoices" i ON i.store_id = ls.store_id
+        JOIN "invoice_line_items" ili ON ili.invoice_id = i.id AND ili.tire_master_product_id = ls.product_id
+        WHERE i.invoice_date >= ls.last_sale_date - INTERVAL '90 days'
+        AND i.invoice_date <= ls.last_sale_date
+        GROUP BY ls.product_id, ls.store_id
       )
       SELECT
         p.id as "productId",
@@ -67,16 +97,40 @@ export class InsightsService {
         inv.store_id as "storeId",
         inv.store_name as "storeName",
         inv.quantity,
-        COALESCE(sh.total_sold, 0) as "soldLast90Days",
-        COALESCE(sh.total_sold, 0) / 180.0 as "dailyVelocity",
-        sh.last_sale_date as "lastSaleDate"
+        COALESCE(s180.total_sold_180, 0) as "soldLast90Days",
+        COALESCE(s180.total_sold_180, 0) / 180.0 as "dailyVelocity",
+        ls.last_sale_date as "lastSaleDate",
+        COALESCE(sp.sold_90_days_prior, 0) as "soldInLast90Days"
       FROM "tire_master_products" p
       JOIN Inventory inv ON p.id = inv.product_id
-      LEFT JOIN SalesHistory sh ON p.id = sh.product_id AND inv.store_id = sh.store_id
+      LEFT JOIN LastSales ls ON p.id = ls.product_id AND inv.store_id = ls.store_id
+      LEFT JOIN Sales180 s180 ON p.id = s180.product_id AND inv.store_id = s180.store_id
+      LEFT JOIN SalesPrior sp ON p.id = sp.product_id AND inv.store_id = sp.store_id
       WHERE p."isTire" = true
       AND p.quality IN ('PREMIUM', 'STANDARD', 'ECONOMY')
-      ${storeFilter}
     `;
+
+    // Fetch avg quantities for min stock calculation
+    const productIds = inventoryData.map(i => i.productId);
+    const avgQuantities = productIds.length > 0 ? await this.prisma.$queryRaw<Array<{ productId: string; avgQty: number }>>`
+      SELECT 
+        ili."tire_master_product_id" as "productId",
+        AVG(ili.quantity) as "avgQty"
+      FROM "invoice_line_items" ili
+      WHERE ili."tire_master_product_id" IN (${Prisma.join(productIds)})
+      GROUP BY ili."tire_master_product_id"
+    ` : [];
+    
+    const avgQtyMap = new Map<string, number>();
+    avgQuantities.forEach(q => avgQtyMap.set(q.productId, Number(q.avgQty)));
+
+    const getRoundedInstallQty = (qty: number) => {
+      if (qty < 2) return 2;
+      if (qty > 8) return 10;
+      if (qty > 6) return 8;
+      if (qty > 2) return 4;
+      return 2;
+    };
 
     // Process data to calculate risk and suggestions
     const analysis = inventoryData.map(item => {
@@ -97,13 +151,32 @@ export class InsightsService {
         daysOutOfStock = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       }
 
+      // Calculate Min Stock Level
+      const rawAvgQty = avgQtyMap.get(item.productId) || 
+        (item.type === 'PASSENGER' || item.type === 'LIGHT_TRUCK' ? 4 : 2);
+      const minStockLevel = getRoundedInstallQty(rawAvgQty);
+
       // Risk Logic
-      if (daysOfSupply < outlookDays && dailyVelocity > 0) {
-        status = 'Low Stock';
-        const needed = Math.ceil(dailyVelocity * outlookDays);
-        suggestedOrder = Math.max(0, needed - quantity);
-        suggestion = `Order ${suggestedOrder} units to cover ${outlookDays} days`;
-      } else if (daysOfSupply > 180 && quantity > 4) { // Threshold for overstock
+      if (dailyVelocity > 0) {
+        const neededVelocity = Math.ceil(dailyVelocity * outlookDays);
+        const targetInventory = Math.max(neededVelocity, minStockLevel);
+        
+        if (quantity < targetInventory) {
+          suggestedOrder = targetInventory - quantity;
+          
+          // Ensure we don't suggest tiny orders unless it's critical?
+          // User said: "If the restock is 1 or less ignore"
+          if (suggestedOrder <= 1) {
+            suggestedOrder = 0;
+          } else {
+            if (quantity <= 0) status = 'Out of Stock';
+            else status = 'Low Stock';
+            suggestion = `Order ${suggestedOrder} units (Target: ${targetInventory}, Min: ${minStockLevel})`;
+          }
+        }
+      }
+      
+      if (status === 'OK' && daysOfSupply > 180 && quantity > 4) { // Threshold for overstock
         status = 'Overstock';
         suggestion = 'Consider transfer or promotion';
       }
@@ -112,21 +185,28 @@ export class InsightsService {
         ...item,
         dailyVelocity,
         quantity,
+        currentStock: quantity,
         daysOfSupply,
         status,
         suggestion,
         suggestedOrder,
-        daysOutOfStock
+        daysOutOfStock,
+        soldInLast90Days: Number(item.soldInLast90Days),
+        minStockLevel
       };
     });
 
     // Filter by days out of stock if threshold provided
     if (daysOutOfStockThreshold > 0) {
       // Return items that are OOS within threshold OR items that are Low Stock (about to go out)
-      return analysis.filter(item => 
-        (item.quantity <= 0 && item.daysOutOfStock < daysOutOfStockThreshold) ||
-        (item.quantity > 0 && item.status === 'Low Stock')
+      // For OOS items, ensure they have been sold recently (daysOutOfStock > 0 implies a lastSaleDate exists)
+      const filtered = analysis.filter(item => 
+        (item.quantity <= 0 && item.daysOutOfStock < daysOutOfStockThreshold && item.daysOutOfStock > 0 && item.suggestedOrder > 1) ||
+        (item.quantity > 0 && item.status === 'Low Stock' && item.suggestedOrder > 1)
       );
+
+      // Sort by suggestedOrder DESC
+      return filtered.sort((a, b) => b.suggestedOrder - a.suggestedOrder);
     }
 
     return analysis;

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { FileText, Package, Tag, Upload, Trash2, CheckCircle, AlertCircle, Users } from 'lucide-react';
 import CsvImportClientPage from '../../app/csv-import/csv-import-client';
+import { useAuth } from '../../contexts/auth-context';
 
 type ImportType = 'invoices' | 'inventory' | 'brands' | 'employees';
 
 export default function ImportCenter() {
+  const { token } = useAuth();
   const [activeTab, setActiveTab] = useState<ImportType>('invoices');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -27,6 +29,9 @@ export default function ImportCenter() {
 
       const res = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData,
       });
 
@@ -51,8 +56,11 @@ export default function ImportCenter() {
 
     try {
       const endpoint = type === 'inventory' ? '/api/v1/csv-import/inventory' : '/api/v1/csv-import/brands';
-      const res = await fetch(endpoint, {
+      const res = await fetch(`http://localhost:3001${endpoint}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       if (!res.ok) throw new Error('Clear failed');

@@ -12,9 +12,9 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log', 'debug'],
   });
 
-  // Increase payload size limit to 500MB
-  app.use(json({ limit: '500mb' }));
-  app.use(urlencoded({ extended: true, limit: '500mb' }));
+  // Increase payload size limit to 2GB
+  app.use(json({ limit: '2gb' }));
+  app.use(urlencoded({ extended: true, limit: '2gb' }));
 
   console.log('✅ NestJS application created');
 

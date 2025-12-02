@@ -28,6 +28,7 @@
 - **Metrics**:
   - **Restock Alerts**: Identify items with low quantity. Updated filter to show items out of stock for < 30/60/90/365 days (recent OOS). Added velocity-based outlook (30/60/90/180 days).
   - **Urgent Actions**: Updated logic to include both "Low Stock" (about to go out) and "Recently Out of Stock" (OOS < 90 days) items when the 90-day OOS filter is active. Defaulted the view to this 90-day outlook.
+  - **Urgent Actions**: Added "Last Sold Date" and "Quantity Sold in 90 Days Prior to Last Sale" to the display for better context on dead stock candidates.
   - **Cross-Store Transfers**: Added logic to suggest moving inventory from overstocked stores to stores with demand. Implemented "Even Inventory" logic (sets of 2 or balancing odd quantities).
   - **Overstock Alerts**: Identify items with high quantity and low sales.
   - **Labor Efficiency**: Analyze technician utilization.
@@ -84,6 +85,13 @@
     - **Filter**: Ensured excluded categories are filtered out in the frontend rendering loop.
     - **Fix**: Removed extra closing `</div>` tag in `InsightsDashboard`.
 
+
+  - **Table View**:
+    - Refactored "Inventory at Risk" (Urgent Actions) display from cards to a color-coded table.
+    - Applied to both the main dashboard widget and the "View All" modal.
+    - **Columns**: Product, Store, Status, Velocity, Last Sold, Order Qty.
+    - **Styling**: Rows are color-coded (Red for Out of Stock, Yellow for Low Stock) using the same logic as the previous cards.
+    - **Sorting**: Preserved the sorting logic (Stocked items first, then by Order Qty).
 
 ## Current State
 - Backend server is running (manually started by user).
@@ -276,3 +284,38 @@
       - This ensures that `stores` are correctly fetched and filtered by the backend based on the user's access.
       - `DashboardLayout` relies on `stores` from `StoreContext` to populate the dropdown.
   - [x] Login Page: Replaced lock icon with application logo.
+
+### Insights Dashboard Improvements
+- **Inventory Risk (Urgent Actions)**:
+  - **Color Coding**:
+    - **Low Stock**: Yellow/Amber styling (for items with quantity > 0 but low days of supply).
+    - **Out of Stock**: Red styling (for items with quantity <= 0).
+  - **Sorting**:
+    - **Primary**: Stock Status (Low Stock items appear *before* Out of Stock items).
+    - **Secondary**: Suggested Order Quantity (Descending).
+  - **Backend Update**: Updated `InsightsService.getInventoryRiskAnalysis` to explicitly set `status = 'Out of Stock'` when quantity is <= 0, enabling precise frontend styling.
+  - **Frontend Update**: Updated `InsightsDashboard` to implement the new sorting and dynamic styling logic for both the main dashboard card and the "View All" modal.
+  - **Urgent Actions Modal**:
+    - **Status Text**: Removed empty parentheses `()` when stock is 0 or undefined. Now shows "xd supply" or "Out of Stock (xd)".
+    - **OOS Toggle**: Added a checkbox to filter the list to show "Out of Stock Only".
+    - **Outlook Selector**: Added a dropdown to change the outlook period (30/60/90/180 days) directly within the modal.
+    - **Stock Column**: Added "Stock" column to show current quantity.
+    - **Group Filter**: Added "Group" filter dropdown to filter by product category (e.g., Light Truck, Passenger).
+    - **Filtering**: Updated logic to support both OOS toggle and Category filter simultaneously.
+    - **Refinement**:
+      - **Group by SKU**: Updated modal to group alerts by SKU. If multiple stores have alerts for the same SKU, they are displayed under a single product header.
+      - **Size Filter**: Added a "Size" filter dropdown to the modal.
+      - **OOS Logic**: Refined "Out of Stock Only" toggle to check `currentStock <= 0` for accuracy.
+      - **Modal Width**: Increased modal width to `max-w-7xl` for better readability.
+      - **Sorting Refinement**: Updated sorting to prioritize In-Stock items first, followed by Out-of-Stock items.
+      - **Display Refinement**: Explicitly labeled items as "Out of Stock" or "X In Stock" for clarity.
+      - **Fix**: Fixed "undefined in stock" error by mapping `quantity` to `currentStock` in `InsightsService`.
+  - [x] Update Urgent Actions modal:
+    - [x] Sort by most suggested tires to order (descending) by default.
+    - [x] Filter out Out of Stock items if suggested order is less than 6.
+    - [x] Update alert counts to reflect filtered results.
+    - [x] Explicitly sort grouped alerts by max suggested order.
+    - [x] Filter out items with supply exceeding outlook days.
+  - [x] **Config Page Import 401**:
+    - **Issue**: Import functionality on the Config page was returning 401 Unauthorized.
+    - **Fix**: Updated `ImportCenter` and `CsvImportClientPage` components to include the `Authorization` header in all fetch requests (`/api/v1/csv-import/...` and `/api/v1/invoices/...`).

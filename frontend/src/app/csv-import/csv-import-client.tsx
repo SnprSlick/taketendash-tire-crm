@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FileUp, Download, Eye, CheckCircle, AlertCircle, Upload, ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
+import { useAuth } from '../../contexts/auth-context';
 
 interface ParsedInvoice {
   invoiceNumber: string;
@@ -42,6 +43,7 @@ interface DashboardStats {
 }
 
 export default function CsvImportClientPage() {
+  const { token } = useAuth();
   const [csvData, setCsvData] = useState<ParsedInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +97,11 @@ export default function CsvImportClientPage() {
       if (typeof window === 'undefined' || !isMounted) return;
       
       try {
-        const response = await fetch('/api/v1/invoices/stats/summary');
+        const response = await fetch('/api/v1/invoices/stats/summary', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.data) {
@@ -128,6 +134,7 @@ export default function CsvImportClientPage() {
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
         });
         const requestTime = Date.now() - startTime;
@@ -274,7 +281,11 @@ Troubleshooting:
   const pollProgress = async (batchId: string) => {
     const pollInterval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/v1/csv-import/progress/${batchId}`);
+        const res = await fetch(`/api/v1/csv-import/progress/${batchId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         
         if (res.status === 404) {
            // Batch might be done or not found. Stop polling.
@@ -328,6 +339,9 @@ Troubleshooting:
 
       const response = await fetch('/api/v1/csv-import/upload', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData,
       });
 
@@ -440,7 +454,11 @@ Troubleshooting:
 
     // First try a direct API call to test connectivity
     try {
-      const testResponse = await fetch('/api/v1/invoices?limit=1');
+      const testResponse = await fetch('/api/v1/invoices?limit=1', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       console.log('🧪 [REFRESH] Test API call status:', testResponse.status);
 
       if (testResponse.ok) {
@@ -468,6 +486,7 @@ Troubleshooting:
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
       });
 
@@ -591,6 +610,9 @@ Troubleshooting:
     try {
       const response = await fetch('/api/v1/csv-import/database', {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       if (!response.ok) {

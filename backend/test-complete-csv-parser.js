@@ -193,6 +193,10 @@ async function testCompleteCsvParsing() {
       formatValid: invoiceCount > 0
     };
 
+    if (!fs.existsSync(TEST_CONFIG.testOutputDir)) {
+      fs.mkdirSync(TEST_CONFIG.testOutputDir, { recursive: true });
+    }
+
     const analysisFile = path.join(TEST_CONFIG.testOutputDir, 'complete-csv-analysis.json');
     fs.writeFileSync(analysisFile, JSON.stringify(analysis, null, 2));
     console.log(`💾 Complete analysis saved to: ${analysisFile}`);
