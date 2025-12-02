@@ -22,6 +22,7 @@ export class RedisService implements OnModuleDestroy {
       this.logger.log(`Connecting to Redis using REDIS_URL (host: ${redisUrl.split('@')[1]?.split(':')[0] || 'hidden'})`);
       this.client = new Redis(redisUrl, commonOptions);
     } else {
+      this.logger.warn('⚠️ REDIS_URL environment variable is NOT set. Falling back to localhost.');
       this.logger.log(`Connecting to Redis using individual params (host: ${process.env.REDIS_HOST || 'localhost'})`);
       this.client = new Redis({
         host: process.env.REDIS_HOST || 'localhost',
@@ -38,6 +39,9 @@ export class RedisService implements OnModuleDestroy {
 
     this.client.on('error', (error) => {
       this.logger.error('Redis client error:', error);
+      if (error instanceof AggregateError || error.errors) {
+        this.logger.error('AggregateError details:', JSON.stringify(error.errors, null, 2));
+      }
     });
 
     this.client.on('ready', () => {
