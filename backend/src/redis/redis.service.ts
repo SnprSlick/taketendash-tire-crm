@@ -12,13 +12,25 @@ export class RedisService implements OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
 
   constructor() {
-    this.client = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD || undefined,
-      db: parseInt(process.env.REDIS_DB || '0'),
+    const redisUrl = process.env.REDIS_URL;
+    const commonOptions = {
       maxRetriesPerRequest: 3,
-    });
+      family: 4, // Force IPv4
+    };
+
+    if (redisUrl) {
+      this.logger.log(`Connecting to Redis using REDIS_URL (host: ${redisUrl.split('@')[1]?.split(':')[0] || 'hidden'})`);
+      this.client = new Redis(redisUrl, commonOptions);
+    } else {
+      this.logger.log(`Connecting to Redis using individual params (host: ${process.env.REDIS_HOST || 'localhost'})`);
+      this.client = new Redis({
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+        password: process.env.REDIS_PASSWORD || undefined,
+        db: parseInt(process.env.REDIS_DB || '0'),
+        ...commonOptions,
+      });
+    }
 
     this.client.on('connect', () => {
       this.logger.log('Redis client connected');
