@@ -19,7 +19,9 @@ export class RedisService implements OnModuleDestroy {
     };
 
     if (redisUrl) {
-      this.logger.log(`Connecting to Redis using REDIS_URL (host: ${redisUrl.split('@')[1]?.split(':')[0] || 'hidden'})`);
+      // Log the host we are trying to connect to for debugging
+      const host = redisUrl.split('@')[1]?.split(':')[0] || 'unknown';
+      this.logger.log(`Connecting to Redis using REDIS_URL (host: ${host})`);
       this.client = new Redis(redisUrl, commonOptions);
     } else {
       this.logger.warn('⚠️ REDIS_URL environment variable is NOT set. Falling back to localhost.');
