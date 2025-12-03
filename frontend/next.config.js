@@ -13,8 +13,27 @@ const nextConfig = {
     GRAPHQL_URL: process.env.GRAPHQL_URL || 'http://localhost:3001/graphql',
   },
   async rewrites() {
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || 'http://localhost:3001';
-    console.log(`[Next.js] Rewriting /api/* to ${backendUrl}/api/*`);
+    let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL;
+    
+    console.log('[Next.js] Environment Check:');
+    console.log(`- NEXT_PUBLIC_BACKEND_URL: ${process.env.NEXT_PUBLIC_BACKEND_URL}`);
+    console.log(`- BACKEND_URL: ${process.env.BACKEND_URL}`);
+
+    if (!backendUrl) {
+      console.warn('[Next.js] ⚠️ BACKEND_URL not set, falling back to http://localhost:3001');
+      backendUrl = 'http://localhost:3001';
+    }
+
+    // Ensure protocol
+    if (!backendUrl.startsWith('http')) {
+      console.log('[Next.js] ⚠️ URL missing protocol, adding https://');
+      backendUrl = `https://${backendUrl}`;
+    }
+    
+    // Remove trailing slash
+    backendUrl = backendUrl.replace(/\/$/, '');
+
+    console.log(`[Next.js] 🚀 Rewriting /api/* to ${backendUrl}/api/*`);
     
     return [
       {
