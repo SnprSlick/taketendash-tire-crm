@@ -27,7 +27,7 @@ export default function ImportCenter() {
       else if (type === 'brands') endpoint = '/api/v1/csv-import/brands';
       else if (type === 'employees') endpoint = '/api/v1/csv-import/employees';
 
-      const res = await fetch(`http://localhost:3001${endpoint}`, {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -56,7 +56,7 @@ export default function ImportCenter() {
 
     try {
       const endpoint = type === 'inventory' ? '/api/v1/csv-import/inventory' : '/api/v1/csv-import/brands';
-      const res = await fetch(`http://localhost:3001${endpoint}`, {
+      const res = await fetch(endpoint, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

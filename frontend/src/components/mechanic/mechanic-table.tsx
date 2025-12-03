@@ -103,8 +103,8 @@ export default function MechanicTable() {
     setLoading(true);
     try {
       const url = selectedStoreId 
-        ? `http://localhost:3001/api/v1/mechanic/summary?storeId=${selectedStoreId}&t=${new Date().getTime()}`
-        : `http://localhost:3001/api/v1/mechanic/summary?t=${new Date().getTime()}`;
+        ? `/api/v1/mechanic/summary?storeId=${selectedStoreId}&t=${new Date().getTime()}`
+        : `/api/v1/mechanic/summary?t=${new Date().getTime()}`;
 
       const response = await fetch(url, {
         headers: {
@@ -140,7 +140,7 @@ export default function MechanicTable() {
         params.append('storeId', selectedStoreId);
       }
       
-      const response = await fetch(`http://localhost:3001/api/v1/mechanic?${params}`, {
+      const response = await fetch(`/api/v1/mechanic?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

@@ -476,9 +476,10 @@ Troubleshooting:
   };
 
   const testDirectBackendCall = async () => {
-    console.log('🧪 [TEST] Testing direct backend call...');
+    console.log('🧪 [TEST] Testing backend call via proxy...');
     try {
-      const directUrl = 'http://localhost:3001/api/v1/invoices?page=1&limit=5';
+      // Use relative path to test via Next.js proxy
+      const directUrl = '/api/v1/invoices?page=1&limit=5';
       console.log('🧪 [TEST] Calling:', directUrl);
 
       const response = await fetch(directUrl, {
