@@ -25,8 +25,8 @@ export default function MechanicImport({ onImportSuccess }: { onImportSuccess: (
     formData.append('file', file);
 
     try {
-      // Use absolute URL to avoid proxy issues during development
-      const response = await fetch('http://localhost:3001/api/v1/mechanic/import', {
+      // Use relative URL to leverage Next.js proxy
+      const response = await fetch('/api/v1/mechanic/import', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

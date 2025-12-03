@@ -40,8 +40,8 @@ export default function MechanicAnalytics() {
 
     const timestamp = new Date().getTime();
     const url = selectedStoreId 
-      ? `http://localhost:3001/api/v1/mechanic/analytics?storeId=${selectedStoreId}&_t=${timestamp}`
-      : `http://localhost:3001/api/v1/mechanic/analytics?_t=${timestamp}`;
+      ? `/api/v1/mechanic/analytics?storeId=${selectedStoreId}&_t=${timestamp}`
+      : `/api/v1/mechanic/analytics?_t=${timestamp}`;
 
     setLoading(true);
     fetch(url, {

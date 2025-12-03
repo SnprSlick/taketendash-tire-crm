@@ -42,7 +42,7 @@ export default function StoresPage() {
         setLoading(true);
         
         // Fetch Stores (only once ideally, but okay here)
-        const res = await fetch('http://localhost:3001/api/v1/stores', {
+        const res = await fetch('/api/v1/stores', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -60,7 +60,7 @@ export default function StoresPage() {
         if (dateRange.startDate) params.append('startDate', dateRange.startDate.toISOString());
         if (dateRange.endDate) params.append('endDate', dateRange.endDate.toISOString());
 
-        const compRes = await fetch(`http://localhost:3001/api/v1/stores/analytics/comparison?${params.toString()}`, {
+        const compRes = await fetch(`/api/v1/stores/analytics/comparison?${params.toString()}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

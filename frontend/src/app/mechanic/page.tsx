@@ -24,7 +24,7 @@ export default function MechanicPage() {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/v1/mechanic/clear', {
+      const response = await fetch('/api/v1/mechanic/clear', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

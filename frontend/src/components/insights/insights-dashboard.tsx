@@ -139,12 +139,12 @@ export function InsightsDashboard() {
       try {
         const headers = { 'Authorization': `Bearer ${token}` };
         const [deadStockRes, utilRes, marginRes, attachRes, transfersRes, topTiresRes] = await Promise.all([
-          fetch('http://localhost:3001/api/v1/insights/inventory/dead-stock', { headers }),
-          fetch('http://localhost:3001/api/v1/insights/workforce/utilization', { headers }),
-          fetch('http://localhost:3001/api/v1/insights/margin/leakage', { headers }),
-          fetch('http://localhost:3001/api/v1/insights/margin/attachment', { headers }),
-          fetch('http://localhost:3001/api/v1/insights/inventory/transfers', { headers }),
-          fetch('http://localhost:3001/api/v1/insights/inventory/top-tires', { headers })
+          fetch('/api/v1/insights/inventory/dead-stock', { headers }),
+          fetch('/api/v1/insights/workforce/utilization', { headers }),
+          fetch('/api/v1/insights/margin/leakage', { headers }),
+          fetch('/api/v1/insights/margin/attachment', { headers }),
+          fetch('/api/v1/insights/inventory/transfers', { headers }),
+          fetch('/api/v1/insights/inventory/top-tires', { headers })
         ]);
 
         if (deadStockRes.ok) setDeadStock(await deadStockRes.json());
@@ -167,7 +167,8 @@ export function InsightsDashboard() {
     const fetchRestockAlerts = async () => {
       if (!token) return;
       try {
-        const url = new URL('http://localhost:3001/api/v1/insights/inventory/restock');
+        // Use relative path with window.location.origin base
+        const url = new URL('/api/v1/insights/inventory/restock', window.location.origin);
         if (daysOutOfStockThreshold) {
           url.searchParams.append('daysOutOfStockThreshold', daysOutOfStockThreshold.toString());
         }

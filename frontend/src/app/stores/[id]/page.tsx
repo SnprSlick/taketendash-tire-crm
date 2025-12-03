@@ -61,7 +61,7 @@ export default function StoreDetailPage() {
         
         // Fetch Store Details (only if not already loaded)
         if (!store) {
-          const storeRes = await fetch(`http://localhost:3001/api/v1/stores/${id}`, {
+          const storeRes = await fetch(`/api/v1/stores/${id}`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
@@ -77,7 +77,7 @@ export default function StoreDetailPage() {
         if (dateRange.endDate) params.append('endDate', dateRange.endDate.toISOString());
 
         // Fetch Stats
-        const statsRes = await fetch(`http://localhost:3001/api/v1/stores/${id}/stats?${params.toString()}`, {
+        const statsRes = await fetch(`/api/v1/stores/${id}/stats?${params.toString()}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -86,7 +86,7 @@ export default function StoreDetailPage() {
         if (statsData.success) setStats(statsData.data);
 
         // Fetch Analytics
-        const analyticsRes = await fetch(`http://localhost:3001/api/v1/stores/${id}/analytics?${params.toString()}`, {
+        const analyticsRes = await fetch(`/api/v1/stores/${id}/analytics?${params.toString()}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -96,7 +96,7 @@ export default function StoreDetailPage() {
 
         // Fetch Employees (only if not already loaded)
         if (employees.length === 0) {
-          const empRes = await fetch(`http://localhost:3001/api/v1/stores/${id}/employees`, {
+          const empRes = await fetch(`/api/v1/stores/${id}/employees`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
