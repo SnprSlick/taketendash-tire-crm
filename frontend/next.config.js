@@ -13,10 +13,13 @@ const nextConfig = {
     GRAPHQL_URL: process.env.GRAPHQL_URL || 'http://localhost:3001/graphql',
   },
   async rewrites() {
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || 'http://localhost:3001';
+    console.log(`[Next.js] Rewriting /api/* to ${backendUrl}/api/*`);
+    
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || 'http://localhost:3001'}/api/:path*`,
+        destination: `${backendUrl}/api/:path*`,
       },
     ];
   },
