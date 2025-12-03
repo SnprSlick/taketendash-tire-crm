@@ -20,8 +20,8 @@ const nextConfig = {
     console.log(`- BACKEND_URL: ${process.env.BACKEND_URL}`);
 
     if (!backendUrl) {
-      console.warn('[Next.js] ⚠️ BACKEND_URL not set, falling back to http://localhost:3001');
-      backendUrl = 'http://localhost:3001';
+      console.warn('[Next.js] ⚠️ BACKEND_URL not set, using hardcoded production URL');
+      backendUrl = 'https://taketen-dash-backend-production.up.railway.app';
     }
 
     // Ensure protocol
