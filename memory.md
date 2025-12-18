@@ -2,6 +2,19 @@
 
 ## Recent Sessions Summary
 
+### Railway Migration
+- **Issue**: User wanted to migrate local database to Railway. Previous script targeted Docker container, but data was in local host Postgres.
+- **Fix**: Created `scripts/migrate-local-to-railway.sh` to dump from local host `tire_crm_dev` database.
+- **Status**: Backup created successfully. Documentation updated.
+
+### Tire Identification & Classification
+- **Issue**: User reported "no tires" showing after re-upload. Tire classification was missing or reset.
+- **Fix**: 
+  - Ran `backend/scripts/classify-tires.ts` manually to fix existing data (7249 tires identified).
+  - Updated `InventoryImportService` to run `classifyProduct` during inventory import, ensuring new/updated items are correctly classified.
+  - Added manual trigger endpoint `POST /api/v1/analytics/tires/classify` in `TireAnalyticsController` (and service logic) to allow admins to re-run classification from the UI/API.
+- **Status**: Immediate data fixed. Import process enhanced. Manual trigger available.
+
 ### Employee Management
 - **Import Logic**: Updated employee import to parse roles and assign `isMechanic` boolean.
 - **Store Assignment**: Added logic to assign employees to stores based on invoice history.

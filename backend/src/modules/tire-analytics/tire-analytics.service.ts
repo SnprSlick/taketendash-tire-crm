@@ -1,11 +1,78 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TireAnalyticsFilterDto } from './dto/tire-analytics-filter.dto';
 import { Prisma, TireQuality } from '@prisma/client';
+import { classifyProduct, classifyBrandQuality } from '../../utils/tire-classifier';
 
 @Injectable()
 export class TireAnalyticsService {
+  private readonly logger = new Logger(TireAnalyticsService.name);
+
   constructor(private prisma: PrismaService) {}
+
+  async runClassification() {
+    this.logger.log('Starting tire classification...');
+
+    // Fetch all products
+    const products = await this.prisma.tireMasterProduct.findMany({
+      select: {
+        id: true,
+        tireMasterSku: true,
+        description: true,
+        size: true,
+        type: true,
+        isTire: true,
+        brand: true,
+        manufacturerCode: true,
+        quality: true
+      }
+    });
+
+    this.logger.log(`Found ${products.length} products to classify.`);
+
+    let updates = 0;
+    let tiresFound = 0;
+
+    for (const product of products) {
+      const classification = classifyProduct({
+        tireMasterSku: product.tireMasterSku,
+        description: product.description,
+        size: product.size
+      });
+
+      let quality: TireQuality = TireQuality.UNKNOWN;
+      
+      // Only classify quality if it's a tire
+      if (classification.isTire) {
+        tiresFound++;
+        quality = classifyBrandQuality(product.brand, product.manufacturerCode);
+      }
+
+      // Only update if classification or quality changed
+      if (
+        product.type !== classification.type || 
+        product.isTire !== classification.isTire ||
+        product.quality !== quality
+      ) {
+        await this.prisma.tireMasterProduct.update({
+          where: { id: product.id },
+          data: {
+            type: classification.type,
+            isTire: classification.isTire,
+            quality: quality
+          }
+        });
+        updates++;
+      }
+    }
+
+    this.logger.log(`Classification complete. Updated ${updates} products. Found ${tiresFound} tires.`);
+    return {
+      totalProducts: products.length,
+      tiresFound,
+      updates
+    };
+  }
 
   async getTireAnalytics(filter: TireAnalyticsFilterDto, allowedStoreIds?: string[]) {
     const { startDate, endDate, brands, qualities, types, sizes, storeId, groupBy } = filter;
