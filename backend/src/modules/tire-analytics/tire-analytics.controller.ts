@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Query, UseGuards, ForbiddenException } from '@nestjs/common';
 import { TireAnalyticsService } from './tire-analytics.service';
 import { TireAnalyticsFilterDto } from './dto/tire-analytics-filter.dto';
 import { User } from '../../common/decorators/user.decorator';
@@ -9,6 +9,15 @@ import { RolesGuard } from '../../auth/guards/roles.guard';
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class TireAnalyticsController {
   constructor(private readonly analyticsService: TireAnalyticsService) {}
+
+  @Post('classify')
+  async runClassification(@User() user?: any) {
+    // Only allow Admin or Corporate to run classification
+    if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
+      throw new ForbiddenException('Only Administrators can run classification');
+    }
+    return this.analyticsService.runClassification();
+  }
 
   @Get()
   async getAnalytics(@Query() filter: TireAnalyticsFilterDto, @User() user?: any) {

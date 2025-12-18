@@ -2,7 +2,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TireMasterInventoryParser } from '../processors/tiremaster-inventory-parser';
-import { classifyBrandQuality } from '../../utils/tire-classifier';
+import { classifyBrandQuality, classifyProduct } from '../../utils/tire-classifier';
 import * as fs from 'fs';
 import * as readline from 'readline';
 
@@ -97,6 +97,13 @@ export class InventoryImportService {
 
       // 3. Upsert Product
       try {
+        // Run classification
+        const classification = classifyProduct({
+          tireMasterSku: item.productCode,
+          description: item.description,
+          size: item.size
+        });
+
         const product = await this.prisma.tireMasterProduct.upsert({
           where: { tireMasterSku: item.productCode },
           update: {
@@ -104,20 +111,24 @@ export class InventoryImportService {
             size: item.size,
             laborPrice: item.labor,
             fetAmount: item.fet,
-            updatedAt: new Date()
+            updatedAt: new Date(),
+            // Update classification fields as they depend on description/size
+            type: classification.type,
+            isTire: classification.isTire
           },
           create: {
             tireMasterSku: item.productCode,
             brand: brand,
             pattern: 'Unknown',
             size: item.size,
-            type: 'PASSENGER', // Default, will be updated by classifier later or separate process
+            type: classification.type,
             season: 'ALL_SEASON',
             quality: classifyBrandQuality(brand),
             description: item.description,
             laborPrice: item.labor,
             fetAmount: item.fet,
-            isActive: true
+            isActive: true,
+            isTire: classification.isTire
           }
         });
 
