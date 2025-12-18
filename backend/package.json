@@ -21,7 +21,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "db:seed": "ts-node prisma/seed.ts",
-    "db:backup": "ts-node scripts/backup-db.ts"
+    "db:backup": "ts-node scripts/backup-db.ts",
+    "db:classify": "ts-node scripts/classify-tires.ts"
   },
   "dependencies": {
     "@apollo/server": "^4.10.0",
