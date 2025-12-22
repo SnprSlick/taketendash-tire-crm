@@ -10,11 +10,13 @@ import { PrismaModule } from '../prisma/prisma.module';
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.register({
-      secret: process.env.JWT_SECRET || 'fallback-secret',
-      signOptions: {
-        expiresIn: process.env.JWT_EXPIRES_IN || '24h',
-      },
+    JwtModule.registerAsync({
+      useFactory: () => ({
+        secret: process.env.JWT_SECRET || 'fallback-secret',
+        signOptions: {
+          expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+        },
+      }),
     }),
     PrismaModule,
   ],

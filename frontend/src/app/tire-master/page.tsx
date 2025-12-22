@@ -9,8 +9,10 @@ import TireMasterRefreshCwStatus from '@/components/tire-master/sync-status';
 import TireMasterInventory from '@/components/tire-master/inventory';
 import ImportCenter from '@/components/tire-master/import-center';
 import ReconciliationCenter from '@/components/tire-master/reconciliation';
+import CustomersList from '@/components/tire-master/customers-list';
+import InvoicesList from '@/components/tire-master/invoices-list';
 
-type ViewType = 'overview' | 'search' | 'sync' | 'inventory' | 'settings' | 'import' | 'reconciliation';
+type ViewType = 'overview' | 'search' | 'sync' | 'inventory' | 'settings' | 'import' | 'reconciliation' | 'customers' | 'invoices';
 
 interface IntegrationHealth {
   healthScore: number;
@@ -19,6 +21,8 @@ interface IntegrationHealth {
   recentFailures: number;
   activeMappings: number;
   totalProducts: number;
+  totalCustomers: number;
+  totalInvoices: number;
   checks: {
     connectivity: boolean;
     dataRefreshCw: boolean;
@@ -194,6 +198,26 @@ export default function TireMasterIntegrationPage() {
                 <Package className="h-4 w-4 mr-1" />
                 Inventory
               </button>
+              <button
+                onClick={() => setView('customers')}
+                className={`hidden sm:inline-flex items-center px-3 py-2 text-sm font-medium rounded-md border ${
+                  view === 'customers'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                Customers
+              </button>
+              <button
+                onClick={() => setView('invoices')}
+                className={`hidden sm:inline-flex items-center px-3 py-2 text-sm font-medium rounded-md border ${
+                  view === 'invoices'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                Invoices
+              </button>
             </div>
           </div>
 
@@ -269,14 +293,22 @@ export default function TireMasterIntegrationPage() {
 
                 <div className="bg-white rounded-lg shadow p-6">
                   <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <h3 className="text-sm font-medium">Total Products</h3>
-                    <Package className="h-4 w-4 text-gray-400" />
+                    <h3 className="text-sm font-medium">Data Overview</h3>
+                    <Database className="h-4 w-4 text-gray-400" />
                   </div>
-                  <div className="pt-2">
-                    <div className="text-2xl font-bold">{integrationHealth.totalProducts.toLocaleString()}</div>
-                    <p className="text-xs text-gray-500">
-                      {integrationHealth.activeMappings} active mappings
-                    </p>
+                  <div className="pt-2 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Products</span>
+                      <span className="text-lg font-bold">{integrationHealth.totalProducts.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Customers</span>
+                      <span className="text-lg font-bold">{integrationHealth.totalCustomers?.toLocaleString() || 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Invoices</span>
+                      <span className="text-lg font-bold">{integrationHealth.totalInvoices?.toLocaleString() || 0}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -437,6 +469,14 @@ export default function TireMasterIntegrationPage() {
 
           {view === 'reconciliation' && (
             <ReconciliationCenter onBackToOverview={() => setView('overview')} />
+          )}
+
+          {view === 'customers' && (
+            <CustomersList onBackToOverview={() => setView('overview')} />
+          )}
+
+          {view === 'invoices' && (
+            <InvoicesList onBackToOverview={() => setView('overview')} />
           )}
         </div>
       </div>

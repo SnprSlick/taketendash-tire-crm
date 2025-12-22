@@ -242,8 +242,16 @@ export class TireMasterService {
     startDate?: Date;
     endDate?: Date;
     status?: string;
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
   }) {
     const where: any = {};
+    const page = filters.page || 1;
+    const limit = filters.limit || 20;
+    const sortBy = filters.sortBy || 'orderDate';
+    const sortOrder = filters.sortOrder || 'desc';
 
     if (filters.startDate || filters.endDate) {
       where.orderDate = {};
@@ -253,20 +261,79 @@ export class TireMasterService {
 
     if (filters.status) where.status = filters.status;
 
-    return this.prisma.tireMasterSalesOrder.findMany({
-      where,
-      include: {
-        items: {
-          include: {
-            product: true,
+    const orderBy: any = {};
+    if (sortBy === 'customer') {
+      orderBy.customer = { companyName: sortOrder };
+    } else {
+      orderBy[sortBy] = sortOrder;
+    }
+
+    const [orders, total] = await Promise.all([
+      this.prisma.tireMasterSalesOrder.findMany({
+        where,
+        include: {
+          items: {
+            include: {
+              product: true,
+            },
           },
+          customer: true,
         },
-        customer: true,
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.tireMasterSalesOrder.count({ where }),
+    ]);
+
+    return {
+      orders,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
       },
-      orderBy: {
-        orderDate: 'desc',
+    };
+  }
+
+  async getCustomers(filters: {
+    page: number;
+    limit: number;
+    search?: string;
+  }) {
+    const where: any = {};
+    if (filters.search) {
+      where.OR = [
+        { companyName: { contains: filters.search, mode: 'insensitive' } },
+        { tireMasterCode: { contains: filters.search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [customers, total] = await Promise.all([
+      this.prisma.tireMasterCustomer.findMany({
+        where,
+        skip: (filters.page - 1) * filters.limit,
+        take: filters.limit,
+        orderBy: { companyName: 'asc' },
+        include: {
+          _count: {
+            select: { salesOrders: true }
+          }
+        }
+      }),
+      this.prisma.tireMasterCustomer.count({ where }),
+    ]);
+
+    return {
+      customers,
+      pagination: {
+        page: filters.page,
+        limit: filters.limit,
+        total,
+        totalPages: Math.ceil(total / filters.limit),
       },
-    });
+    };
   }
 
   async syncSalesOrder(orderId: string) {
@@ -454,6 +521,8 @@ export class TireMasterService {
       }
     });
     const totalProducts = await this.prisma.tireMasterProduct.count();
+    const totalCustomers = await this.prisma.tireMasterCustomer.count();
+    const totalInvoices = await this.prisma.tireMasterSalesOrder.count();
     const activeMappings = await this.prisma.tireMasterProductMapping.count();
     const connectivity = await this.checkTireMasterConnectivity();
     const healthScore = this.calculateHealthScore(lastSync, recentFailures);
@@ -465,6 +534,8 @@ export class TireMasterService {
       recentFailures,
       activeMappings,
       totalProducts,
+      totalCustomers,
+      totalInvoices,
       checks: {
         connectivity,
         dataRefreshCw: !!lastSync,

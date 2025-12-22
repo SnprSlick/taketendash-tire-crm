@@ -1,6 +1,80 @@
 # Project Memory
 
+## Current Status (Live Sync Update)
+- **Admin User**: Re-created default admin user (`admin` / `password`) after database clear. Role set to `ADMINISTRATOR`.
+- **Database Cleared**: All data (Invoices, Customers, Products, Sync History) has been cleared to resolve data discrepancies and prepare for a fresh sync.
+- **Sync Client**: Updated with exclusion logic for internal accounts and ZZ- transactions.
+- **Sync Client Fix**: Updated customer ID filtering to use string comparison to ensure "ZZ-VISA/MASTERCARD" (ID 105) is correctly excluded.
+- **Backend**: Configured to load `.env` correctly using `@nestjs/config`.
+- **Database Cleared**: Re-ran `clear-all-data.ts` to wipe all data for a fresh start.
+- **Cache Cleared**: Deleted `sync_cache.json` (if it existed) to force a full re-sync.
+- **Next Steps**: Run the sync client to re-populate the database with clean data.
+
+### Recent Changes
+- Created `backend/clear-all-data.ts` to clear all tables.
+- Installed `@nestjs/config` in backend to fix environment variable loading issues.
+- Updated `backend/src/app.module.ts` to import `ConfigModule`.
+
+
+## Recent Issues
+- **Invoice Mismatch**: Invoices were missing items or had wrong totals. Fixed by using composite IDs and correcting revenue calc.
+- **Negative Profit**: Caused by incorrect cost/revenue mapping. Fixed.
+- **Sorting**: User wants to sort by Site #. Updated sync client query.
+- **Customer Names**: "Bill to" vs "Customer". Updated logic to prioritize `COMPANY` > `NAME` > `CONTACT`.
+
+## Next Steps
+- User will run the sync client on the external computer.
+- Verify data in Dashboard and Reports.
+
 ## Recent Sessions Summary
+
+### Live Data Sync (New Feature)
+- **Branch**: `feat/live-sync`
+- **Goal**: Implement live data syncing from external database (replacing CSV imports).
+- **Status**: Initial setup. Running locally offline first.
+- **Implementation**:
+  - Created `LiveSyncModule`, `LiveSyncController`, `LiveSyncService`.
+  - Defined DTOs for `customers`, `inventory`, `vehicles`, `invoices`, `details`.
+  - Updated Prisma schema to add `tireMasterId` to `TireMasterProduct` for linking.
+  - Implemented upsert logic for all entities.
+  - Exposed endpoints:
+    - `POST /live-sync/customers`
+    - `POST /live-sync/inventory`
+    - `POST /live-sync/vehicles` (Stubbed)
+    - `POST /live-sync/invoices`
+    - `POST /live-sync/details`
+  - **Note**: Vehicle sync is stubbed due to missing link to internal Customer model.
+  - **Fix**: Added `@Transform` to `TERMS`, `ZIP`, `BPHONE` in `TireMasterCustomerDto` to handle non-string values from ODBC.
+  - **Fix**: Added check for null `PARTNO` in `syncInvoiceItems` to prevent `findUnique` error.
+  - **Fix**: Added SKU collision handling in `syncInventory`. If `INVNO` is duplicate for different `PARTNO`, appends `PARTNO` to SKU.
+  - **Fix**: Updated `syncInvoices` to create a placeholder "Unknown Customer" if the referenced customer is missing, ensuring invoices are not skipped.
+  - **Strategy**: Refactored `tiremaster_sync_client.js` to use a "Point of Truth" strategy:
+    1. Fetch ALL invoice IDs since start date.
+    2. Process in batches of 50.
+    3. For each batch, extract and sync referenced Customers and Products *before* syncing the Invoices and Details.
+    4. This ensures referential integrity and handles large datasets efficiently.
+  - **Frontend**: Updated `TireMasterIntegrationPage` to display counts for Customers and Invoices in the "Data Overview" card.
+  - **Frontend**: Added `CustomersList` and `InvoicesList` components to view synced data in tables.
+  - **Backend**: Updated `TireMasterService.checkIntegrationHealth` to return `totalCustomers` and `totalInvoices`.
+  - **Backend**: Added `getCustomers` endpoint to `TireMasterController` and `TireMasterService`.
+  - **Optimization**: Rewrote `tiremaster_sync_client.js` to use parallel batch processing (Concurrency: 5, Batch Size: 100) for faster sync.
+  - **Validation**: Added client-side validation to `tiremaster_sync_client.js` using a local JSON cache (`sync_cache.json`) to skip sending unchanged records (Customers, Inventory, Invoices) to the backend, reducing network load and processing time.
+  - **Utility**: Created `backend/scripts/clear-tiremaster-data.ts` to wipe all Tire Master related data from the database for a fresh sync.
+  - **Fix**: Updated `LiveSyncService` to force recalculation of invoice totals from line items (`TRANS` table) whenever they differ from the header (`HINVOICE` table), resolving discrepancies where headers showed $0 or negative values.
+  - **Fix**: Updated `InvoicesList` frontend component to correctly map API fields (`totalAmount`, `orderNumber`) to the display, fixing the issue where the Total column showed $0 due to undefined properties.
+  - **Feature**: Added sorting capability to the Tire Master invoices page (sort by Invoice #, Date, Customer, Total, Status).
+  - **Feature**: Added `Site #` and `Salesperson` columns to the Tire Master invoices list.
+    - Updated Prisma schema to include `siteNo` and `salesperson` in `TireMasterSalesOrder`.
+    - Updated `tiremaster_sync_client.js` to fetch `SITENO` and `SALESMAN`.
+    - Updated `LiveSyncService` to save these fields.
+    - Updated `InvoicesList` to display and sort by these fields.
+  - **Fix**: Updated `LiveSyncService` to use composite keys (`INVOICE-SITENO`) for `TireMasterSalesOrder` and `Invoice` to prevent cross-site collisions.
+  - **Fix**: Corrected profit calculation in `LiveSyncService`. The `COST` field from TireMaster is the *extended cost* (total line cost), not unit cost. Removed the multiplication by quantity which was causing extremely negative profits.
+  - **Fix**: Updated `LiveSyncService` to prevent overwriting invoice totals with 0 when line items are missing/zero.
+  - **Fix**: Repaired existing zero-total invoices using `repair-zero-totals.js`.
+  - **Fix**: Linked existing invoices to stores using `link-invoices-to-sites.js`.
+  - **Fix**: Cleared all invoice data to prepare for a fresh, correct sync.
+  - **Optimization**: Increased sync client batch size to 500 for faster processing.
 
 ### Railway Migration
 - **Issue**: User wanted to migrate local database to Railway. Previous script targeted Docker container, but data was in local host Postgres.
@@ -13,6 +87,7 @@
   - Ran `backend/scripts/classify-tires.ts` manually to fix existing data (7249 tires identified).
   - Updated `InventoryImportService` to run `classifyProduct` during inventory import, ensuring new/updated items are correctly classified.
   - Added manual trigger endpoint `POST /api/v1/analytics/tires/classify` in `TireAnalyticsController` (and service logic) to allow admins to re-run classification from the UI/API.
+  - Ran classification script against Railway production database using public URL (identified 3095 tires).
 - **Status**: Immediate data fixed. Import process enhanced. Manual trigger available.
 
 ### Employee Management
@@ -332,3 +407,26 @@
   - [x] **Config Page Import 401**:
     - **Issue**: Import functionality on the Config page was returning 401 Unauthorized.
     - **Fix**: Updated `ImportCenter` and `CsvImportClientPage` components to include the `Authorization` header in all fetch requests (`/api/v1/csv-import/...` and `/api/v1/invoices/...`).
+
+### Live Sync Fixes (2025-12-19)
+- **Negative Profit Fix**: Identified that `TRANS.COST` from TireMaster is the **Total Cost** (Extended Cost), not Unit Cost. Updated `LiveSyncService` to calculate Unit Cost as `Total Cost / Quantity`. This resolves the issue of massive negative profits.
+- **Database Reset**: Cleared all TireMaster-related data (Invoices, Sales Data, Inventory, Customers, etc.) to ensure a clean state for the new sync logic.
+- **Sync Client**: 
+    - Verified configuration: Excludes "ZZ-VISA/MASTERCARD" customers.
+    - **Data Quality**: Added exclusion logic for Internal/Accounting customers: "GOODYEAR TIRE & RUBBER", "TAKE TEN", "MADDEN,JAMES".
+    - **Data Quality**: Added exclusion logic for Accounting transactions (invoices with "INVENTORY COST", "FE TAX RECEIVED", "PAYROLL", etc.).
+    - Verified configuration: Runs full sync (no test mode).
+    - Verified configuration: Batch size 2000, Concurrency 10.
+- **Status**: Backend is running on port 3001. Database is empty (including test data) and ready for the user to run the sync client on the external machine.
+- **Current Status**: Database cleared on 2025-12-19. Ready for fresh sync.
+- **Next Steps**: Run the sync client to populate data.
+
+### Auth Fixes (2025-12-22)
+- **Admin User**: Reset `admin` user password to `admin123`.
+- **Admin Role**: Updated `admin` user role to `ADMINISTRATOR` (Fixed from 'system administrator' to match frontend check).
+- **Auth Module**: Fixed `AuthModule` and `JwtStrategy` to correctly load `JWT_SECRET` using `ConfigService` / `registerAsync` to avoid race conditions with environment variable loading.
+- **Port Conflict**: Moved backend to port `3002` due to `EADDRINUSE` on `3001` (likely a zombie process or conflict).
+- **Frontend Config**: Updated `frontend/.env.local` to point to port `3002`.
+- **Verification**: Verified login and token validation works correctly on port 3002.
+- **Port Reset**: Reset backend port to `3001` and updated frontend config accordingly (User manual restart).
+- **Status**: Backend running on port 3001.

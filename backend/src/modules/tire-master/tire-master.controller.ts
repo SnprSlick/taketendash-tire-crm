@@ -115,11 +115,32 @@ export class TireMasterController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('status') status?: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
   ) {
     return this.tireMasterService.getSalesOrders({
       startDate: startDate ? new Date(startDate) : undefined,
       endDate: endDate ? new Date(endDate) : undefined,
       status,
+      page: Number(page),
+      limit: Number(limit),
+      sortBy,
+      sortOrder,
+    });
+  }
+
+  @Get('customers')
+  async getCustomers(
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+    @Query('search') search?: string,
+  ) {
+    return this.tireMasterService.getCustomers({
+      page: Number(page),
+      limit: Number(limit),
+      search,
     });
   }
 

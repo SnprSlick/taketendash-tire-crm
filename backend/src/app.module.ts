@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { BullModule } from '@nestjs/bull';
@@ -31,9 +32,11 @@ import { AppController } from './app.controller';
 import { InvoiceController } from './controllers/invoice.controller';
 // import { CsvImportController } from './csv-import/controllers/csv-import.controller'; // Moved to CsvImportModule
 // import { HealthResolver } from './graphql/resolvers/health.resolver'; // Disabled with GraphQL
+import { LiveSyncModule } from './live-sync/live-sync.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
     // ScheduleModule.forRoot(), // Temporarily disabled for debugging
     EventEmitterModule.forRoot(), // Re-enabled for CSV import functionality
     // BullModule.forRoot({ // Temporarily disabled for debugging
@@ -67,6 +70,7 @@ import { InvoiceController } from './controllers/invoice.controller';
     StoreModule,
     InsightsModule,
     UsersModule,
+    LiveSyncModule,
   ],
   controllers: [AppController, InvoiceController], // CsvImportController moved to CsvImportModule
   providers: [], // DateScalar and HealthResolver removed with GraphQL

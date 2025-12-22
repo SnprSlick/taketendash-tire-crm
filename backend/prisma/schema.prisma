@@ -575,6 +575,7 @@ enum MappingType {
 
 model TireMasterProduct {
   id               String                       @id @default(cuid())
+  tireMasterId     Int?                         @unique @map("tire_master_id")
   tireMasterSku    String                       @unique @db.VarChar(50)
   brand            String                       @db.VarChar(100)
   pattern          String                       @db.VarChar(100)
@@ -742,6 +743,8 @@ model TireMasterSalesOrder {
   taxAmount       Decimal?                      @db.Decimal(10, 2)
   shippingAmount  Decimal?                      @db.Decimal(10, 2)
   totalAmount     Decimal                       @db.Decimal(12, 2)
+  siteNo          Int?                          @map("site_no")
+  salesperson     String?                       @db.VarChar(50)
   notes           String?                       @db.Text
   lastSyncedAt    DateTime?
   createdAt       DateTime                      @default(now())
@@ -755,6 +758,8 @@ model TireMasterSalesOrder {
   @@index([customerId])
   @@index([orderDate])
   @@index([status])
+  @@index([siteNo])
+  @@index([salesperson])
   @@index([lastSyncedAt])
   @@map("tire_master_sales_orders")
 }
