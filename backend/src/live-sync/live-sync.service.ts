@@ -6,6 +6,10 @@ import {
   TireMasterVehicleDto,
   TireMasterInvoiceDto,
   TireMasterInvoiceItemDto,
+  TireMasterInventoryDataDto,
+  TireMasterCategoryDto,
+  TireMasterBrandDto,
+  SyncLogDto,
 } from './dto/sync-dtos';
 import { TireType, TireSeason, TireQuality, ProductCategory, InvoiceStatus } from '@prisma/client';
 
@@ -14,6 +18,79 @@ export class LiveSyncService {
   private readonly logger = new Logger(LiveSyncService.name);
 
   constructor(private prisma: PrismaService) {}
+
+  async logRemote(log: SyncLogDto) {
+    const { message, level, timestamp, context } = log;
+    const formattedMessage = `[REMOTE] ${message}`;
+    const ctx = context ? JSON.stringify(context) : '';
+    
+    switch (level?.toLowerCase()) {
+      case 'error':
+        this.logger.error(formattedMessage, ctx);
+        break;
+      case 'warn':
+        this.logger.warn(formattedMessage, ctx);
+        break;
+      case 'debug':
+        this.logger.debug(formattedMessage, ctx);
+        break;
+      default:
+        this.logger.log(formattedMessage, ctx);
+    }
+    return { success: true };
+  }
+
+  async syncCategories(categories: TireMasterCategoryDto[]) {
+    this.logger.log(`Syncing ${categories.length} categories`);
+    let count = 0;
+    for (const cat of categories) {
+      try {
+        await this.prisma.tireMasterCategory.upsert({
+          where: { code: cat.CAT },
+          update: {
+            name: cat.NAME,
+            catType: cat.CatType,
+            lastSyncedAt: new Date(),
+          },
+          create: {
+            code: cat.CAT,
+            name: cat.NAME,
+            catType: cat.CatType,
+            lastSyncedAt: new Date(),
+          },
+        });
+        count++;
+      } catch (error) {
+        this.logger.error(`Failed to sync category ${cat.CAT}: ${error.message}`);
+      }
+    }
+    return { count };
+  }
+
+  async syncBrands(brands: TireMasterBrandDto[]) {
+    this.logger.log(`Syncing ${brands.length} brands`);
+    let count = 0;
+    for (const brand of brands) {
+      try {
+        await this.prisma.tireMasterBrand.upsert({
+          where: { code: brand.CODE },
+          update: {
+            name: brand.NAME,
+            lastSyncedAt: new Date(),
+          },
+          create: {
+            code: brand.CODE,
+            name: brand.NAME,
+            lastSyncedAt: new Date(),
+          },
+        });
+        count++;
+      } catch (error) {
+        this.logger.error(`Failed to sync brand ${brand.CODE}: ${error.message}`);
+      }
+    }
+    return { count };
+  }
 
   async syncCustomers(customers: TireMasterCustomerDto[]) {
     this.logger.log(`Syncing ${customers.length} customers`);
@@ -71,7 +148,46 @@ export class LiveSyncService {
     let count = 0;
     for (const product of products) {
       try {
-        const tireType = this.mapTireType(product.CAT);
+        let isTire = false;
+        let tireType: TireType = TireType.OTHER;
+
+        // 1. Determine Tire Type and isTire using Category
+        if (product.CAT) {
+           const category = await this.prisma.tireMasterCategory.findUnique({
+             where: { code: product.CAT }
+           });
+           
+           if (category) {
+             // CatType 1 = Tire, 0 = Service/Part (based on sample data)
+             if (category.catType === 1) {
+               isTire = true;
+               // Try to refine TireType from category name
+               tireType = this.mapTireType(product.CAT, product.SIZE, product.NAME);
+               if (tireType === TireType.OTHER) tireType = TireType.PASSENGER; // Default for tires if unknown
+             } else {
+               isTire = false;
+               tireType = TireType.OTHER;
+             }
+           } else {
+             // Fallback to heuristic
+             tireType = this.mapTireType(product.CAT, product.SIZE, product.NAME);
+             isTire = tireType !== TireType.OTHER;
+           }
+        } else {
+           tireType = this.mapTireType(product.CAT, product.SIZE, product.NAME);
+           isTire = tireType !== TireType.OTHER;
+        }
+
+        // 2. Look up Brand Name
+        let brandName = product.MFG || 'Unknown';
+        if (product.MFG) {
+           const brand = await this.prisma.tireMasterBrand.findUnique({
+             where: { code: product.MFG }
+           });
+           if (brand && brand.name) {
+             brandName = brand.name;
+           }
+        }
         
         // Use INVNO as SKU, fallback to PARTNO if INVNO is missing
         let sku = product.INVNO || product.PARTNO.toString();
@@ -90,7 +206,7 @@ export class LiveSyncService {
           where: { tireMasterId: product.PARTNO },
           update: {
             tireMasterSku: sku,
-            brand: product.MFG || 'Unknown',
+            brand: brandName,
             pattern: 'Unknown', // Not provided in sample
             size: product.SIZE || 'Unknown',
             type: tireType,
@@ -100,12 +216,13 @@ export class LiveSyncService {
             weight: product.WEIGHT,
             manufacturerCode: product.VENDPARTNO,
             isActive: product.ACTIVE === 1,
+            isTire: isTire,
             lastSyncedAt: new Date(),
           },
           create: {
             tireMasterId: product.PARTNO,
             tireMasterSku: sku,
-            brand: product.MFG || 'Unknown',
+            brand: brandName,
             pattern: 'Unknown',
             size: product.SIZE || 'Unknown',
             type: tireType,
@@ -115,12 +232,76 @@ export class LiveSyncService {
             weight: product.WEIGHT,
             manufacturerCode: product.VENDPARTNO,
             isActive: product.ACTIVE === 1,
+            isTire: isTire,
             lastSyncedAt: new Date(),
           },
         });
         count++;
       } catch (error) {
         this.logger.error(`Failed to sync product ${product.PARTNO}: ${error.message}`);
+      }
+    }
+    return { count };
+  }
+
+  async syncInventoryQuantities(inventoryData: TireMasterInventoryDataDto[]) {
+    this.logger.log(`Syncing ${inventoryData.length} inventory quantity records`);
+    let count = 0;
+    for (const item of inventoryData) {
+      try {
+        // 1. Find Product
+        const product = await this.prisma.tireMasterProduct.findUnique({
+          where: { tireMasterId: item.PARTNO }
+        });
+
+        if (!product) {
+          // Product not synced yet, skip or log
+          // this.logger.warn(`Product ${item.PARTNO} not found for inventory sync`);
+          continue;
+        }
+
+        // 2. Find or Create Location
+        const locationCode = item.EFFSITENO.toString();
+        let location = await this.prisma.tireMasterLocation.findUnique({
+          where: { tireMasterCode: locationCode }
+        });
+
+        if (!location) {
+          location = await this.prisma.tireMasterLocation.create({
+            data: {
+              tireMasterCode: locationCode,
+              name: `Site ${locationCode}`,
+              isActive: true
+            }
+          });
+        }
+
+        // 3. Upsert Inventory
+        await this.prisma.tireMasterInventory.upsert({
+          where: {
+            productId_locationId: {
+              productId: product.id,
+              locationId: location.id
+            }
+          },
+          update: {
+            quantity: item.QTYONHAND || 0,
+            reservedQty: item.RESERVE || 0,
+            availableQty: (item.QTYONHAND || 0) - (item.RESERVE || 0),
+            lastUpdated: new Date(),
+          },
+          create: {
+            productId: product.id,
+            locationId: location.id,
+            quantity: item.QTYONHAND || 0,
+            reservedQty: item.RESERVE || 0,
+            availableQty: (item.QTYONHAND || 0) - (item.RESERVE || 0),
+            lastUpdated: new Date(),
+          }
+        });
+        count++;
+      } catch (error) {
+        this.logger.error(`Failed to sync inventory for PARTNO ${item.PARTNO} at Site ${item.EFFSITENO}: ${error.message}`);
       }
     }
     return { count };
@@ -618,20 +799,42 @@ export class LiveSyncService {
     }
   }
 
-  private mapTireType(cat: string): TireType {
-    if (!cat) return TireType.OTHER;
-    const upperCat = cat.toUpperCase();
-    if (upperCat.includes('TIRE')) return TireType.PASSENGER;
-    if (upperCat.includes('LTR')) return TireType.LIGHT_TRUCK;
-    if (upperCat.includes('MTR')) return TireType.MEDIUM_TRUCK;
-    if (upperCat.includes('IND')) return TireType.INDUSTRIAL;
-    if (upperCat.includes('AGR')) return TireType.AGRICULTURAL;
-    if (upperCat.includes('OTR')) return TireType.OTR;
-    if (upperCat.includes('TRL')) return TireType.TRAILER;
-    if (upperCat.includes('ATV')) return TireType.ATV_UTV;
-    if (upperCat.includes('LAWN')) return TireType.LAWN_GARDEN;
-    if (upperCat.includes('COMM')) return TireType.COMMERCIAL;
-    if (upperCat.includes('SPEC')) return TireType.SPECIALTY;
+  private mapTireType(cat: string, size?: string, name?: string): TireType {
+    // 1. Check Category
+    if (cat) {
+        const upperCat = cat.toUpperCase();
+        if (upperCat.includes('TIRE') || upperCat.includes('PASS')) return TireType.PASSENGER;
+        if (upperCat.includes('LTR')) return TireType.LIGHT_TRUCK;
+        if (upperCat.includes('MTR')) return TireType.MEDIUM_TRUCK;
+        if (upperCat.includes('IND')) return TireType.INDUSTRIAL;
+        if (upperCat.includes('AGR')) return TireType.AGRICULTURAL;
+        if (upperCat.includes('OTR')) return TireType.OTR;
+        if (upperCat.includes('TRL')) return TireType.TRAILER;
+        if (upperCat.includes('ATV')) return TireType.ATV_UTV;
+        if (upperCat.includes('LAWN')) return TireType.LAWN_GARDEN;
+        if (upperCat.includes('COMM')) return TireType.COMMERCIAL;
+        if (upperCat.includes('SPEC')) return TireType.SPECIALTY;
+    }
+
+    // 2. Check Size (Regex for common tire sizes)
+    if (size) {
+        const upperSize = size.toUpperCase();
+        // Passenger/Light Truck: 205/55R16, P215/60R16, LT245/75R16
+        if (/^[P]?\d{3}\/\d{2}[R|D|B]\d{2}/.test(upperSize)) return TireType.PASSENGER;
+        if (/^LT\d{3}\/\d{2}[R|D|B]\d{2}/.test(upperSize)) return TireType.LIGHT_TRUCK;
+        // Medium Truck: 11R22.5, 295/75R22.5
+        if (/^\d{2,3}[R|D|B]\d{2}\.?\d?/.test(upperSize)) return TireType.MEDIUM_TRUCK;
+        if (/^\d{3}\/\d{2}[R|D|B]\d{2}\.?\d?/.test(upperSize) && upperSize.includes('22.5')) return TireType.MEDIUM_TRUCK;
+        // Flotation: 35x12.50R15
+        if (/^\d{2}X\d{2}\.?\d{0,2}[R|D|B]\d{2}/.test(upperSize)) return TireType.LIGHT_TRUCK;
+    }
+
+    // 3. Check Name/Description
+    if (name) {
+        const upperName = name.toUpperCase();
+        if (upperName.includes('TIRE')) return TireType.PASSENGER; // Generic guess
+    }
+
     return TireType.OTHER;
   }
 }

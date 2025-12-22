@@ -278,3 +278,97 @@ export class SyncInvoiceItemsDto {
   @Type(() => TireMasterInvoiceItemDto)
   details: TireMasterInvoiceItemDto[];
 }
+
+export class TireMasterInventoryDataDto {
+  @IsNumber()
+  PARTNO: number;
+
+  @IsNumber()
+  EFFSITENO: number;
+
+  @IsNumber()
+  @IsOptional()
+  QTYONHAND: number;
+
+  @IsNumber()
+  @IsOptional()
+  RESERVE: number;
+
+  @IsNumber()
+  @IsOptional()
+  MAXQTY: number;
+
+  @IsNumber()
+  @IsOptional()
+  MINQTY: number;
+
+  @IsString()
+  @IsOptional()
+  lastsync: string;
+}
+
+export class SyncInventoryDataDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TireMasterInventoryDataDto)
+  inventoryData: TireMasterInventoryDataDto[];
+}
+
+export class SyncLogDto {
+  @IsString()
+  message: string;
+
+  @IsString()
+  @IsOptional()
+  level: string;
+
+  @IsOptional()
+  timestamp: string;
+
+  @IsOptional()
+  context: any;
+}
+
+export class TireMasterCategoryDto {
+  @IsString()
+  CAT: string;
+
+  @IsString()
+  @IsOptional()
+  NAME: string;
+
+  @IsNumber()
+  @IsOptional()
+  CatType: number;
+
+  @IsString()
+  @IsOptional()
+  lastsync: string;
+}
+
+export class SyncCategoriesDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TireMasterCategoryDto)
+  categories: TireMasterCategoryDto[];
+}
+
+export class TireMasterBrandDto {
+  @IsString()
+  CODE: string;
+
+  @IsString()
+  @IsOptional()
+  NAME: string;
+
+  @IsString()
+  @IsOptional()
+  lastsync: string;
+}
+
+export class SyncBrandsDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TireMasterBrandDto)
+  brands: TireMasterBrandDto[];
+}

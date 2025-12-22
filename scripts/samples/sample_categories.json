@@ -1,0 +1,3863 @@
+[
+  {
+    "CAT": "ACCE",
+    "NAME": "Accessories",
+    "LABCOST": 1,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "AL2",
+    "NAME": "2 Wheel Alignmnet",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2022-10-21 15:53:28.9410"
+  },
+  {
+    "CAT": "AL4",
+    "NAME": "4 Wheel Alignment",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "ALD",
+    "NAME": "Alignment - Dually",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "ALFE",
+    "NAME": "Alignments & Front End",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "ALHD",
+    "NAME": "HD ALIGNMENT",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2020-01-24 11:04:58.8340"
+  },
+  {
+    "CAT": "ALHP",
+    "NAME": "HD PARTS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2023-10-02 13:00:19.9860"
+  },
+  {
+    "CAT": "ALWA",
+    "NAME": "Alignment Warranty-Parts",
+    "LABCOST": null,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "BATT",
+    "NAME": "Batteries",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "BRAK",
+    "NAME": "BRAKE SYSTEMS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "BRKS",
+    "NAME": "Brakes",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "CLAI",
+    "NAME": "CLAIMS OUR FAULT",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "CORE",
+    "NAME": "Core Charges",
+    "LABCOST": null,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "CSLL",
+    "NAME": "Cash Short/Long-Lube",
+    "LABCOST": null,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "DCAD",
+    "NAME": "DISCOUNT - PROMOTION",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2025-07-17 11:53:27.9740"
+  },
+  {
+    "CAT": "DCAL",
+    "NAME": "DISCOUNT - COMPANY VEHICLE",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2025-07-17 11:55:10.2490"
+  },
+  {
+    "CAT": "DCBB",
+    "NAME": "DISCOUNT - COMMERCIAL SALES",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2025-07-17 11:56:14.6690"
+  },
+  {
+    "CAT": "DCBD",
+    "NAME": "DISCOUNT - PRICE MATCH",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2025-07-17 11:56:47.8490"
+  },
+  {
+    "CAT": "DCBR",
+    "NAME": "DISCOUNT - CUSTOMER SATISFACTI",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2025-07-17 11:57:14.3820"
+  },
+  {
+    "CAT": "DCBS",
+    "NAME": "Discounts - Back Shop",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2025-07-17 11:59:47.2020"
+  },
+  {
+    "CAT": "DCCP",
+    "NAME": "Discounts - Coupons",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2025-07-17 11:59:54.8560"
+  },
+  {
+    "CAT": "DCEM",
+    "NAME": "DISCOUNT - EMPLOYEE",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2025-07-17 11:57:30.5340"
+  },
+  {
+    "CAT": "DCLU",
+    "NAME": "DISCOUNT - LUBE",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2025-07-17 11:57:46.2290"
+  },
+  {
+    "CAT": "DCSC",
+    "NAME": "Discounts - Senior Citizen",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2025-07-17 12:00:06.4710"
+  },
+  {
+    "CAT": "DCTI",
+    "NAME": "Discounts - Tires",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2025-07-17 11:59:40.2210"
+  },
+  {
+    "CAT": "DISP",
+    "NAME": "Tire Disposal (Pay)",
+    "LABCOST": null,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "DONA",
+    "NAME": "Donation",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "DRIV",
+    "NAME": "Drivetrain",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "DSCN",
+    "NAME": "DISCOUNT - SPL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2025-07-17 12:00:48.6280"
+  },
+  {
+    "CAT": "ELEC",
+    "NAME": "Electrical",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "ENGI",
+    "NAME": "ENGINE SERVICE\\PARTS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "ENMP",
+    "NAME": "Engine & Mech Parts",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "EXHA",
+    "NAME": "Exhaust",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "FRGT",
+    "NAME": "Freight",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "FTSV",
+    "NAME": "FEE-TIRE SERVICE",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "FTTF",
+    "NAME": "FEE-TIRE FEE",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "GIFT",
+    "NAME": "Gift Certificates",
+    "LABCOST": null,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "HDBR",
+    "NAME": "HD BRAKES",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2022-07-13 08:04:36.3420"
+  },
+  {
+    "CAT": "HDSU",
+    "NAME": "HD SUSPENSION",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2022-07-13 09:25:52.1750"
+  },
+  {
+    "CAT": "HDTR",
+    "NAME": "HD TRAILER REP",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2022-07-13 09:26:55.1010"
+  },
+  {
+    "CAT": "HDUH",
+    "NAME": "HD UNDERHOOD",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2022-08-04 16:21:06.6930"
+  },
+  {
+    "CAT": "HEAT",
+    "NAME": "HEATING AND COOLING",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "HVAC",
+    "NAME": "Heat-A/C repair",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "INSP",
+    "NAME": "INSPECTIONS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "LOFS",
+    "NAME": "Lube, Oil & Filter",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "LSTR",
+    "NAME": "LABOR-TRANSMISSION",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "LTBA",
+    "NAME": "TIRE MISC-BALANCING",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "LTFR",
+    "NAME": "TIRE MISC-FLAT REPAIR",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2023-04-03 15:59:54.9590"
+  },
+  {
+    "CAT": "LTMS",
+    "NAME": "TIRE MISC-LABOR",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "LTSR",
+    "NAME": "TIRE MISC-SERVICE/REPAIR",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "LUBL",
+    "NAME": "Lube Parts/Labor",
+    "LABCOST": 1,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "LUBP",
+    "NAME": "QDS test Cat.",
+    "LABCOST": null,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "MISC",
+    "NAME": "MISC PARTS\\SERVICE\\LAB",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "MPTL",
+    "NAME": "Misc. Parts/Labor",
+    "LABCOST": 1,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-03-25 10:44:02.6990"
+  },
+  {
+    "CAT": "MTPL",
+    "NAME": "Medium Truck-Repairs/Labor",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "NITR",
+    "NAME": "Nitrogen Fill",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "OTHR",
+    "NAME": "Other Items",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "PFLT",
+    "NAME": "Preferred Fleet Sublet",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-08-03 17:11:20.0720"
+  },
+  {
+    "CAT": "PSTR",
+    "NAME": "PARTS-TRANSMISSION",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "PTVP",
+    "NAME": "PARTS-TIRE VALVES/PATCHES",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "QLAA",
+    "NAME": "TICKET COUNT",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-11-11 14:15:46.1230"
+  },
+  {
+    "CAT": "QLAF",
+    "NAME": "AIR FILTERS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-11-25 08:47:39.4770"
+  },
+  {
+    "CAT": "QLBA",
+    "NAME": "LUBE BATTERY",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "QLBU",
+    "NAME": "LUBE BULB",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "QLCA",
+    "NAME": "CABIN AIR FILTERS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-11-25 08:48:07.0690"
+  },
+  {
+    "CAT": "QLFF",
+    "NAME": "FUEL FILTERS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-11-25 08:48:23.6710"
+  },
+  {
+    "CAT": "QLFI",
+    "NAME": "LUBE FILTERS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "QLFL",
+    "NAME": "LUBE FLUID",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "QLLA",
+    "NAME": "LUBE LABOR ",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "QLOI",
+    "NAME": "LUBE OIL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "QLSA",
+    "NAME": "LUBE ADDITIVES",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-12-12 16:17:52.8400"
+  },
+  {
+    "CAT": "QLSB",
+    "NAME": "LUBE SERP BELT",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "QLSD",
+    "NAME": "LUBE DIFF SERVICE",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-12-12 15:46:44.2840"
+  },
+  {
+    "CAT": "QLSH",
+    "NAME": "LUBE SHOP SUPPLIES",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-08-14 16:31:17.8250"
+  },
+  {
+    "CAT": "QLSL",
+    "NAME": "LUBE HEADLIGHT REST",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-12-12 15:48:38.9370"
+  },
+  {
+    "CAT": "QLSP",
+    "NAME": "LUBE POWER ST SVC",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-12-12 15:46:54.8610"
+  },
+  {
+    "CAT": "QLSR",
+    "NAME": "LUBE RADIATOR SVC",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-12-12 15:46:27.4670"
+  },
+  {
+    "CAT": "QLST",
+    "NAME": "LUBE TRANNY SVC",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-12-12 15:46:15.0560"
+  },
+  {
+    "CAT": "QLSV",
+    "NAME": "LUBE SERVICES",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "QLTK",
+    "NAME": "OIL CHANGES",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-11-11 14:15:20.0690"
+  },
+  {
+    "CAT": "QLWB",
+    "NAME": "LUBE WIPER BLADE",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "QLWS",
+    "NAME": "LUBE CHIP REPAIR",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-10-01 15:13:40.7590"
+  },
+  {
+    "CAT": "SF17",
+    "NAME": "State Waste Fee - Passenger",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2022-05-09 08:26:57.4810"
+  },
+  {
+    "CAT": "SFA1",
+    "NAME": "Ag <19.5\"/<30\"",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "SFA2",
+    "NAME": "Ag Waste >19.5\"/<30\"",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "SFA3",
+    "NAME": "AG Waste >30\"/<44\"",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "SFA4",
+    "NAME": "Ag Waste >44\"/<72\"",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "SFM2",
+    "NAME": "State Waste Fee >19.5\"/>12\"",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "SFMT",
+    "NAME": "State Waste - >19.5\" / <12\"",
+    "LABCOST": null,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "SFTR",
+    "NAME": "State Waste Fee - <19.5\"",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "SHOP",
+    "NAME": "Shop Supplies",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2024-08-21 16:36:51.7870"
+  },
+  {
+    "CAT": "SHST",
+    "NAME": "Shocks & Struts",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "SRVC",
+    "NAME": "Service Calls",
+    "LABCOST": 1,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "SRVF",
+    "NAME": "Service Truck Fuel SurCharge",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2023-09-24 08:09:10.2530"
+  },
+  {
+    "CAT": "SRVL",
+    "NAME": "Service Truck Labor",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "SRVM",
+    "NAME": "Service Truck Mileage",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "SRVP",
+    "NAME": "Service Parts",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "SRVT",
+    "NAME": "Service Truck",
+    "LABCOST": null,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "SRWA",
+    "NAME": "Service Parts Warranty",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "STAR",
+    "NAME": "STARTING\\CHARGING SYS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "STAX",
+    "NAME": "State Taxes",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "STEE",
+    "NAME": "STEERING",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "SUBL",
+    "NAME": "Sublet Wrecker",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "SUBO",
+    "NAME": "Sublet Outside Labor",
+    "LABCOST": null,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "SUSL",
+    "NAME": "Suspension Labor",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "SVPL",
+    "NAME": "Service Parts/Labor",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TBC",
+    "NAME": "TIRE- LT TBC",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2020-01-03 13:16:09.6050"
+  },
+  {
+    "CAT": "TFOR",
+    "NAME": "Tires-Farm/Off Road",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2020-11-25 13:43:11.3720"
+  },
+  {
+    "CAT": "TICO",
+    "NAME": "TRECONNECT",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2023-09-12 11:02:22.6100"
+  },
+  {
+    "CAT": "TIND",
+    "NAME": "TIRE-INDUSTRIAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-21 12:45:16.4300"
+  },
+  {
+    "CAT": "TIPP",
+    "NAME": "TIRE-IND PP",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2024-07-22 12:17:37.6680"
+  },
+  {
+    "CAT": "TIPS",
+    "NAME": "TIRE-IND PS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2024-07-23 11:19:12.5030"
+  },
+  {
+    "CAT": "TLAM",
+    "NAME": "TIRE-LT AMERICUS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-08-17 08:54:17.7200"
+  },
+  {
+    "CAT": "TLAS",
+    "NAME": "TIRE-LT ARMSTRONG",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-12-01 15:08:44.0400"
+  },
+  {
+    "CAT": "TLBF",
+    "NAME": "TIRE-LT BFGOODRICH",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TLBK",
+    "NAME": "TIRE-LT BLACKHAWK",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2024-11-12 05:19:36.2310"
+  },
+  {
+    "CAT": "TLBS",
+    "NAME": "TIRE-LT BRIDGESTONE",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TLCO",
+    "NAME": "TIRE-LT COOPER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TLDE",
+    "NAME": "TIRE-LT DELIUM",
+    "LABCOST": 20,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-07-01 10:02:14.7390"
+  },
+  {
+    "CAT": "TLDY",
+    "NAME": "TIRE-LT DAYTON",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TLFL",
+    "NAME": "TIRE-LT FALKEN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2020-10-01 13:36:20.0620"
+  },
+  {
+    "CAT": "TLFS",
+    "NAME": "TIRE-LT FIRESTONE",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TLGN",
+    "NAME": "TIRE-LT GENERAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TLGY",
+    "NAME": "TIRE-LT GOODYEAR",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2020-11-25 07:34:15.1250"
+  },
+  {
+    "CAT": "TLHK",
+    "NAME": "TIRE-LT HANKOOK",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TLIR",
+    "NAME": "TIRE-LT IRON",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TLKE",
+    "NAME": "TIRE LT KENDA",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2021-06-26 09:57:25.3560"
+  },
+  {
+    "CAT": "TLKH",
+    "NAME": "TIRE-LTKUMHO",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TLKL",
+    "NAME": "TIRE-LT KELLY",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2020-01-04 16:27:22.8450"
+  },
+  {
+    "CAT": "TLMI",
+    "NAME": "TIRE-LT MICHELIN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TLMS",
+    "NAME": "TIRE-LT MISCELANEOUS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TLMT",
+    "NAME": "TIRE LT-MICKEY",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-10-20 11:44:38.6950"
+  },
+  {
+    "CAT": "TLNA",
+    "NAME": "TIRE-LT NATIONAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2022-01-24 09:16:06.1550"
+  },
+  {
+    "CAT": "TLNI",
+    "NAME": "TIRE-LT NITTO",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2022-05-20 09:05:58.7350"
+  },
+  {
+    "CAT": "TLNO",
+    "NAME": "TIRE-LT NITTO",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-08-04 16:44:47.4640"
+  },
+  {
+    "CAT": "TLNX",
+    "NAME": "TIRE-LT NEXEN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TLPT",
+    "NAME": "TIRE -LT PANTERA",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-12-07 06:49:06.2540"
+  },
+  {
+    "CAT": "TLPW",
+    "NAME": "TIRE-LT PRIMEWELL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TLSL",
+    "NAME": "TIRE-LT SAILUN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2024-03-12 10:07:09.4750"
+  },
+  {
+    "CAT": "TLTB",
+    "NAME": "TIRE-LT- TBC",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2022-03-14 08:49:27.0780"
+  },
+  {
+    "CAT": "TLTO",
+    "NAME": "TIRE-LT TOYO",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TLUN",
+    "NAME": "TIRE-LT UNIROYAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TLWF",
+    "NAME": "TIRE-LT WATERFALL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-11-16 13:30:43.9690"
+  },
+  {
+    "CAT": "TLWL",
+    "NAME": "TIRE-LT WESTLAKE",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2022-03-03 11:07:58.5380"
+  },
+  {
+    "CAT": "TLYO",
+    "NAME": "TIRE-LT YOK",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TMAD",
+    "NAME": "TIRE-MED SAMSON/ADVANCE",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2023-09-20 07:22:39.2620"
+  },
+  {
+    "CAT": "TMAM",
+    "NAME": "TIRE-MED AMERICUS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-08-04 09:55:09.4390"
+  },
+  {
+    "CAT": "TMAS",
+    "NAME": "TIRE-MED ARMSTRONG",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-12-01 12:17:29.9360"
+  },
+  {
+    "CAT": "TMBF",
+    "NAME": "TIRE-MED BFGOODRICH",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TMBL",
+    "NAME": "TIRE-MED BLACKHAWK",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2021-06-26 12:42:31.6840"
+  },
+  {
+    "CAT": "TMBS",
+    "NAME": "TIRE-MED BRIDGESTONE",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TMBT",
+    "NAME": "TIRE-MED BOTO",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TMCL",
+    "NAME": "TIRE-MED CACH",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TMCO",
+    "NAME": "TIRE-MED CONTINENTAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2020-01-21 13:50:31.5630"
+  },
+  {
+    "CAT": "TMCP",
+    "NAME": "TIRE-MED COOPER ",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2021-05-17 12:52:34.5470"
+  },
+  {
+    "CAT": "TMCS",
+    "NAME": "TIRE-MED CASINGS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2020-10-01 13:42:54.7680"
+  },
+  {
+    "CAT": "TMDC",
+    "NAME": "TIRE-MED DOUBLE COIN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2020-08-10 14:01:52.7850"
+  },
+  {
+    "CAT": "TMDT",
+    "NAME": "TIRE-MED DYNATRAC",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-11-17 14:34:21.4750"
+  },
+  {
+    "CAT": "TMDU",
+    "NAME": "TIRE-MED DUNLOP",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2020-11-25 13:50:26.0000"
+  },
+  {
+    "CAT": "TMDY",
+    "NAME": "TIRE-MED DAYTON",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TMFL",
+    "NAME": "TIRE-MED FALKEN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2020-01-31 12:50:58.8460"
+  },
+  {
+    "CAT": "TMFS",
+    "NAME": "TIRE-MED FIRESTONE",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TMGE",
+    "NAME": "TIRE-MED GENERAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2020-01-21 13:50:02.0590"
+  },
+  {
+    "CAT": "TMGY",
+    "NAME": "TIRE-MED GOODYEAR",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TMHC",
+    "NAME": "TIRE-MED HERCULES",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-12-22 06:37:11.7760"
+  },
+  {
+    "CAT": "TMHK",
+    "NAME": "TIRE-MED HANKOOK",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TMIM",
+    "NAME": "TIRE MED IRONMAN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-10-14 11:05:47.5070"
+  },
+  {
+    "CAT": "TMKH",
+    "NAME": "TIRE-MED KUMHO",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-10-02 08:37:08.2540"
+  },
+  {
+    "CAT": "TMKL",
+    "NAME": "TIRE-MED KELLY",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2020-10-01 13:43:32.7050"
+  },
+  {
+    "CAT": "TMMI",
+    "NAME": "TIRE-MED MICHELIN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TMMS",
+    "NAME": "TIRE-MED MISCELANEOUS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TMNV",
+    "NAME": "TIRE-MED NAVITRAC",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-10-20 10:50:49.6320"
+  },
+  {
+    "CAT": "TMOT",
+    "NAME": "TIRE -MED OTANI",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2023-01-17 15:37:36.1690"
+  },
+  {
+    "CAT": "TMPK",
+    "NAME": "TIRE-MED POWERKING",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-12-02 12:37:56.1610"
+  },
+  {
+    "CAT": "TMPR",
+    "NAME": "TIRE-MED PRINX",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-12-06 08:33:33.1330"
+  },
+  {
+    "CAT": "TMRM",
+    "NAME": "TIRE-MED ROADMASTER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-09-29 10:51:28.0970"
+  },
+  {
+    "CAT": "TMRT",
+    "NAME": "TIRE-MED RETREAD CAPS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2020-11-24 14:40:53.1310"
+  },
+  {
+    "CAT": "TMSL",
+    "NAME": "TIRE-MED SAILUN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-09-09 11:43:04.8400"
+  },
+  {
+    "CAT": "TMSM",
+    "NAME": "TIRE-MED SUPERMAX",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-10-02 08:32:58.7720"
+  },
+  {
+    "CAT": "TMSS",
+    "NAME": "TIRE MED -SAMSON",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2023-09-20 07:22:21.7740"
+  },
+  {
+    "CAT": "TMSU",
+    "NAME": "TIRE-MED SUMITOMO",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2020-10-01 13:44:02.9140"
+  },
+  {
+    "CAT": "TMTO",
+    "NAME": "TIRE-MED TOYO",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-08-04 10:00:27.0830"
+  },
+  {
+    "CAT": "TMUN",
+    "NAME": "TIRE-MED UNIROYAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TMUS",
+    "NAME": "TIRE-MED USED",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2020-10-01 13:44:19.7700"
+  },
+  {
+    "CAT": "TMVR",
+    "NAME": "TIRE MED- VEE RUBBER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-09-29 16:19:40.5690"
+  },
+  {
+    "CAT": "TMWS",
+    "NAME": "TIRE-MED WESTLAKE",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2021-10-04 09:53:15.0990"
+  },
+  {
+    "CAT": "TMYO",
+    "NAME": "TIRE - MED YOKOHAMA",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TNIT",
+    "NAME": "TIRE-LT NITTO",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TPBF",
+    "NAME": "TIRE-PASS BFGOODRICH",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TPBK",
+    "NAME": "TIRE-PASS BLACKLION",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-09 17:15:51.6950"
+  },
+  {
+    "CAT": "TPBS",
+    "NAME": "TIRE-PASS BRIDGESTONE",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TPCA",
+    "NAME": "TIRE-PASS CAPITAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TPCN",
+    "NAME": "TIRE-PASSNEGER CONTINENTAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2020-10-01 13:44:51.3310"
+  },
+  {
+    "CAT": "TPCO",
+    "NAME": "TIRE-PASS COOPER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TPDY",
+    "NAME": "TIRE-PASS DAYTON",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TPFL",
+    "NAME": "TIRE-PASS FALKEN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2020-01-31 12:44:32.4220"
+  },
+  {
+    "CAT": "TPFS",
+    "NAME": "TIRE-PASS FIRESTONE",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TPFW",
+    "NAME": "TIRE-PASS FULLWAY",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2022-02-07 08:41:48.8700"
+  },
+  {
+    "CAT": "TPFZ",
+    "NAME": "TIRE-PASS FUZION",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TPGL",
+    "NAME": "TIRE-PASS GENERAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-10-22 11:15:34.9500"
+  },
+  {
+    "CAT": "TPGY",
+    "NAME": "TIRE-PASS GOODYEAR",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TPHK",
+    "NAME": "TIRE-PASS HANKOOK",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TPIR",
+    "NAME": "TIRE-PASS IRONMAN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2022-06-02 13:53:50.5440"
+  },
+  {
+    "CAT": "TPKE",
+    "NAME": "TIRE-PASS KENDA",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2021-08-16 09:23:04.8740"
+  },
+  {
+    "CAT": "TPKH",
+    "NAME": "TIRE-PASS KUHMO",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-08-29 09:01:17.2050"
+  },
+  {
+    "CAT": "TPKL",
+    "NAME": "TIRE-PASS KELLY",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2023-03-15 08:58:06.6440"
+  },
+  {
+    "CAT": "TPLF",
+    "NAME": "TIRE PASS- LAUFENN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-10-16 08:17:28.3100"
+  },
+  {
+    "CAT": "TPLL",
+    "NAME": "TIRE-PASS LINGLONG",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-09-16 08:09:18.5580"
+  },
+  {
+    "CAT": "TPMA",
+    "NAME": "TIRE-PASS MAST",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TPMI",
+    "NAME": "TIRE-PASS MICHELIN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TPMS",
+    "NAME": "TIRE-PASS MISCELANEOUS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TPMX",
+    "NAME": "TIRE-PASS MAXXIS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-10-08 08:36:11.4130"
+  },
+  {
+    "CAT": "TPNI",
+    "NAME": "TIRE-PASS NITTO",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TPNK",
+    "NAME": "TIRE-PASS NOKIAN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2021-03-16 10:53:24.9430"
+  },
+  {
+    "CAT": "TPNX",
+    "NAME": "TIRE-PASS NEXEN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TPPI",
+    "NAME": "TIRE-PASS PIRELI",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2021-12-28 12:04:50.6870"
+  },
+  {
+    "CAT": "TPPL",
+    "NAME": "TIRE-PASS PETLAS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-12-10 08:49:34.4470"
+  },
+  {
+    "CAT": "TPPW",
+    "NAME": "TIRE-PASS PRIMEWELL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TPPX",
+    "NAME": "TIRE PASS- PRIN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-12-18 09:18:28.8790"
+  },
+  {
+    "CAT": "TPSL",
+    "NAME": "TIRE-PASS SAILUN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2021-06-27 08:47:34.9750"
+  },
+  {
+    "CAT": "TPSU",
+    "NAME": "TIRE-PASSENGER SUMITOMO",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-07-01 07:54:09.0840"
+  },
+  {
+    "CAT": "TPTO",
+    "NAME": "TIRE- PASS TOYO",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TPTR",
+    "NAME": "TIRE-TRAILER",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2024-01-10 07:03:43.6450"
+  },
+  {
+    "CAT": "TPUN",
+    "NAME": "TIRE-PASS UNIROYAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "TPVE",
+    "NAME": "TIRE-PASS VELOZZA",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-10-07 10:47:45.2020"
+  },
+  {
+    "CAT": "TPVS",
+    "NAME": "TIRE-PASS VERCELLI",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2021-09-24 08:37:21.9910"
+  },
+  {
+    "CAT": "TPYO",
+    "NAME": "TIRE-PASSENGER YOK",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-09-27 09:48:42.6770"
+  },
+  {
+    "CAT": "TRAK",
+    "NAME": "TIRE-TRACKS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2020-01-04 16:20:57.6160"
+  },
+  {
+    "CAT": "TRPR",
+    "NAME": "TIRE-PASS PIRELLI",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2024-01-10 06:31:35.9060"
+  },
+  {
+    "CAT": "TTRL",
+    "NAME": "TIRE-TRAILER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2024-01-10 06:32:19.8610"
+  },
+  {
+    "CAT": "TUBE",
+    "NAME": "Tubes",
+    "LABCOST": 1,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "USTR",
+    "NAME": "Used Tires",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "USWL",
+    "NAME": "Used Wheels",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "WHEE",
+    "NAME": "WHEELS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "WHLA",
+    "NAME": "Wheel-Accessories",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "WHLS",
+    "NAME": "Wheels",
+    "LABCOST": 1,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "WLOF",
+    "NAME": "Warranty Lube",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "WMSR",
+    "NAME": "Wheels Misc. - Service/R",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "WTLT",
+    "NAME": "Warranty - Light Truck T",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "WTPT",
+    "NAME": "Warranty - Passenger Tir",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2024-12-16 14:08:24.6840"
+  },
+  {
+    "CAT": "YMKH",
+    "NAME": "TIRE-MED KUMHO",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2019-10-02 08:31:53.8100"
+  },
+  {
+    "CAT": "ZEXP",
+    "NAME": "Expense",
+    "LABCOST": 1,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "ZZNT",
+    "NAME": "Misc Notes/Comments",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "ZZZZ",
+    "NAME": "Undefined Category",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2019-05-01 12:59:54.8560"
+  },
+  {
+    "CAT": "MSRT",
+    "NAME": "Mobile Service Truck",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2024-12-11 10:59:27.1620"
+  },
+  {
+    "CAT": "ZTES",
+    "NAME": "TEST",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-04-10 09:10:49.6300"
+  },
+  {
+    "CAT": "9800",
+    "NAME": "PERFORMANCE ECON",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:03:40.5800"
+  },
+  {
+    "CAT": "9700",
+    "NAME": "PERFORMANCE VALUE",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:03:59.7420"
+  },
+  {
+    "CAT": "9600",
+    "NAME": "PERFORMANCE PREM",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:04:15.8770"
+  },
+  {
+    "CAT": "9520",
+    "NAME": "TOURING ECON A/S LIGHT TRUCK",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:04:47.3350"
+  },
+  {
+    "CAT": "9510",
+    "NAME": "TOURING ECON A/S PASSENGER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:05:21.4640"
+  },
+  {
+    "CAT": "9500",
+    "NAME": "TOURING ECON COMM/LT VAN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:05:42.1050"
+  },
+  {
+    "CAT": "9420",
+    "NAME": "TOURING VALUE A/S LIGHT TRUCK",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:09:55.6250"
+  },
+  {
+    "CAT": "9410",
+    "NAME": "TOURING VALUE A/S PASSENGER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:10:19.8340"
+  },
+  {
+    "CAT": "9400",
+    "NAME": "TOURING VALUE COMM/LT VAN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:10:33.2720"
+  },
+  {
+    "CAT": "9320",
+    "NAME": "TOURING PREM A/S LIGHT TRUCK",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:11:00.3920"
+  },
+  {
+    "CAT": "9310",
+    "NAME": "TOURING PREM A/S PASSENGER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:11:16.8350"
+  },
+  {
+    "CAT": "9300",
+    "NAME": "TOURING PREM COMM/LT VAN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:11:35.8090"
+  },
+  {
+    "CAT": "9221",
+    "NAME": "A/T ECON M/T LIGHT TRUCK",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:38:26.8290"
+  },
+  {
+    "CAT": "9220",
+    "NAME": "A/T ECON M/T PASSENGER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:38:44.4320"
+  },
+  {
+    "CAT": "9211",
+    "NAME": "A/T ECON R/T LIGHT TRUCK",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:39:06.2150"
+  },
+  {
+    "CAT": "9210",
+    "NAME": "A/T ECON R/T PASSENGER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:39:25.6970"
+  },
+  {
+    "CAT": "9201",
+    "NAME": "A/T ECON A/T LIGHT TRUCK",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:39:39.0750"
+  },
+  {
+    "CAT": "9200",
+    "NAME": "A/T ECON A/T PASSENGER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:39:51.8560"
+  },
+  {
+    "CAT": "9121",
+    "NAME": "A/T VALUE M/T LIGHT TRUCK",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:40:05.4960"
+  },
+  {
+    "CAT": "9120",
+    "NAME": "A/T VALUE M/T PASSENGER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:40:20.4410"
+  },
+  {
+    "CAT": "9111",
+    "NAME": "A/T VALUE R/T LIGHT TRUCK",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:40:36.7380"
+  },
+  {
+    "CAT": "9110",
+    "NAME": "A/T VALUE R/T PASSENGER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:40:53.4390"
+  },
+  {
+    "CAT": "9101",
+    "NAME": "A/T VALUE A/T LIGHT TRUCK",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:41:06.1360"
+  },
+  {
+    "CAT": "9100",
+    "NAME": "A/T VALUE A/T PASSENGER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:41:21.3140"
+  },
+  {
+    "CAT": "9021",
+    "NAME": "A/T PREM M/T LIGHT TRUCK",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:41:36.9380"
+  },
+  {
+    "CAT": "9020",
+    "NAME": "A/T PREM M/T PASSENGER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:41:53.7790"
+  },
+  {
+    "CAT": "9011",
+    "NAME": "A/T PREM R/T LIGHT TRUCK",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:42:08.5250"
+  },
+  {
+    "CAT": "9010",
+    "NAME": "A/T PREM R/T PASSENGER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:42:21.6850"
+  },
+  {
+    "CAT": "9001",
+    "NAME": "A/T PREM A/T LIGHT TRUCK",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:42:36.7270"
+  },
+  {
+    "CAT": "9000",
+    "NAME": "A/T PREM A/T PASSENGER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:42:56.5240"
+  },
+  {
+    "CAT": "8120",
+    "NAME": "TRAILER ECON ALL STEEL",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-08 13:35:44.0270"
+  },
+  {
+    "CAT": "8110",
+    "NAME": "TRAILER ECON ST RADIAL",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-08 13:35:52.4410"
+  },
+  {
+    "CAT": "8100",
+    "NAME": "TRAILER ECON BIAS",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-08 13:36:10.5190"
+  },
+  {
+    "CAT": "8020",
+    "NAME": "TRAILER PREM ALL STEEL",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-08 13:36:35.4670"
+  },
+  {
+    "CAT": "8010",
+    "NAME": "TRAILER PREM ST RADIAL",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-08 13:36:20.9050"
+  },
+  {
+    "CAT": "8000",
+    "NAME": "TRAILER PREM BIAS",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-08 13:35:30.8150"
+  },
+  {
+    "CAT": "7200",
+    "NAME": "SECTION REPAIR",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-10 13:58:20.2790"
+  },
+  {
+    "CAT": "7100",
+    "NAME": "OTR RETREAD",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-08 13:30:22.6630"
+  },
+  {
+    "CAT": "7000",
+    "NAME": "TBR RETREAD",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-08 13:30:02.2640"
+  },
+  {
+    "CAT": "6900",
+    "NAME": "TBR TRAILER PREM",
+    "LABCOST": 0,
+    "ACTIVE": 0,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-08 13:27:00.9760"
+  },
+  {
+    "CAT": "6830",
+    "NAME": "TBR STEER ECON MIXED SERV",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:45:52.6890"
+  },
+  {
+    "CAT": "6820",
+    "NAME": "TBR STEER ECON REGIONAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:46:06.3660"
+  },
+  {
+    "CAT": "6810",
+    "NAME": "TBR STEER ECON LONG HAUL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:46:23.1430"
+  },
+  {
+    "CAT": "6800",
+    "NAME": "TBR STEER ECON URBAN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:46:35.9720"
+  },
+  {
+    "CAT": "6730",
+    "NAME": "TBR STEER VALUE MIXED SERV",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:46:53.4860"
+  },
+  {
+    "CAT": "6720",
+    "NAME": "TBR STEER VALUE REGIONAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:47:12.9300"
+  },
+  {
+    "CAT": "6710",
+    "NAME": "TBR STEER VALUE LONG HAUL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:47:27.8800"
+  },
+  {
+    "CAT": "6700",
+    "NAME": "TBR STEER VALUE URBAN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:47:44.5600"
+  },
+  {
+    "CAT": "6630",
+    "NAME": "TBR STEER PREM MIXED SERV",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:47:59.5800"
+  },
+  {
+    "CAT": "6620",
+    "NAME": "TBR STEER PREM REGIONAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:48:12.5210"
+  },
+  {
+    "CAT": "6610",
+    "NAME": "TBR STEER PREM LONG HAUL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:48:27.3600"
+  },
+  {
+    "CAT": "6600",
+    "NAME": "TBR STEER PREM URBAN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:48:41.3900"
+  },
+  {
+    "CAT": "6530",
+    "NAME": "TBR A/P ECON MIXED SERV",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:49:00.3900"
+  },
+  {
+    "CAT": "6520",
+    "NAME": "TBR A/P ECON REGIONAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:49:22.4680"
+  },
+  {
+    "CAT": "6510",
+    "NAME": "TBR A/P ECON LONG HAUL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:49:39.0860"
+  },
+  {
+    "CAT": "6500",
+    "NAME": "TBR A/P ECON URBAN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:49:55.8080"
+  },
+  {
+    "CAT": "6430",
+    "NAME": "TBR A/P VALUE MIXED SERV",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:50:09.5970"
+  },
+  {
+    "CAT": "6420",
+    "NAME": "TBR A/P VALUE REGIONAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:50:21.5800"
+  },
+  {
+    "CAT": "6410",
+    "NAME": "TBR A/P VALUE LONG HAUL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:50:35.2320"
+  },
+  {
+    "CAT": "6400",
+    "NAME": "TBR A/P VALUE URBAN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:50:49.6240"
+  },
+  {
+    "CAT": "6330",
+    "NAME": "TBR A/P PREM MIXED SERV",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:51:03.2370"
+  },
+  {
+    "CAT": "6320",
+    "NAME": "TBR A/P PREM REGIONAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:51:20.3230"
+  },
+  {
+    "CAT": "6310",
+    "NAME": "TBR A/P PREM LONG HAUL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:51:31.9990"
+  },
+  {
+    "CAT": "6300",
+    "NAME": "TBR A/P PREM URBAN",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:52:24.4270"
+  },
+  {
+    "CAT": "6230",
+    "NAME": "TBR DRIVE ECON MIXED SERV",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:52:40.3270"
+  },
+  {
+    "CAT": "6220",
+    "NAME": "TBR DRIVE ECON MUD",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:52:52.2180"
+  },
+  {
+    "CAT": "6210",
+    "NAME": "TBR DRIVE ECON O/S",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:53:04.9840"
+  },
+  {
+    "CAT": "6200",
+    "NAME": "TBR DRIVE ECON C/S",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:53:24.6820"
+  },
+  {
+    "CAT": "6130",
+    "NAME": "TBR DRIVE VALUE MIXED SERV",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:53:36.5630"
+  },
+  {
+    "CAT": "6120",
+    "NAME": "TBR DRIVE VALUE MUD",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:53:51.3370"
+  },
+  {
+    "CAT": "6110",
+    "NAME": "TBR DRIVE VALUE O/S",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:58:39.7570"
+  },
+  {
+    "CAT": "4230",
+    "NAME": "LAWN ECON WHEELBARROW",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:11:16.7520"
+  },
+  {
+    "CAT": "4220",
+    "NAME": "LAWN ECON SAWTOOTH/GOLF",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:11:39.1630"
+  },
+  {
+    "CAT": "4210",
+    "NAME": "LAWN ECON TURF",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:11:51.4030"
+  },
+  {
+    "CAT": "4200",
+    "NAME": "LAWN ECON SMOOTH",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:12:28.9060"
+  },
+  {
+    "CAT": "4150",
+    "NAME": "LAWN PREM HIGH SPEED TRAILER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:12:44.6280"
+  },
+  {
+    "CAT": "4140",
+    "NAME": "LAWN PREM STRAIGHT RIB",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:12:56.4470"
+  },
+  {
+    "CAT": "4130",
+    "NAME": "LAWN PREM WHEELBARROW",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:13:11.1010"
+  },
+  {
+    "CAT": "4120",
+    "NAME": "LAWN PREM SAWTOOTH/GOLF",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:13:24.2920"
+  },
+  {
+    "CAT": "4110",
+    "NAME": "LAWN PREM TURF",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:13:44.4640"
+  },
+  {
+    "CAT": "4100",
+    "NAME": "LAWN PREM SMOOTH",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:13:56.6640"
+  },
+  {
+    "CAT": "4011",
+    "NAME": "ATV ECON BIAS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:14:10.9540"
+  },
+  {
+    "CAT": "4010",
+    "NAME": "ATV ECON RADIAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:14:22.8520"
+  },
+  {
+    "CAT": "4001",
+    "NAME": "ATV PREM BIAS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:14:41.4470"
+  },
+  {
+    "CAT": "4000",
+    "NAME": "ATV PREM RADIAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:14:56.7290"
+  },
+  {
+    "CAT": "SRRP",
+    "NAME": "SECT REP - RUBBER/PATCHES",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2025-07-20 07:53:10.0960"
+  },
+  {
+    "CAT": "SRTE",
+    "NAME": "SECT. REP - TOOLS/EQUIP",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2025-07-20 07:53:51.0430"
+  },
+  {
+    "CAT": "OSRP",
+    "NAME": "OFF ROAD SEC REP PATCHES/RUBBE",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2025-07-21 06:53:27.7110"
+  },
+  {
+    "CAT": "OSRT",
+    "NAME": "OFF ROAD SEC TOOLS/EQUIP",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2025-07-21 06:53:58.8220"
+  },
+  {
+    "CAT": "OSRS",
+    "NAME": "OFF ROAD SEC REP SUPPLIES-RASP",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2025-07-21 06:54:52.9990"
+  },
+  {
+    "CAT": "OSRL",
+    "NAME": "OFF ROAD SEC REP LABOR",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2025-07-21 06:57:57.6420"
+  },
+  {
+    "CAT": "TFOS",
+    "NAME": "Tires-Off Road Section Repairs",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 0,
+    "lastsync": "2025-07-21 07:15:20.6320"
+  },
+  {
+    "CAT": "3000",
+    "NAME": "TRAILER PREM BIAS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-08 13:22:37.3690"
+  },
+  {
+    "CAT": "3010",
+    "NAME": "TRAILER PREM ST RADIAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-08 13:22:52.6350"
+  },
+  {
+    "CAT": "3020",
+    "NAME": "TRAILER PREM ALL STEEL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-10 13:47:59.6620"
+  },
+  {
+    "CAT": "3100",
+    "NAME": "TRAILER ECON BIAS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-08 13:23:18.5660"
+  },
+  {
+    "CAT": "3110",
+    "NAME": "TRAILER ECON ST RADIAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-08 13:23:31.8870"
+  },
+  {
+    "CAT": "3120",
+    "NAME": "TRAILER ECON ALL STEEL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-08 13:23:49.5820"
+  },
+  {
+    "CAT": "4500",
+    "NAME": "TUBE",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-08 13:26:24.3610"
+  },
+  {
+    "CAT": "6340",
+    "NAME": "TBR TRAILER PREM",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-08 13:28:17.0150"
+  },
+  {
+    "CAT": "6440",
+    "NAME": "TBR TRAILER VALUE",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-08 13:28:39.7380"
+  },
+  {
+    "CAT": "6540",
+    "NAME": "TBR TRAILER ECON",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-08 13:28:59.4490"
+  },
+  {
+    "CAT": "7010",
+    "NAME": "TBR CASING",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-10 13:55:45.3330"
+  },
+  {
+    "CAT": "7110",
+    "NAME": "OTR CASING",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-08 13:30:58.6180"
+  },
+  {
+    "CAT": "7300",
+    "NAME": "CONSIGNMENT",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-09-18 08:28:10.2860"
+  },
+  {
+    "CAT": "3030",
+    "NAME": "TRAILER PREM HIGH SPEED",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-10-07 10:40:42.3530"
+  },
+  {
+    "CAT": "3130",
+    "NAME": "TRAILER ECON HIGH SPEED",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-10-07 10:41:07.3130"
+  },
+  {
+    "CAT": "5030",
+    "NAME": "IND/OTR PREM TRACKS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-10-08 12:41:55.9890"
+  },
+  {
+    "CAT": "5130",
+    "NAME": "IND/OTR ECON TRACKS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-10-08 12:42:17.9160"
+  },
+  {
+    "CAT": "7400",
+    "NAME": "SCRAP",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-12-12 14:56:45.3910"
+  },
+  {
+    "CAT": "6100",
+    "NAME": "TBR DRIVE VALUE C/S",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:58:55.1970"
+  },
+  {
+    "CAT": "6030",
+    "NAME": "TBR DRIVE PREM MIXED SERV",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:59:06.6430"
+  },
+  {
+    "CAT": "6020",
+    "NAME": "TBR DRIVE PREM MUD",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:59:18.7680"
+  },
+  {
+    "CAT": "6010",
+    "NAME": "TBR DRIVE PREM O/S",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:59:36.2940"
+  },
+  {
+    "CAT": "6000",
+    "NAME": "TBR DRIVE PREM C/S",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 11:59:50.6460"
+  },
+  {
+    "CAT": "5126",
+    "NAME": "IND/OTR ECON SOLID R4",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:06:12.6580"
+  },
+  {
+    "CAT": "5125",
+    "NAME": "IND/OTR ECON SOLID L5",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:06:26.8910"
+  },
+  {
+    "CAT": "5124",
+    "NAME": "IND/OTR ECON SOLID E4/L4",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:06:40.9040"
+  },
+  {
+    "CAT": "5123",
+    "NAME": "IND/OTR ECON SOLID E3/L3",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:07:11.3840"
+  },
+  {
+    "CAT": "5122",
+    "NAME": "IND/OTR ECON SOLID G2",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:07:31.6520"
+  },
+  {
+    "CAT": "5121",
+    "NAME": "IND/OTR ECON SOLID SMOOTH",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:07:46.2190"
+  },
+  {
+    "CAT": "5120",
+    "NAME": "IND/OTR ECON SOLID SKIDSTEER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:07:58.9720"
+  },
+  {
+    "CAT": "5117",
+    "NAME": "IND/OTR ECON RADIAL MILITARY",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:08:15.6900"
+  },
+  {
+    "CAT": "5116",
+    "NAME": "IND/OTR ECON RADIAL R4",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:08:34.1930"
+  },
+  {
+    "CAT": "5115",
+    "NAME": "IND/OTR ECON RADIAL L5",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:08:47.0300"
+  },
+  {
+    "CAT": "5114",
+    "NAME": "IND/OTR ECON RADIAL E4/L4",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:09:04.3540"
+  },
+  {
+    "CAT": "5113",
+    "NAME": "IND/OTR ECON RADIAL E3/L3",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:09:16.3080"
+  },
+  {
+    "CAT": "5112",
+    "NAME": "IND/OTR ECON RADIAL G2",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:45:48.0150"
+  },
+  {
+    "CAT": "5111",
+    "NAME": "IND/OTR ECON RADIAL SMOOTH",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:46:50.7250"
+  },
+  {
+    "CAT": "5110",
+    "NAME": "IND/OTR ECON RADIAL SKIDSTEER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:57:26.8940"
+  },
+  {
+    "CAT": "5107",
+    "NAME": "IND/OTR ECON BIAS MILITARY",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:57:46.0450"
+  },
+  {
+    "CAT": "5106",
+    "NAME": "IND/OTR ECON BIAS R4",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:58:05.6760"
+  },
+  {
+    "CAT": "5105",
+    "NAME": "IND/OTR ECON BIAS L5",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:58:19.7290"
+  },
+  {
+    "CAT": "5104",
+    "NAME": "IND/OTR ECON BIAS E4/L4",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:58:37.7910"
+  },
+  {
+    "CAT": "5103",
+    "NAME": "IND/OTR ECON BIAS E3/L3",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:58:49.4280"
+  },
+  {
+    "CAT": "5102",
+    "NAME": "IND/OTR ECON BIAS G2",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:59:03.5290"
+  },
+  {
+    "CAT": "5101",
+    "NAME": "IND/OTR ECON BIAS SMOOTH",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:59:16.2800"
+  },
+  {
+    "CAT": "5100",
+    "NAME": "IND/OTR ECON BIAS SKIDSTEER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:59:30.6810"
+  },
+  {
+    "CAT": "5026",
+    "NAME": "IND/OTR PREM SOLID R4",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 12:59:46.2090"
+  },
+  {
+    "CAT": "5025",
+    "NAME": "IND/OTR PREM SOLID L5",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:00:02.6680"
+  },
+  {
+    "CAT": "5024",
+    "NAME": "IND/OTR PREM SOLID E4/L4",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:00:18.9270"
+  },
+  {
+    "CAT": "5023",
+    "NAME": "IND/OTR PREM SOLID E3/L3",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:00:38.4450"
+  },
+  {
+    "CAT": "5022",
+    "NAME": "IND/OTR PREM SOLID G2",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:00:52.4070"
+  },
+  {
+    "CAT": "5021",
+    "NAME": "IND/OTR PREM SOLID SMOOTH",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:01:06.7510"
+  },
+  {
+    "CAT": "5020",
+    "NAME": "IND/OTR PREM SOLID SKIDSTEER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:01:18.4170"
+  },
+  {
+    "CAT": "5017",
+    "NAME": "IND/OTR PREM RADIAL MILITARY",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:01:29.3690"
+  },
+  {
+    "CAT": "5016",
+    "NAME": "IND/OTR PREM RADIAL R4",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:01:41.0610"
+  },
+  {
+    "CAT": "5015",
+    "NAME": "IND/OTR PREM RADIAL L5",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:01:58.2630"
+  },
+  {
+    "CAT": "5014",
+    "NAME": "IND/OTR PREM RADIAL E4/L4",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:02:13.2600"
+  },
+  {
+    "CAT": "5013",
+    "NAME": "IND/OTR PREM RADIAL E3/L3",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:02:30.0670"
+  },
+  {
+    "CAT": "5012",
+    "NAME": "IND/OTR PREM RADIAL G2",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:02:43.8690"
+  },
+  {
+    "CAT": "5011",
+    "NAME": "IND/OTR PREM RADIAL SMOOTH",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:03:01.0260"
+  },
+  {
+    "CAT": "5010",
+    "NAME": "IND/OTR PREM RADIAL SKIDSTEER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:03:12.4880"
+  },
+  {
+    "CAT": "5007",
+    "NAME": "IND/OTR PREM BIAS MILITARY",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:03:32.8550"
+  },
+  {
+    "CAT": "5006",
+    "NAME": "IND/OTR PREM BIAS R4",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:03:54.8040"
+  },
+  {
+    "CAT": "5005",
+    "NAME": "IND/OTR PREM BIAS L5",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:04:11.9020"
+  },
+  {
+    "CAT": "5004",
+    "NAME": "IND/OTR PREM BIAS E4/L4",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:04:24.5050"
+  },
+  {
+    "CAT": "5003",
+    "NAME": "IND/OTR PREM BIAS E3/L3",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:04:46.7840"
+  },
+  {
+    "CAT": "5002",
+    "NAME": "IND/OTR PREM BIAS G2",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:05:00.6690"
+  },
+  {
+    "CAT": "5001",
+    "NAME": "IND/OTR PREM BIAS SMOOTH",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:05:16.1710"
+  },
+  {
+    "CAT": "5000",
+    "NAME": "IND/OTR PREM BIAS SKIDSTEER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:05:28.5320"
+  },
+  {
+    "CAT": "4470",
+    "NAME": "FARM ECON OTHER FARM",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:05:46.4410"
+  },
+  {
+    "CAT": "4461",
+    "NAME": "FARM ECON REARS BIAS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:06:05.1490"
+  },
+  {
+    "CAT": "4460",
+    "NAME": "FARM ECON REARS RADIAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:06:19.8880"
+  },
+  {
+    "CAT": "4450",
+    "NAME": "FARM ECON R3",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:06:37.4220"
+  },
+  {
+    "CAT": "4440",
+    "NAME": "FARM ECON F3",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:06:50.4600"
+  },
+  {
+    "CAT": "4430",
+    "NAME": "FARM ECON HF",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:07:07.2490"
+  },
+  {
+    "CAT": "4420",
+    "NAME": "FARM ECON 4 RIB",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:07:20.0250"
+  },
+  {
+    "CAT": "4410",
+    "NAME": "FARM ECON 3 RIB",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:07:35.9780"
+  },
+  {
+    "CAT": "4401",
+    "NAME": "FARM ECON I1 IMP DOT",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:07:50.3140"
+  },
+  {
+    "CAT": "4400",
+    "NAME": "FARM ECON I1 IMP STANDARD",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:08:02.7640"
+  },
+  {
+    "CAT": "4370",
+    "NAME": "FARM PREM OTHER FARM",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:08:17.9530"
+  },
+  {
+    "CAT": "4361",
+    "NAME": "FARM PREM REARS BIAS",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:08:35.4130"
+  },
+  {
+    "CAT": "4360",
+    "NAME": "FARM PREM REARS RADIAL",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:08:47.8030"
+  },
+  {
+    "CAT": "4350",
+    "NAME": "FARM PREM R3",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:09:05.2130"
+  },
+  {
+    "CAT": "4340",
+    "NAME": "FARM PREM F-3",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:09:23.2700"
+  },
+  {
+    "CAT": "4330",
+    "NAME": "FARM PREM HF",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:09:42.4320"
+  },
+  {
+    "CAT": "4320",
+    "NAME": "FARM PREM 4 RIB",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:09:56.8380"
+  },
+  {
+    "CAT": "4310",
+    "NAME": "FARM PREM 3 RIB",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:10:08.5360"
+  },
+  {
+    "CAT": "4301",
+    "NAME": "FARM PREM I1 IMP DOT",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:10:22.6740"
+  },
+  {
+    "CAT": "4300",
+    "NAME": "FARM PREM I1 IMP STANDARD",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:10:39.9250"
+  },
+  {
+    "CAT": "4250",
+    "NAME": "LAWN ECON HIGH SPEED TRAILER",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:10:52.3230"
+  },
+  {
+    "CAT": "4240",
+    "NAME": "LAWN ECON STRAIGHT RIB",
+    "LABCOST": 0,
+    "ACTIVE": 1,
+    "TaxLevel": 0,
+    "CatType": 1,
+    "lastsync": "2025-07-17 13:11:03.4310"
+  }
+]

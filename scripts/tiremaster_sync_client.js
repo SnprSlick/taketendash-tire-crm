@@ -16,6 +16,26 @@ const config = {
   cacheFile: path.join(__dirname, 'sync_cache.json'),
 };
 
+// --- REMOTE LOGGING ---
+async function remoteLog(level, message, context = null) {
+  const timestamp = new Date().toISOString();
+  
+  // Print to local console
+  if (level === 'ERROR') console.error(`[${timestamp}] ${message}`, context ? JSON.stringify(context) : '');
+  else console.log(`[${timestamp}] ${message}`, context ? JSON.stringify(context) : '');
+
+  try {
+    await axios.post(`${config.backendUrl}/logs`, {
+      level,
+      message,
+      timestamp,
+      context
+    });
+  } catch (err) {
+    // Fail silently to avoid spamming local console about log failures
+  }
+}
+
 // --- GLOBAL STATE ---
 let employeeMap = {};
 
@@ -29,14 +49,14 @@ let syncCache = {
 
 if (fs.existsSync(config.cacheFile)) {
   try {
-    console.log(`📂 Loading sync cache from ${config.cacheFile}...`);
+    remoteLog('INFO', `📂 Loading sync cache from ${config.cacheFile}...`);
     syncCache = JSON.parse(fs.readFileSync(config.cacheFile, 'utf8'));
     // Ensure structure
     if (!syncCache.customers) syncCache.customers = {};
     if (!syncCache.inventory) syncCache.inventory = {};
     if (!syncCache.invoices) syncCache.invoices = {};
   } catch (err) {
-    console.error('⚠️ Failed to load cache, starting fresh:', err.message);
+    remoteLog('ERROR', '⚠️ Failed to load cache, starting fresh:', err.message);
   }
 }
 
@@ -48,7 +68,7 @@ function saveCache() {
   try {
     fs.writeFileSync(config.cacheFile, JSON.stringify(syncCache, null, 2));
   } catch (err) {
-    console.error('⚠️ Failed to save cache:', err.message);
+    remoteLog('ERROR', '⚠️ Failed to save cache:', err.message);
   }
 }
 
@@ -89,7 +109,7 @@ const pLimit = (concurrency) => {
 
 const limit = pLimit(config.concurrency);
 
-async function fetchAndSync(connection, type, query, description, cacheOptions = null, transformFn = null) {
+async function fetchAndSync(connection, type, query, description, cacheOptions = null, transformFn = null, payloadKey = null) {
   try {
     // 1. Fetch Data (ODBC)
     // Note: ODBC queries on a single connection must be sequential. 
@@ -119,22 +139,22 @@ async function fetchAndSync(connection, type, query, description, cacheOptions =
       });
 
       if (dataToSync.length === 0 && result.length > 0) {
-        // console.log(`      ⏩ All ${result.length} ${type} skipped (unchanged)`);
+        // remoteLog('INFO', `      ⏩ All ${result.length} ${type} skipped (unchanged)`);
         return;
       }
       
       if (dataToSync.length < result.length) {
-        // console.log(`      ℹ️  Syncing ${dataToSync.length}/${result.length} ${type} (others unchanged)`);
+        // remoteLog('INFO', `      ℹ️  Syncing ${dataToSync.length}/${result.length} ${type} (others unchanged)`);
       }
     }
 
     // 3. Send Data (API) - This is where parallelism shines
     const payload = {};
-    payload[type] = dataToSync;
+    payload[payloadKey || type] = dataToSync;
 
     try {
       await axios.post(`${config.backendUrl}/${type}`, payload);
-      // console.log(`      ✅ Synced ${dataToSync.length} ${type}`);
+      // remoteLog('INFO', `      ✅ Synced ${dataToSync.length} ${type}`);
 
       // 4. Update Cache
       if (cacheOptions) {
@@ -145,12 +165,12 @@ async function fetchAndSync(connection, type, query, description, cacheOptions =
       }
 
     } catch (err) {
-      console.error(`      ❌ Failed to sync ${type}: ${err.message}`);
-      if (err.response) console.error('         Server:', err.response.data);
+      remoteLog('ERROR', `      ❌ Failed to sync ${type}: ${err.message}`);
+      if (err.response) remoteLog('ERROR', '         Server:', err.response.data);
       throw err; // Re-throw to mark batch as failed
     }
   } catch (err) {
-    console.error(`      ❌ Error in ${description}: ${err.message}`);
+    remoteLog('ERROR', `      ❌ Error in ${description}: ${err.message}`);
     throw err;
   }
 }
@@ -171,7 +191,7 @@ async function processBatch(connection, batch, batchIndex, totalBatches) {
   ];
   // const customerIds = [...new Set(batch.map(inv => inv.CUCD).filter(id => id != null))]; // No longer needed per-batch
 
-  console.log(`\n📦 Processing Batch ${batchIndex + 1}/${totalBatches} (${batch.length} invoices)`);
+  remoteLog('INFO', `\n📦 Processing Batch ${batchIndex + 1}/${totalBatches} (${batch.length} invoices)`);
 
   try {
     // A. Sync Customers - SKIPPED (Done globally)
@@ -208,7 +228,7 @@ async function processBatch(connection, batch, batchIndex, totalBatches) {
     });
 
     if (invoicesToSkip.size > 0) {
-        // console.log(`      ℹ️  Skipping ${invoicesToSkip.size} internal/accounting invoices in this batch.`);
+        // remoteLog('INFO', `      ℹ️  Skipping ${invoicesToSkip.size} internal/accounting invoices in this batch.`);
     }
 
     // Filter details to exclude skipped invoices
@@ -216,9 +236,9 @@ async function processBatch(connection, batch, batchIndex, totalBatches) {
     
     // DEBUG LOGGING FOR TEST INVOICE
     if (details.length > 0 && details[0].INVOICE == 62783) {
-        console.log('\n🔍 DEBUG: Raw Details for Invoice 62783:');
+        remoteLog('DEBUG', '\n🔍 DEBUG: Raw Details for Invoice 62783:');
         details.forEach(d => {
-            console.log(`   Line ${d.LINENUM}: Part=${d.PARTNO}, Qty=${d.QTY}, Amount=${d.AMOUNT}, Labor=${d.LABOR}, FET=${d.FETAX}, Cost=${d.COST}`);
+            remoteLog('DEBUG', `   Line ${d.LINENUM}: Part=${d.PARTNO}, Qty=${d.QTY}, Amount=${d.AMOUNT}, Labor=${d.LABOR}, FET=${d.FETAX}, Cost=${d.COST}`);
         });
     }
     // const partNos = [...new Set(details.map(d => d.PARTNO).filter(p => p))]; // No longer needed per-batch
@@ -278,34 +298,34 @@ async function processBatch(connection, batch, batchIndex, totalBatches) {
     process.stdout.write(`   ✨ Batch ${batchIndex + 1} Complete\r`);
 
   } catch (error) {
-    console.error(`   ❌ Batch ${batchIndex + 1} Failed:`, error.message);
+    remoteLog('ERROR', `   ❌ Batch ${batchIndex + 1} Failed:`, error.message);
   }
 }
 
 async function main() {
   let connection;
   try {
-    console.log(`🔌 Connecting to ODBC DSN: ${config.dsn}...`);
+    remoteLog('INFO', `🔌 Connecting to ODBC DSN: ${config.dsn}...`);
     const connectionString = `DSN=${config.dsn};UID=${config.user};PWD=${config.password}`;
     // Use a pool if possible, but standard connect is safer if driver is old.
     // We will use a single connection and rely on the event loop.
     connection = await odbc.connect(connectionString);
-    console.log('✅ Connected to Database!');
+    remoteLog('INFO', '✅ Connected to Database!');
 
     // 0. Fetch Employees for Mapping
-    console.log('\n👥 Fetching Employees...');
+    remoteLog('INFO', '\n👥 Fetching Employees...');
     try {
       const employees = await connection.query('SELECT ECUCD, NAME FROM EMPLOYEE');
       employees.forEach(emp => {
         employeeMap[emp.ECUCD] = emp.NAME;
       });
-      console.log(`✅ Loaded ${employees.length} employees.`);
+      remoteLog('INFO', `✅ Loaded ${employees.length} employees.`);
     } catch (err) {
-      console.warn('⚠️ Failed to fetch employees, salesperson mapping will be skipped:', err.message);
+      remoteLog('WARN', '⚠️ Failed to fetch employees, salesperson mapping will be skipped:', err.message);
     }
 
     // 0.5. Fetch ALL Customers
-    console.log('\n👥 Fetching ALL Customers...');
+    remoteLog('INFO', '\n👥 Fetching ALL Customers...');
     const zzCustomerIds = new Set();
     
     const EXCLUDED_NAMES = [
@@ -356,13 +376,13 @@ async function main() {
               zzCustomerIds.add(String(c.CUCD));
           }
       });
-      console.log(`ℹ️  Identified ${zzCustomerIds.size} ZZ/Internal customers to exclude.`);
+      remoteLog('INFO', `ℹ️  Identified ${zzCustomerIds.size} ZZ/Internal customers to exclude.`);
 
-      console.log(`✅ Found ${allCustomers.length} customers. Syncing...`);
+      remoteLog('INFO', `✅ Found ${allCustomers.length} customers. Syncing...`);
       
       // Filter customers to sync
       const validCustomers = allCustomers.filter(c => !zzCustomerIds.has(String(c.CUCD)));
-      console.log(`ℹ️  Syncing ${validCustomers.length} valid customers (excluding ${zzCustomerIds.size} ZZ/Internal).`);
+      remoteLog('INFO', `ℹ️  Syncing ${validCustomers.length} valid customers (excluding ${zzCustomerIds.size} ZZ/Internal).`);
 
       const customerBatches = [];
       for (let i = 0; i < validCustomers.length; i += config.batchSize) {
@@ -378,16 +398,16 @@ async function main() {
         });
       });
       await Promise.all(customerPromises);
-      console.log('\n✅ All Customers Synced.');
+      remoteLog('INFO', '\n✅ All Customers Synced.');
     } catch (err) {
-      console.error('❌ Failed to sync customers:', err.message);
+      remoteLog('ERROR', '❌ Failed to sync customers:', err.message);
     }
 
     // 0.6. Fetch ALL Inventory
-    console.log('\n📦 Fetching ALL Inventory...');
+    remoteLog('INFO', '\n📦 Fetching ALL Inventory...');
     try {
       const allInventory = await connection.query('SELECT PARTNO FROM INV');
-      console.log(`✅ Found ${allInventory.length} inventory items. Syncing...`);
+      remoteLog('INFO', `✅ Found ${allInventory.length} inventory items. Syncing...`);
 
       const inventoryBatches = [];
       for (let i = 0; i < allInventory.length; i += config.batchSize) {
@@ -403,39 +423,100 @@ async function main() {
         });
       });
       await Promise.all(inventoryPromises);
-      console.log('\n✅ All Inventory Synced.');
+      remoteLog('INFO', '\n✅ All Inventory Synced.');
     } catch (err) {
-      console.error('❌ Failed to sync inventory:', err.message);
+      remoteLog('ERROR', '❌ Failed to sync inventory:', err.message);
+    }
+
+    // 0.7. Fetch Inventory Quantities
+    remoteLog('INFO', '\n📦 Fetching Inventory Quantities...');
+    try {
+      // Re-use inventoryBatches to fetch quantities for those parts.
+      // We need to reconstruct inventoryBatches since they were local to the previous block
+      const allInventory = await connection.query('SELECT PARTNO FROM INV');
+      const inventoryBatches = [];
+      for (let i = 0; i < allInventory.length; i += config.batchSize) {
+        inventoryBatches.push(allInventory.slice(i, i + config.batchSize));
+      }
+
+      const qtyPromises = inventoryBatches.map((batch, i) => {
+        return limit(async () => {
+          const ids = batch.map(p => p.PARTNO).join(',');
+          // Note: Using SITENO alias to match DTO expectation of EFFSITENO if table is INVLOC
+          // If table is INVPRICE (from sample), it has EFFSITENO.
+          // We'll try INVLOC first as it's more standard for quantities.
+          // If INVLOC doesn't exist, we might need to try INVPRICE or similar.
+          // Assuming INVLOC has SITENO, QTYONHAND, RESERVE, MAXQTY, MINQTY
+          
+          // Strategy: Try to select from INVLOC. If it fails, catch and try INVPRICE.
+          // But we can't easily do that inside the batch loop efficiently without checking first.
+          // Let's assume INVLOC for now. If it fails, the user will report it and we can adjust.
+          // Actually, sample_inventory_price.json has EFFSITENO. Let's use that column name if we query INVPRICE.
+          // But INVLOC is usually the table.
+          
+          // Let's try a query that works for INVLOC with SITENO aliased to EFFSITENO
+          const query = `SELECT PARTNO, SITENO as EFFSITENO, QTYONHAND, RESERVE, MAXQTY, MINQTY FROM INVLOC WHERE PARTNO IN (${ids})`;
+          
+          await fetchAndSync(connection, 'inventory-quantities', query, `Inventory Qty Batch ${i+1}/${inventoryBatches.length}`, null, null, 'inventoryData');
+          process.stdout.write(`   ✨ Synced Inventory Qty Batch ${i+1}/${inventoryBatches.length}\r`);
+        });
+      });
+      await Promise.all(qtyPromises);
+      remoteLog('INFO', '\n✅ All Inventory Quantities Synced.');
+
+    } catch (err) {
+       remoteLog('ERROR', '❌ Failed to sync inventory quantities (INVLOC might be missing, trying INVPRICE...):', err.message);
+       // Fallback to INVPRICE if INVLOC fails
+       try {
+          const allInventory = await connection.query('SELECT PARTNO FROM INV');
+          const inventoryBatches = [];
+          for (let i = 0; i < allInventory.length; i += config.batchSize) {
+            inventoryBatches.push(allInventory.slice(i, i + config.batchSize));
+          }
+          
+          const qtyPromises = inventoryBatches.map((batch, i) => {
+            return limit(async () => {
+              const ids = batch.map(p => p.PARTNO).join(',');
+              const query = `SELECT PARTNO, EFFSITENO, QTYONHAND, RESERVE, MAXQTY, MINQTY FROM INVPRICE WHERE PARTNO IN (${ids})`;
+              await fetchAndSync(connection, 'inventory-quantities', query, `Inventory Qty Batch (INVPRICE) ${i+1}/${inventoryBatches.length}`, null, null, 'inventoryData');
+              process.stdout.write(`   ✨ Synced Inventory Qty Batch (INVPRICE) ${i+1}/${inventoryBatches.length}\r`);
+            });
+          });
+          await Promise.all(qtyPromises);
+          remoteLog('INFO', '\n✅ All Inventory Quantities Synced (from INVPRICE).');
+       } catch (err2) {
+          remoteLog('ERROR', '❌ Failed to sync inventory quantities from INVPRICE too:', err2.message);
+       }
     }
 
     // 1. Fetch ALL Invoice IDs first
-    console.log(`\n🔍 Fetching ALL invoice IDs since ${config.startDate}...`);
+    remoteLog('INFO', `\n🔍 Fetching ALL invoice IDs since ${config.startDate}...`);
     
     // TEST MODE: Filter for specific invoice if needed
     const TEST_INVOICE = null; // Set to null to disable test mode
     let invoiceQuery = `SELECT INVOICE, CUCD, SITENO FROM HINVOICE WHERE INVDATE >= '${config.startDate}' ORDER BY SITENO, INVOICE`;
     
     if (TEST_INVOICE) {
-      console.log(`🧪 TEST MODE: Fetching only invoice ${TEST_INVOICE}`);
+      remoteLog('INFO', `🧪 TEST MODE: Fetching only invoice ${TEST_INVOICE}`);
       invoiceQuery = `SELECT INVOICE, CUCD, SITENO FROM HINVOICE WHERE INVOICE = ${TEST_INVOICE}`;
     }
 
     const allInvoices = await connection.query(invoiceQuery);
     
     if (allInvoices.length === 0) {
-      console.log('❌ No invoices found since start date.');
+      remoteLog('WARN', '❌ No invoices found since start date.');
       return;
     }
 
     // Filter out ZZ invoices
     const validInvoices = allInvoices.filter(inv => !zzCustomerIds.has(String(inv.CUCD)));
-    console.log(`ℹ️  Filtered out ${allInvoices.length - validInvoices.length} ZZ invoices.`);
+    remoteLog('INFO', `ℹ️  Filtered out ${allInvoices.length - validInvoices.length} ZZ invoices.`);
 
     // Limit removed for full sync
     const limitedInvoices = validInvoices;
 
-    console.log(`✅ Found ${limitedInvoices.length} valid invoices (from ${allInvoices.length} total).`);
-    console.log(`🚀 Starting Parallel Sync (Batch Size: ${config.batchSize}, Concurrency: ${config.concurrency})...`);
+    remoteLog('INFO', `✅ Found ${limitedInvoices.length} valid invoices (from ${allInvoices.length} total).`);
+    remoteLog('INFO', `🚀 Starting Parallel Sync (Batch Size: ${config.batchSize}, Concurrency: ${config.concurrency})...`);
 
     const batches = [];
     for (let i = 0; i < limitedInvoices.length; i += config.batchSize) {
@@ -449,17 +530,17 @@ async function main() {
 
     await Promise.all(promises);
 
-    console.log('\n💾 Saving sync cache...');
+    remoteLog('INFO', '\n💾 Saving sync cache...');
     saveCache();
 
-    console.log('\n🏁 Full Sync Completed!');
+    remoteLog('INFO', '\n🏁 Full Sync Completed!');
 
   } catch (error) {
-    console.error('❌ Fatal Error:', error);
+    remoteLog('ERROR', '❌ Fatal Error:', error);
   } finally {
     if (connection) {
       await connection.close();
-      console.log('🔌 Connection closed.');
+      remoteLog('INFO', '🔌 Connection closed.');
     }
   }
 }

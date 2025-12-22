@@ -6,11 +6,30 @@ import {
   SyncVehiclesDto,
   SyncInvoicesDto,
   SyncInvoiceItemsDto,
+  SyncInventoryDataDto,
+  SyncCategoriesDto,
+  SyncBrandsDto,
+  SyncLogDto,
 } from './dto/sync-dtos';
 
 @Controller('live-sync')
 export class LiveSyncController {
   constructor(private readonly liveSyncService: LiveSyncService) {}
+
+  @Post('logs')
+  async logRemote(@Body() dto: SyncLogDto) {
+    return this.liveSyncService.logRemote(dto);
+  }
+
+  @Post('categories')
+  async syncCategories(@Body() dto: SyncCategoriesDto) {
+    return this.liveSyncService.syncCategories(dto.categories);
+  }
+
+  @Post('brands')
+  async syncBrands(@Body() dto: SyncBrandsDto) {
+    return this.liveSyncService.syncBrands(dto.brands);
+  }
 
   @Post('customers')
   async syncCustomers(@Body() dto: SyncCustomersDto) {
@@ -20,6 +39,11 @@ export class LiveSyncController {
   @Post('inventory')
   async syncInventory(@Body() dto: SyncInventoryDto) {
     return this.liveSyncService.syncInventory(dto.inventory);
+  }
+
+  @Post('inventory-quantities')
+  async syncInventoryQuantities(@Body() dto: SyncInventoryDataDto) {
+    return this.liveSyncService.syncInventoryQuantities(dto.inventoryData);
   }
 
   @Post('vehicles')

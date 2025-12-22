@@ -509,6 +509,8 @@ enum TireType {
   COMMERCIAL
   SPECIALTY
   OTHER
+  SERVICES
+  PARTS
 }
 
 enum TireSeason {
@@ -830,6 +832,30 @@ model TireMasterSyncHistory {
   @@index([startTime])
   @@map("tire_master_sync_history")
 }
+
+model TireMasterCategory {
+  id          String   @id @default(cuid())
+  code        String   @unique @db.VarChar(10) // CAT
+  name        String?  @db.VarChar(100)
+  catType     Int?     // 0 or 1
+  lastSyncedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("tire_master_categories")
+}
+
+model TireMasterBrand {
+  id          String   @id @default(cuid())
+  code        String   @unique @db.VarChar(10) // MFG or CODE
+  name        String?  @db.VarChar(100)
+  lastSyncedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("tire_master_brands")
+}
+
 // National Account Reconciliation Models
 
 model ReconciliationBatch {

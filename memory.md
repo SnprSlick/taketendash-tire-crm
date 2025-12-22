@@ -2,18 +2,18 @@
 
 ## Current Status (Live Sync Update)
 - **Admin User**: Re-created default admin user (`admin` / `password`) after database clear. Role set to `ADMINISTRATOR`.
-- **Database Cleared**: All data (Invoices, Customers, Products, Sync History) has been cleared to resolve data discrepancies and prepare for a fresh sync.
-- **Sync Client**: Updated with exclusion logic for internal accounts and ZZ- transactions.
-- **Sync Client Fix**: Updated customer ID filtering to use string comparison to ensure "ZZ-VISA/MASTERCARD" (ID 105) is correctly excluded.
-- **Backend**: Configured to load `.env` correctly using `@nestjs/config`.
-- **Database Cleared**: Re-ran `clear-all-data.ts` to wipe all data for a fresh start.
-- **Cache Cleared**: Deleted `sync_cache.json` (if it existed) to force a full re-sync.
-- **Next Steps**: Run the sync client to re-populate the database with clean data.
+- **Database**: Schema updated with `TireMasterCategory`, `TireMasterBrand` models and `TireType` enum (added SERVICES, PARTS).
+- **Sync Clients**:
+  - `tiremaster_sync_client.js`: Main sync (Customers, Invoices).
+  - `tiremaster_inventory_sync_client.js`: Inventory sync (Categories, Brands, Products, Inventory).
+- **Backend**: Running on port 3001.
+- **Next Steps**: Run the inventory sync client to populate categories, brands, and inventory.
 
-### Recent Changes
-- Created `backend/clear-all-data.ts` to clear all tables.
-- Installed `@nestjs/config` in backend to fix environment variable loading issues.
-- Updated `backend/src/app.module.ts` to import `ConfigModule`.
+### Recent Fixes
+- Added `SERVICES` and `PARTS` to `TireType` enum in Prisma schema to match `LiveSyncService` logic.
+- Regenerated Prisma Client and pushed schema changes to DB.
+- Fixed TypeScript errors in `LiveSyncService` related to missing enum values and models.
+- Created `tiremaster_inventory_sync_client.js` to handle inventory sync separately.
 
 
 ## Recent Issues
@@ -430,3 +430,58 @@
 - **Verification**: Verified login and token validation works correctly on port 3002.
 - **Port Reset**: Reset backend port to `3001` and updated frontend config accordingly (User manual restart).
 - **Status**: Backend running on port 3001.
+- **Git Push**: Pushed changes to `feat/live-sync` branch (2025-12-22).
+
+## Inventory Sync Fixes
+- Fixed missing `TireMasterInventoryDataDto` import in `live-sync.service.ts`.
+- Verified `LiveSyncController` has `inventory-quantities` endpoint.
+- Verified `tiremaster_sync_client.js` fetches inventory quantities from `INVLOC` (or `INVPRICE`).
+- Verified frontend `InventoryPage` expects data structure provided by `InventoryService`.
+- Restarted backend to apply changes.
+
+- **Inventory Sync Client Split**:
+  - Created `scripts/tiremaster_inventory_sync_client.js` to handle inventory syncing separately from invoices.
+  - Fixed `p-limit` dependency issue by inlining custom implementation, removing the need for external package installation.
+  - This allows for independent updates of inventory levels without re-syncing all invoices.
+  - Logic includes fetching products from `INV` and quantities from `INVLOC` (with fallback to `INVPRICE`).
+
+- **Fix Inventory Sync API Errors**:
+  - Updated `tiremaster_inventory_sync_client.js` to sanitize `null` values from the payload before sending to the backend. This prevents `class-validator` errors for optional fields that are null in the database.
+  - Verified `p-limit` implementation in the script.
+  - **Fix Inventory Sync Client**:
+    - Updated API URL to `10.10.11.204`.
+    - Fixed SQL quoting for `PARTNO` in `IN` clauses to prevent ODBC errors.
+    - Fixed `p.PartNO.replace is not a function` error by casting `PARTNO` to String before calling `.replace()`.
+- [x] Fix SQL quoting for PARTNO in inventory sync client (escaped single quotes)
+- [x] **Fix Inventory Sync**:
+  - Created `scripts/tiremaster_inventory_sync_client.js` to sync inventory separately.
+  - Fixed `p-limit` dependency issue by implementing a custom concurrency limiter.
+  - Fixed SQL quoting for `PartNO`.
+  - Fixed API URL (added IP).
+  - Fixed "error executing sql statement" by prioritizing `INVPRICE` table over `INVLOC` and adding robust error handling/fallback.
+
+### Remote Logging & Final Setup (2025-12-22)
+- **Remote Logging**: Enabled. Sync clients (`tiremaster_sync_client.js` and `tiremaster_inventory_sync_client.js`) now send logs to `/api/v1/live-sync/logs`.
+- **Backend**: `LiveSyncController` updated to accept logs and print them to the backend console.
+- **Port**: Backend confirmed running on port 3001. Sync clients configured to use port 3001.
+- **Status**: Ready for user to run sync clients on the external machine. Logs will appear in the backend terminal.
+
+### Inventory Sync Fixes (2025-12-22)
+- **Backend Fix**: Fixed `TireType` enum error in `LiveSyncService` (removed invalid `SERVICES` and `PARTS` checks).
+- **Sync Client Update**: Updated `tiremaster_inventory_sync_client.js` with verification logic to detect missing products.
+  - Logs "Batch mismatch" warnings if fetched items count != requested batch size.
+  - Logs sample IDs for debugging.
+  - Refactored `fetchAndSync` to accept pre-fetched data to avoid re-execution.
+- **Category Sync Fix**: Updated `tiremaster_inventory_sync_client.js` to correctly map `CatType` to a number (or null) to satisfy backend validation, resolving 400 Bad Request errors.
+
+### Inventory Sync Debugging (2025-12-22)
+- **Missing Tables**: User reported `MFG` and `CODES` tables not found.
+- **Fix**: Updated `tiremaster_inventory_sync_client.js` to:
+  - List all tables in the database (via `systable`) to help identify correct table names.
+  - Try `MANUFACTURER` and `BRAND` tables as fallbacks for brand data.
+  - Log potential brand table candidates.
+- **Brand Table Search**: Created `scripts/find-brand-table.js` to help locate the correct tables for Brands and Categories by searching for "Bridgestone" and inspecting SKU '000019'.
+  - **Update**: Fixed connection string to use `DSN=TireMaster` to match the working sync client environment.
+  - **Action**: User needs to run `node scripts/find-brand-table.js` on the external computer and report the output.
+  - **Success**: User confirmed `MFGCODE` table contains brand info (Code='BRI', Descr='bridgestone'). Updated `tiremaster_inventory_sync_client.js` to use this table.
+
