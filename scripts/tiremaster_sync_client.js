@@ -10,9 +10,9 @@ const config = {
   user: 'dba',                 // ODBC User
   password: 'sql',             // ODBC Password
   backendUrl: 'http://10.10.13.188:3001/api/v1/live-sync', // REPLACE 'localhost' with your Mac's IP if running on a different machine
-  startDate: '2025-01-01',     // Sync data from this date
-  batchSize: 2000,             // Records per API request (Increased for speed)
-  concurrency: 10,             // Max concurrent batches
+  startDate: process.argv[2] || '2025-01-01',     // Sync data from this date
+  batchSize: 1000,             // Records per API request
+  concurrency: 5,             // Max concurrent batches
   cacheFile: path.join(__dirname, 'sync_cache.json'),
 };
 
@@ -111,13 +111,24 @@ const limit = pLimit(config.concurrency);
 
 async function fetchAndSync(connection, type, query, description, cacheOptions = null, transformFn = null, payloadKey = null) {
   try {
+    remoteLog('DEBUG', `      Starting fetch for ${description}...`);
+    
     // 1. Fetch Data (ODBC)
-    // Note: ODBC queries on a single connection must be sequential. 
-    // We rely on the main loop to manage this, or we accept that node-odbc might queue them.
-    // To be safe and robust, we'll assume this might block other fetches, which is fine.
-    const result = await connection.query(query);
+    // remoteLog('DEBUG', `      Querying ${type}...`);
+    const startFetch = Date.now();
+    
+    // Add timeout to query
+    const queryPromise = connection.query(query);
+    const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Query timed out after 60s')), 60000)
+    );
+    
+    const result = await Promise.race([queryPromise, timeoutPromise]);
+    
+    const fetchTime = Date.now() - startFetch;
     
     if (result.length === 0) return;
+    // remoteLog('DEBUG', `      Fetched ${result.length} rows in ${fetchTime}ms`);
 
     // 1.5 Transform Data
     let dataToSync = result;
@@ -153,8 +164,17 @@ async function fetchAndSync(connection, type, query, description, cacheOptions =
     payload[payloadKey || type] = dataToSync;
 
     try {
-      await axios.post(`${config.backendUrl}/${type}`, payload);
-      // remoteLog('INFO', `      ✅ Synced ${dataToSync.length} ${type}`);
+      const payloadStr = JSON.stringify(payload);
+      const payloadSizeMB = (Buffer.byteLength(payloadStr) / 1024 / 1024).toFixed(2);
+      // remoteLog('DEBUG', `      Posting ${dataToSync.length} items (${payloadSizeMB} MB) to ${type}...`);
+      
+      const startPost = Date.now();
+      await axios.post(`${config.backendUrl}/${type}`, payload, {
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity
+      });
+      const postTime = Date.now() - startPost;
+      // remoteLog('INFO', `      ✅ Synced ${dataToSync.length} ${type} in ${postTime}ms`);
 
       // 4. Update Cache
       if (cacheOptions) {
@@ -187,7 +207,11 @@ async function processBatch(connection, batch, batchIndex, totalBatches) {
         'EMILY R ISRAEL',
         'ELI STEWARD',
         'INTERNAL',
-        'ACCOUNTING'
+        'ACCOUNTING',
+        'TRANSFER',
+        'TR',
+        'INTER-STORE',
+        'INTERCOMPANY'
   ];
   // const customerIds = [...new Set(batch.map(inv => inv.CUCD).filter(id => id != null))]; // No longer needed per-batch
 
@@ -203,11 +227,16 @@ async function processBatch(connection, batch, batchIndex, totalBatches) {
     */
 
     // B. Fetch Details to find Products
-    const detailsQuery = `SELECT t.INVOICE, t.LINENUM, t.SITENO, t.PARTNO, t.DESCR, t.QTY, t.AMOUNT, t.COST, t.FETAX, t.LABOR 
+    const detailsQuery = `SELECT INVOICE, LINENUM, SITENO, PARTNO, DESCR, QTY, AMOUNT, COST, FETAX, LABOR 
                           FROM TRANS t 
                           WHERE t.INVOICE IN (${invoiceIds})`;
     
     const details = await connection.query(detailsQuery);
+
+    // DEBUG: Log columns of first row to verify field names
+    if (details.length > 0 && batchIndex === 0) {
+        remoteLog('INFO', `🔍 TRANS Table Columns: ${Object.keys(details[0]).join(', ')}`);
+    }
     
     // Identify invoices to skip based on line item content (Accounting/Internal transactions)
     const invoicesToSkip = new Set();
@@ -257,42 +286,63 @@ async function processBatch(connection, batch, batchIndex, totalBatches) {
     */
 
     // D. Sync Invoices
-    const invoiceSyncQuery = `SELECT INVOICE, CUCD, INVDATE, TAX, NOTAXABLE, TAXABLE, SITENO, BSALES FROM HINVOICE WHERE INVOICE IN (${invoiceIds})`;
+    const invoiceSyncQuery = `SELECT INVOICE, CUCD, INVDATE, TAX, NOTAXABLE, TAXABLE, SITENO, BSALES, KEYMOD, CUCD_S FROM HINVOICE WHERE INVOICE IN (${invoiceIds})`;
     
     const invoiceTransform = (inv) => {
+      // Capture raw data before modification
+      // const raw_data = { ...inv }; // Removed for performance
+
       // Skip if in skip list
       if (invoicesToSkip.has(inv.INVOICE)) return null;
 
       // Map BSALES (Employee ID) to Salesperson Name
       if (inv.BSALES && employeeMap[inv.BSALES]) {
         inv.SALESMAN = employeeMap[inv.BSALES];
-        
-        // Check if Salesperson is in exclusion list
-        const salesmanUpper = inv.SALESMAN.toUpperCase();
-        for (const excluded of EXCLUDED_NAMES) {
-            if (salesmanUpper.includes(excluded)) {
-                return null; // Skip this invoice
-            }
-        }
       } else {
         inv.SALESMAN = null;
       }
-      delete inv.BSALES; // Remove BSALES as it's not in the DTO
-      return inv;
+      
+      // Filter allowed fields
+      const allowed = ['INVOICE', 'CUCD', 'INVDATE', 'TAX', 'NOTAXABLE', 'TAXABLE', 'SITENO', 'SALESMAN', 'KEYMOD', 'CUCD_S', 'lastsync'];
+      const cleanItem = {};
+      allowed.forEach(key => {
+          if (inv[key] !== undefined) cleanItem[key] = inv[key];
+      });
+      // cleanItem.raw_data = raw_data; // Removed for performance
+      
+      return cleanItem;
     };
 
     await fetchAndSync(connection, 'invoices', invoiceSyncQuery, 'Invoices', null, invoiceTransform);
 
     // E. Sync Details (Send the details we already fetched)
-    // Note: Details are tricky to cache individually because they don't have a single unique ID in the query result easily (INVOICE + LINENUM + SITENO).
-    // Also, if we skip the invoice, we probably skip details.
-    // For now, we'll just sync details if we synced the invoice or if we want to be safe.
-    // Optimization: Only sync details for invoices that were NOT skipped?
-    // But fetchAndSync filters the array. We don't easily know which invoices were skipped in step D without checking cache again.
-    // Let's just send details. The backend upsert handles it.
     if (filteredDetails.length > 0) {
-        const payload = { details: filteredDetails };
-        await axios.post(`${config.backendUrl}/details`, payload);
+        // Add raw_data to details and filter fields
+        const allowed = ['INVOICE', 'LINENUM', 'SITENO', 'PARTNO', 'DESCR', 'QTY', 'AMOUNT', 'COST', 'FETAX', 'LABOR', 'lastsync'];
+        
+        const cleanedDetails = filteredDetails.map(d => {
+            const cleanItem = {};
+            // Case-insensitive mapping
+            const keys = Object.keys(d);
+            allowed.forEach(allowKey => {
+                const foundKey = keys.find(k => k.toUpperCase() === allowKey.toUpperCase());
+                if (foundKey) {
+                    cleanItem[allowKey] = d[foundKey];
+                }
+            });
+            // cleanItem.raw_data = { ...d }; // Removed for performance
+            return cleanItem;
+        });
+        
+        if (cleanedDetails.length > 0 && batchIndex === 0) {
+             remoteLog('DEBUG', `Sample Detail Item: ${JSON.stringify(cleanedDetails[0])}`);
+        }
+        
+        const payload = { details: cleanedDetails };
+        await axios.post(`${config.backendUrl}/details`, payload, {
+            maxBodyLength: Infinity,
+            maxContentLength: Infinity
+        });
     }
 
     process.stdout.write(`   ✨ Batch ${batchIndex + 1} Complete\r`);
@@ -301,6 +351,16 @@ async function processBatch(connection, batch, batchIndex, totalBatches) {
     remoteLog('ERROR', `   ❌ Batch ${batchIndex + 1} Failed:`, error.message);
   }
 }
+
+// --- GLOBAL ERROR HANDLERS ---
+process.on('unhandledRejection', (reason, promise) => {
+  remoteLog('ERROR', '❌ Unhandled Rejection:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  remoteLog('ERROR', '❌ Uncaught Exception:', error);
+  process.exit(1);
+});
 
 async function main() {
   let connection;
@@ -336,7 +396,11 @@ async function main() {
         'EMILY R ISRAEL',
         'ELI STEWARD',
         'INTERNAL',
-        'ACCOUNTING'
+        'ACCOUNTING',
+        'TRANSFER',
+        'TR',
+        'INTER-STORE',
+        'INTERCOMPANY'
     ];
 
     try {
@@ -381,8 +445,11 @@ async function main() {
       remoteLog('INFO', `✅ Found ${allCustomers.length} customers. Syncing...`);
       
       // Filter customers to sync
-      const validCustomers = allCustomers.filter(c => !zzCustomerIds.has(String(c.CUCD)));
-      remoteLog('INFO', `ℹ️  Syncing ${validCustomers.length} valid customers (excluding ${zzCustomerIds.size} ZZ/Internal).`);
+      // UPDATE: Sync ALL customers to support all invoices.
+      const validCustomers = allCustomers;
+      // const validCustomers = allCustomers.filter(c => !zzCustomerIds.has(String(c.CUCD)));
+      // remoteLog('INFO', `ℹ️  Syncing ${validCustomers.length} valid customers (excluding ${zzCustomerIds.size} ZZ/Internal).`);
+      remoteLog('INFO', `ℹ️  Syncing ALL ${validCustomers.length} customers.`);
 
       const customerBatches = [];
       for (let i = 0; i < validCustomers.length; i += config.batchSize) {
@@ -391,9 +458,21 @@ async function main() {
 
       const customerPromises = customerBatches.map((batch, i) => {
         return limit(async () => {
-          const ids = batch.map(c => c.CUCD).join(',');
-          const query = `SELECT CUCD, NAME, ADDRESS1, ADDRESS2, CITY, STATE, ZIP, BPHONE, EMail, CREDIT, TERMS, ACTIVE FROM CUSTOMER WHERE CUCD IN (${ids})`;
-          await fetchAndSync(connection, 'customers', query, `Customers Batch ${i+1}/${customerBatches.length}`, null);
+          const ids = batch.map(c => `'${String(c.CUCD).replace(/'/g, "''")}'`).join(',');
+          // UPDATE: Fetch specific columns to improve performance
+          const query = `SELECT CUCD, NAME, CONTACT, COMPANY, ADDRESS1, ADDRESS2, CITY, STATE, ZIP, BPHONE, EMail, CREDIT, TERMS, ACTIVE, SITENO FROM CUSTOMER WHERE CUCD IN (${ids})`;
+          
+          const transformFn = (item) => {
+              const allowed = ['CUCD', 'NAME', 'CONTACT', 'COMPANY', 'ADDRESS1', 'ADDRESS2', 'CITY', 'STATE', 'ZIP', 'BPHONE', 'EMail', 'CREDIT', 'TERMS', 'ACTIVE', 'SITENO', 'lastsync'];
+              const cleanItem = {};
+              allowed.forEach(key => {
+                  if (item[key] !== undefined) cleanItem[key] = item[key];
+              });
+              // cleanItem.raw_data = { ...item }; // Removed for performance
+              return cleanItem;
+          };
+
+          await fetchAndSync(connection, 'customers', query, `Customers Batch ${i+1}/${customerBatches.length}`, null, transformFn);
           process.stdout.write(`   ✨ Synced Customers Batch ${i+1}/${customerBatches.length}\r`);
         });
       });
@@ -416,9 +495,21 @@ async function main() {
 
       const inventoryPromises = inventoryBatches.map((batch, i) => {
         return limit(async () => {
-          const ids = batch.map(p => p.PARTNO).join(',');
-          const query = `SELECT PARTNO, INVNO, MFG, SIZE, CAT, NAME, WEIGHT, ACTIVE, VENDPARTNO FROM INV WHERE PARTNO IN (${ids})`;
-          await fetchAndSync(connection, 'inventory', query, `Inventory Batch ${i+1}/${inventoryBatches.length}`, null);
+          const ids = batch.map(p => `'${String(p.PARTNO).replace(/'/g, "''")}'`).join(',');
+          const query = `SELECT PARTNO, INVNO, MFG, SIZE, CAT, NAME, WEIGHT, ACTIVE, VENDPARTNO, NEXTCOST, LASTCOST, EDL, DBILL FROM INV WHERE PARTNO IN (${ids})`;
+          
+          const transformFn = (item) => {
+              const cleanItem = { ...item };
+              // Keep cost fields in metadata for fallback calculations
+              cleanItem.raw_data = { 
+                  NEXTCOST: item.NEXTCOST, 
+                  LASTCOST: item.LASTCOST, 
+                  EDL: item.EDL 
+              };
+              return cleanItem;
+          };
+
+          await fetchAndSync(connection, 'inventory', query, `Inventory Batch ${i+1}/${inventoryBatches.length}`, null, transformFn);
           process.stdout.write(`   ✨ Synced Inventory Batch ${i+1}/${inventoryBatches.length}\r`);
         });
       });
@@ -441,7 +532,7 @@ async function main() {
 
       const qtyPromises = inventoryBatches.map((batch, i) => {
         return limit(async () => {
-          const ids = batch.map(p => p.PARTNO).join(',');
+          const ids = batch.map(p => `'${String(p.PARTNO).replace(/'/g, "''")}'`).join(',');
           // Note: Using SITENO alias to match DTO expectation of EFFSITENO if table is INVLOC
           // If table is INVPRICE (from sample), it has EFFSITENO.
           // We'll try INVLOC first as it's more standard for quantities.
@@ -476,7 +567,7 @@ async function main() {
           
           const qtyPromises = inventoryBatches.map((batch, i) => {
             return limit(async () => {
-              const ids = batch.map(p => p.PARTNO).join(',');
+              const ids = batch.map(p => `'${String(p.PARTNO).replace(/'/g, "''")}'`).join(',');
               const query = `SELECT PARTNO, EFFSITENO, QTYONHAND, RESERVE, MAXQTY, MINQTY FROM INVPRICE WHERE PARTNO IN (${ids})`;
               await fetchAndSync(connection, 'inventory-quantities', query, `Inventory Qty Batch (INVPRICE) ${i+1}/${inventoryBatches.length}`, null, null, 'inventoryData');
               process.stdout.write(`   ✨ Synced Inventory Qty Batch (INVPRICE) ${i+1}/${inventoryBatches.length}\r`);
@@ -494,11 +585,11 @@ async function main() {
     
     // TEST MODE: Filter for specific invoice if needed
     const TEST_INVOICE = null; // Set to null to disable test mode
-    let invoiceQuery = `SELECT INVOICE, CUCD, SITENO FROM HINVOICE WHERE INVDATE >= '${config.startDate}' ORDER BY SITENO, INVOICE`;
+    let invoiceQuery = `SELECT INVOICE, CUCD, CUCD_S, SITENO, KEYMOD FROM HINVOICE WHERE INVDATE >= '${config.startDate}' ORDER BY SITENO, INVOICE`;
     
     if (TEST_INVOICE) {
       remoteLog('INFO', `🧪 TEST MODE: Fetching only invoice ${TEST_INVOICE}`);
-      invoiceQuery = `SELECT INVOICE, CUCD, SITENO FROM HINVOICE WHERE INVOICE = ${TEST_INVOICE}`;
+      invoiceQuery = `SELECT INVOICE, CUCD, CUCD_S, SITENO, KEYMOD FROM HINVOICE WHERE INVOICE = ${TEST_INVOICE}`;
     }
 
     const allInvoices = await connection.query(invoiceQuery);
@@ -508,9 +599,17 @@ async function main() {
       return;
     }
 
-    // Filter out ZZ invoices
-    const validInvoices = allInvoices.filter(inv => !zzCustomerIds.has(String(inv.CUCD)));
-    remoteLog('INFO', `ℹ️  Filtered out ${allInvoices.length - validInvoices.length} ZZ invoices.`);
+    // Filter out ZZ invoices and Transfer (TR) invoices
+    // UPDATE: User wants to import ALL invoices and filter in the backend/frontend based on KEYMOD.
+    // So we remove the filters here.
+    const validInvoices = allInvoices;
+    // const validInvoices = allInvoices.filter(inv => {
+    //     if (zzCustomerIds.has(String(inv.CUCD))) return false;
+    //     if (inv.KEYMOD === 'TR') return false;
+    //     return true;
+    // });
+    // remoteLog('INFO', `ℹ️  Filtered out ${allInvoices.length - validInvoices.length} ZZ/TR invoices.`);
+    remoteLog('INFO', `ℹ️  Importing ALL invoices (filtering disabled).`);
 
     // Limit removed for full sync
     const limitedInvoices = validInvoices;

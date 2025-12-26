@@ -54,6 +54,7 @@ export class InvoiceController {
     @Query('endDate') endDate?: string,
     @Query('sortBy') sortBy: string = 'invoiceDate',
     @Query('sortOrder') sortOrder: string = 'desc',
+    @Query('keymod') keymod?: string,
     @User() user?: any
   ) {
     try {
@@ -121,6 +122,19 @@ export class InvoiceController {
         }
       }
 
+      if (keymod) {
+        if (keymod === '_SALES_ONLY_') {
+           where.OR = [
+             { keymod: null },
+             { keymod: '' },
+             { keymod: '  ' },
+             { keymod: { in: ['NA', 'GS', 'FC', 'ST'] } }
+           ];
+        } else if (keymod !== 'ALL') {
+           where.keymod = keymod;
+        }
+      }
+
       // Determine sort order
       const orderBy: any = {};
       const direction = sortOrder.toLowerCase() === 'asc' ? 'asc' : 'desc';
@@ -141,6 +155,7 @@ export class InvoiceController {
           where,
           include: {
             customer: true,
+            store: true,
             lineItems: {
               orderBy: { lineNumber: 'asc' }
             },
@@ -177,6 +192,8 @@ export class InvoiceController {
         return {
           id: invoice.id, // Include ID for navigation
           invoiceNumber: invoice.invoiceNumber,
+          siteNo: invoice.store?.code || '',
+          keymod: invoice.keymod,
           customerName: invoice.customer.name,
           customerId: invoice.customer.id, // Include Customer ID for navigation
           vehicleInfo: invoice.vehicleInfo || '',
@@ -406,7 +423,11 @@ export class InvoiceController {
         invoiceDate: {
           gte: startDate
         },
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        OR: [
+          { keymod: null },
+          { keymod: { in: ['', '  ', 'NA', 'GS', 'FC', 'ST'] } }
+        ]
       };
 
       // Access Control
@@ -463,6 +484,8 @@ export class InvoiceController {
         storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
       }
 
+      const salesKeymodCondition = Prisma.sql`AND (i.keymod IS NULL OR i.keymod IN ('', '  ', 'NA', 'GS', 'FC', 'ST'))`;
+
       const categoryStats = await this.prisma.$queryRaw`
         SELECT 
           CASE 
@@ -478,6 +501,7 @@ export class InvoiceController {
         WHERE i.invoice_date >= ${startDate} 
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${storeCondition}
+          ${salesKeymodCondition}
         GROUP BY 1
       `;
 
@@ -495,7 +519,11 @@ export class InvoiceController {
         invoiceDate: {
           gte: startDate
         },
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        OR: [
+          { keymod: null },
+          { keymod: { in: ['', '  ', 'NA', 'GS', 'FC', 'ST'] } }
+        ]
       };
 
       if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
@@ -539,6 +567,7 @@ export class InvoiceController {
         JOIN invoice_customers c ON c.id = i.customer_id
         WHERE i.invoice_date >= ${startDate} AND i.status = 'ACTIVE'::"InvoiceStatus"
         ${storeCondition}
+        ${salesKeymodCondition}
         GROUP BY c.id, c.name
         ORDER BY total_spent DESC
         LIMIT 5
@@ -562,6 +591,8 @@ export class InvoiceController {
           FROM invoices i
           JOIN invoice_line_items ili ON i.id = ili.invoice_id
           WHERE i.invoice_date >= ${startDate} AND i.status = 'ACTIVE'::"InvoiceStatus"
+          ${storeCondition}
+          ${salesKeymodCondition}
           GROUP BY TO_CHAR(i.invoice_date, 'Mon'), TO_CHAR(i.invoice_date, 'YYYY-MM')
           ORDER BY sort_key
         `;
@@ -577,6 +608,8 @@ export class InvoiceController {
           FROM invoices i
           JOIN invoice_line_items ili ON i.id = ili.invoice_id
           WHERE i.invoice_date >= ${startDate} AND i.status = 'ACTIVE'::"InvoiceStatus"
+          ${storeCondition}
+          ${salesKeymodCondition}
           GROUP BY TO_CHAR(i.invoice_date, 'Mon DD'), TO_CHAR(i.invoice_date, 'YYYY-MM-DD')
           ORDER BY sort_key
         `;
@@ -661,11 +694,13 @@ export class InvoiceController {
     @Query('storeId') storeId?: string,
     @Query('sortBy') sortBy: string = 'total_revenue',
     @Query('sortOrder') sortOrder: string = 'desc',
+    @Query('filterKeymods') filterKeymodsStr?: string,
     @User() user?: any
   ) {
     try {
       const startDate = startDateStr ? new Date(startDateStr) : new Date(new Date().setFullYear(new Date().getFullYear() - 1));
       const endDate = endDateStr ? new Date(endDateStr) : new Date();
+      const filterKeymods = filterKeymodsStr !== 'false'; // Default to true
       
       // Whitelist sort columns to prevent SQL injection
       const allowedSorts = ['salesperson', 'invoice_count', 'total_revenue', 'total_profit', 'profit_margin', 'avg_ticket', 'avg_profit_per_unit'];
@@ -696,6 +731,11 @@ export class InvoiceController {
       } else if (storeId) {
         storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
       }
+
+      // Filter out non-sales keymods (TR, IC, etc.)
+      const salesKeymodCondition = filterKeymods 
+        ? Prisma.sql`AND (i.keymod IS NULL OR i.keymod IN ('', '  ', 'NA', 'GS', 'FC', 'ST'))`
+        : Prisma.sql``;
 
       // Build order by clause
       let orderByClause;
@@ -729,6 +769,7 @@ export class InvoiceController {
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${searchCondition}
           ${storeCondition}
+          ${salesKeymodCondition}
         GROUP BY i.salesperson
         ${orderByClause}
       `;
@@ -747,6 +788,7 @@ export class InvoiceController {
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${searchCondition}
           ${storeCondition}
+          ${salesKeymodCondition}
         GROUP BY i.salesperson
       `;
 
@@ -780,6 +822,7 @@ export class InvoiceController {
     @Query('limit') limit: number = 20,
     @Query('sortBy') sortBy: string = 'total_revenue',
     @Query('sortOrder') sortOrder: string = 'desc',
+    @Query('filterKeymods') filterKeymodsStr?: string,
     @User() user?: any
   ) {
     try {
@@ -788,6 +831,7 @@ export class InvoiceController {
       const pageNum = Math.max(1, Number(page) || 1);
       const limitNum = Math.min(100, Math.max(1, Number(limit) || 20));
       const offset = (pageNum - 1) * limitNum;
+      const filterKeymods = filterKeymodsStr !== 'false'; // Default to true
 
       // Whitelist sort columns
       const allowedSorts = ['customer_name', 'invoice_count', 'total_revenue', 'total_profit', 'profit_margin', 'avg_ticket'];
@@ -819,6 +863,11 @@ export class InvoiceController {
         storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
       }
 
+      // Filter out non-sales keymods (TR, IC, etc.)
+      const salesKeymodCondition = filterKeymods 
+        ? Prisma.sql`AND (i.keymod IS NULL OR i.keymod IN ('', '  ', 'NA', 'GS', 'FC', 'ST'))`
+        : Prisma.sql``;
+
       // Get total count for pagination
       const countResult = await this.prisma.$queryRaw`
         SELECT COUNT(DISTINCT c.id)::int as count
@@ -829,6 +878,7 @@ export class InvoiceController {
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${searchCondition}
           ${storeCondition}
+          ${salesKeymodCondition}
       `;
 
       const totalCount = countResult[0]?.count || 0;
@@ -854,6 +904,7 @@ export class InvoiceController {
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${searchCondition}
           ${storeCondition}
+          ${salesKeymodCondition}
         GROUP BY c.id, c.name
         ORDER BY ${Prisma.raw(sortColumn)} ${Prisma.raw(orderDirection)}
         LIMIT ${limitNum} OFFSET ${offset}
@@ -878,12 +929,14 @@ export class InvoiceController {
   async getMonthlyReport(
     @Query('year') yearStr?: string,
     @Query('storeId') storeId?: string,
+    @Query('filterKeymods') filterKeymodsStr?: string,
     @User() user?: any
   ) {
     try {
       const year = parseInt(yearStr) || new Date().getFullYear();
       const startDate = new Date(year, 0, 1);
       const endDate = new Date(year, 11, 31, 23, 59, 59);
+      const filterKeymods = filterKeymodsStr !== 'false'; // Default to true
 
       let storeCondition = Prisma.sql``;
       if (user && user.role !== 'ADMINISTRATOR' && user.role !== 'CORPORATE') {
@@ -903,6 +956,11 @@ export class InvoiceController {
         storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
       }
 
+      // Filter out non-sales keymods (TR, IC, etc.)
+      const salesKeymodCondition = filterKeymods 
+        ? Prisma.sql`AND (i.keymod IS NULL OR i.keymod IN ('', '  ', 'NA', 'GS', 'FC', 'ST'))`
+        : Prisma.sql``;
+
       const report = await this.prisma.$queryRaw`
         SELECT 
           TO_CHAR(i.invoice_date, 'YYYY-MM') as month_key,
@@ -918,6 +976,7 @@ export class InvoiceController {
         JOIN invoice_line_items ili ON i.id = ili.invoice_id
         WHERE i.invoice_date >= ${startDate} AND i.invoice_date <= ${endDate} AND i.status = 'ACTIVE'::"InvoiceStatus"
         ${storeCondition}
+        ${salesKeymodCondition}
         GROUP BY TO_CHAR(i.invoice_date, 'YYYY-MM'), TO_CHAR(i.invoice_date, 'Month')
         ORDER BY month_key
       `;
@@ -937,12 +996,14 @@ export class InvoiceController {
     @Param('id') id: string,
     @Query('year') yearStr?: string,
     @Query('storeId') storeId?: string,
+    @Query('filterKeymods') filterKeymodsStr?: string,
     @User() user?: any
   ) {
     try {
       const year = parseInt(yearStr) || new Date().getFullYear();
       const startDate = new Date(year, 0, 1);
       const endDate = new Date(year, 11, 31, 23, 59, 59);
+      const filterKeymods = filterKeymodsStr !== 'false'; // Default to true
 
       let storeCondition = Prisma.sql``;
       let salespersonCondition = Prisma.sql``;
@@ -970,6 +1031,11 @@ export class InvoiceController {
       } else if (storeId) {
         storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
       }
+
+      // Filter out non-sales keymods (TR, IC, etc.)
+      const salesKeymodCondition = filterKeymods 
+        ? Prisma.sql`AND (i.keymod IS NULL OR i.keymod IN ('', '  ', 'NA', 'GS', 'FC', 'ST'))`
+        : Prisma.sql``;
 
       // 1. Customer Info & Totals
       const customerInfo = await this.prisma.invoiceCustomer.findUnique({
@@ -1005,6 +1071,7 @@ export class InvoiceController {
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${storeCondition}
           ${salespersonCondition}
+          ${salesKeymodCondition}
         GROUP BY TO_CHAR(i.invoice_date, 'YYYY-MM'), TO_CHAR(i.invoice_date, 'Month')
         ORDER BY month_key
       `;
@@ -1025,6 +1092,7 @@ export class InvoiceController {
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${storeCondition}
           ${salespersonCondition}
+          ${salesKeymodCondition}
         GROUP BY i.id
         ORDER BY i.invoice_date DESC
         LIMIT 20
@@ -1042,6 +1110,7 @@ export class InvoiceController {
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${storeCondition}
           ${salespersonCondition}
+          ${salesKeymodCondition}
         GROUP BY ili.category
         ORDER BY total_revenue DESC
         LIMIT 5
@@ -1070,11 +1139,13 @@ export class InvoiceController {
     @Param('name') name: string,
     @Query('year') yearStr?: string,
     @Query('storeId') storeId?: string,
+    @Query('filterKeymods') filterKeymodsStr?: string,
     @User() user?: any
   ) {
     try {
       const decodedName = decodeURIComponent(name);
       let salespersonName = decodedName;
+      const filterKeymods = filterKeymodsStr !== 'false'; // Default to true
 
       // Check if name is an ID (simple heuristic: length 25 and alphanumeric)
       if (decodedName.length === 25 && !decodedName.includes(' ')) {
@@ -1130,6 +1201,12 @@ export class InvoiceController {
         storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
       }
 
+      // Filter out non-sales keymods (TR, IC, etc.)
+      // Note: '  ' (two spaces) is sometimes used for normal sales in TireMaster
+      const salesKeymodCondition = filterKeymods 
+        ? Prisma.sql`AND (i.keymod IS NULL OR i.keymod IN ('', '  ', 'NA', 'GS', 'FC', 'ST'))`
+        : Prisma.sql``;
+
       // 1. Monthly Stats
       const monthlyStats = await this.prisma.$queryRaw`
         SELECT 
@@ -1150,6 +1227,7 @@ export class InvoiceController {
           AND i.invoice_date <= ${endDate} 
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${storeCondition}
+          ${salesKeymodCondition}
         GROUP BY TO_CHAR(i.invoice_date, 'YYYY-MM'), TO_CHAR(i.invoice_date, 'Month')
         ORDER BY month_key
       `;
@@ -1173,6 +1251,7 @@ export class InvoiceController {
         WHERE i.salesperson = ${salespersonName} 
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${storeCondition}
+          ${salesKeymodCondition}
         GROUP BY i.id, c.name
         ORDER BY i.invoice_date DESC
         LIMIT 20
@@ -1195,6 +1274,7 @@ export class InvoiceController {
         WHERE i.salesperson = ${salespersonName} 
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${storeCondition}
+          ${salesKeymodCondition}
         GROUP BY c.id, c.name
         ORDER BY total_revenue DESC
         LIMIT 10
@@ -1210,6 +1290,7 @@ export class InvoiceController {
           AND i.invoice_date <= ${endDate}
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${storeCondition}
+          ${salesKeymodCondition}
       `;
       const totalCommission = commissionStats[0]?.total_commission || 0;
 
@@ -1226,6 +1307,7 @@ export class InvoiceController {
           AND i.invoice_date <= ${endDate}
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${storeCondition}
+          ${salesKeymodCondition}
       `;
       
       const totalLabor = laborStats[0]?.total_labor ? Number(laborStats[0].total_labor) : 0;
@@ -1304,6 +1386,10 @@ export class InvoiceController {
         storeCondition = Prisma.sql`AND i.store_id = ${storeId}`;
       }
 
+      // Filter out non-sales keymods (TR, IC, etc.)
+      // Note: '  ' (two spaces) is sometimes used for normal sales in TireMaster
+      const salesKeymodCondition = Prisma.sql`AND (i.keymod IS NULL OR i.keymod IN ('', '  ', 'NA', 'GS', 'FC', 'ST'))`;
+
       const commissions: any[] = await this.prisma.$queryRaw`
         SELECT 
           rr.id,
@@ -1322,6 +1408,7 @@ export class InvoiceController {
           AND i.invoice_date <= ${endDate}
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${storeCondition}
+          ${salesKeymodCondition}
         ORDER BY rr."invoiceDate" DESC
         LIMIT ${limit} OFFSET ${offset}
       `;
@@ -1335,6 +1422,7 @@ export class InvoiceController {
           AND i.invoice_date <= ${endDate}
           AND i.status = 'ACTIVE'::"InvoiceStatus"
           ${storeCondition}
+          ${salesKeymodCondition}
       `;
 
       const mappedCommissions = commissions.map(c => ({

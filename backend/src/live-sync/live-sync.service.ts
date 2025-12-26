@@ -102,11 +102,19 @@ export class LiveSyncService {
     for (const customer of customers) {
       try {
         // Determine best name to use
-        // Priority: COMPANY > NAME > CONTACT
-        const customerName = customer.COMPANY || customer.NAME || customer.CONTACT || 'Unknown Customer';
+        // Priority: NAME > COMPANY > CONTACT
+        // Explanation: User confirmed NAME field contains the correct business name (e.g. "UHAUL EMERGENCY ROAD SERVICE").
+        const company = customer.COMPANY ? customer.COMPANY.trim() : '';
+        const name = customer.NAME ? customer.NAME.trim() : '';
+        const contact = customer.CONTACT ? customer.CONTACT.trim() : '';
+        
+        const customerName = name.length > 0 ? name : (company.length > 0 ? company : (contact.length > 0 ? contact : 'Unknown Customer'));
+
+        // Use composite key if SITENO is available, otherwise fallback to CUCD
+        const uniqueCode = customer.SITENO ? `${customer.CUCD}-${customer.SITENO}` : customer.CUCD.toString();
 
         await this.prisma.tireMasterCustomer.upsert({
-          where: { tireMasterCode: customer.CUCD.toString() },
+          where: { tireMasterCode: uniqueCode },
           update: {
             companyName: customerName,
             address: `${customer.ADDRESS1 || ''} ${customer.ADDRESS2 || ''}`.trim(),
@@ -118,10 +126,11 @@ export class LiveSyncService {
             creditLimit: customer.CREDIT,
             paymentTerms: customer.TERMS,
             isActive: customer.ACTIVE === 1,
+            metadata: customer.raw_data || {},
             lastSyncedAt: new Date(),
           },
           create: {
-            tireMasterCode: customer.CUCD.toString(),
+            tireMasterCode: uniqueCode,
             companyName: customerName,
             address: `${customer.ADDRESS1 || ''} ${customer.ADDRESS2 || ''}`.trim(),
             city: customer.CITY,
@@ -132,6 +141,7 @@ export class LiveSyncService {
             creditLimit: customer.CREDIT,
             paymentTerms: customer.TERMS,
             isActive: customer.ACTIVE === 1,
+            metadata: customer.raw_data || {},
             lastSyncedAt: new Date(),
           },
         });
@@ -217,6 +227,7 @@ export class LiveSyncService {
             manufacturerCode: product.VENDPARTNO,
             isActive: product.ACTIVE === 1,
             isTire: isTire,
+            metadata: product.raw_data || {},
             lastSyncedAt: new Date(),
           },
           create: {
@@ -233,6 +244,7 @@ export class LiveSyncService {
             manufacturerCode: product.VENDPARTNO,
             isActive: product.ACTIVE === 1,
             isTire: isTire,
+            metadata: product.raw_data || {},
             lastSyncedAt: new Date(),
           },
         });
@@ -288,6 +300,7 @@ export class LiveSyncService {
             quantity: item.QTYONHAND || 0,
             reservedQty: item.RESERVE || 0,
             availableQty: (item.QTYONHAND || 0) - (item.RESERVE || 0),
+            metadata: item.raw_data || {},
             lastUpdated: new Date(),
           },
           create: {
@@ -296,6 +309,7 @@ export class LiveSyncService {
             quantity: item.QTYONHAND || 0,
             reservedQty: item.RESERVE || 0,
             availableQty: (item.QTYONHAND || 0) - (item.RESERVE || 0),
+            metadata: item.raw_data || {},
             lastUpdated: new Date(),
           }
         });
@@ -327,18 +341,35 @@ export class LiveSyncService {
     for (const invoice of invoices) {
       try {
         // Find TireMasterCustomer to get internal ID
+        // Use composite key lookup: CUCD-CUCD_S
+        const customerCode = invoice.CUCD_S ? `${invoice.CUCD}-${invoice.CUCD_S}` : invoice.CUCD.toString();
+        
         let tmCustomer = await this.prisma.tireMasterCustomer.findUnique({
-          where: { tireMasterCode: invoice.CUCD.toString() },
+          where: { tireMasterCode: customerCode },
         });
 
         if (!tmCustomer) {
-          this.logger.warn(`Customer ${invoice.CUCD} not found for invoice ${invoice.INVOICE}. Creating placeholder.`);
+          // Fallback: Try looking up by just CUCD (legacy or missing site)
+          tmCustomer = await this.prisma.tireMasterCustomer.findFirst({
+             where: { tireMasterCode: { startsWith: `${invoice.CUCD}-` } }
+          });
+          
+          if (!tmCustomer) {
+             // Try exact CUCD match (if no site suffix)
+             tmCustomer = await this.prisma.tireMasterCustomer.findUnique({
+                where: { tireMasterCode: invoice.CUCD.toString() }
+             });
+          }
+        }
+
+        if (!tmCustomer) {
+          this.logger.warn(`Customer ${customerCode} not found for invoice ${invoice.INVOICE}. Creating placeholder.`);
           
           // Create a placeholder customer so we don't lose the invoice
           tmCustomer = await this.prisma.tireMasterCustomer.create({
             data: {
-              tireMasterCode: invoice.CUCD.toString(),
-              companyName: `Unknown Customer (${invoice.CUCD})`,
+              tireMasterCode: customerCode,
+              companyName: `Unknown Customer (${customerCode})`,
               isActive: false,
               lastSyncedAt: new Date(),
             }
@@ -360,6 +391,8 @@ export class LiveSyncService {
             totalAmount: (invoice.TAXABLE || 0) + (invoice.NOTAXABLE || 0) + (invoice.TAX || 0),
             siteNo: invoice.SITENO,
             salesperson: invoice.SALESMAN,
+            keymod: invoice.KEYMOD,
+            metadata: invoice.raw_data || {},
             lastSyncedAt: new Date(),
           },
           create: {
@@ -373,6 +406,8 @@ export class LiveSyncService {
             totalAmount: (invoice.TAXABLE || 0) + (invoice.NOTAXABLE || 0) + (invoice.TAX || 0),
             siteNo: invoice.SITENO,
             salesperson: invoice.SALESMAN,
+            keymod: invoice.KEYMOD,
+            metadata: invoice.raw_data || {},
             lastSyncedAt: new Date(),
           },
         });
@@ -505,6 +540,7 @@ export class LiveSyncService {
             quantity: quantity, // Keep original quantity (0) for record
             unitPrice: unitPrice,
             totalAmount: totalAmount,
+            metadata: item.raw_data || {},
           },
           create: {
             salesOrderId: salesOrder.id,
@@ -513,6 +549,7 @@ export class LiveSyncService {
             quantity: quantity, // Keep original quantity (0) for record
             unitPrice: unitPrice,
             totalAmount: totalAmount,
+            metadata: item.raw_data || {},
           },
         });
 
@@ -529,6 +566,64 @@ export class LiveSyncService {
     const affectedInvoiceIds = [...new Set(items.map(i => `${i.SITENO}-${i.INVOICE}`))];
     this.updateInvoiceTotals(affectedInvoiceIds);
 
+    return { count };
+  }
+
+  async rehydrateInvoices(startDate: Date, endDate: Date) {
+    this.logger.log(`Rehydrating invoices from ${startDate} to ${endDate}`);
+    
+    const batch = await this.getOrCreateLiveSyncBatch();
+
+    const orders = await this.prisma.tireMasterSalesOrder.findMany({
+      where: {
+        orderDate: {
+          gte: startDate,
+          lte: endDate
+        }
+      },
+      include: {
+        customer: true,
+        items: {
+          include: {
+            product: true
+          }
+        }
+      }
+    });
+
+    this.logger.log(`Found ${orders.length} orders to rehydrate`);
+
+    let count = 0;
+    for (const order of orders) {
+      try {
+        const invoiceDto = order.metadata as any; // Cast to DTO
+        if (!invoiceDto || !invoiceDto.INVOICE) {
+            // this.logger.warn(`Order ${order.id} missing metadata`);
+            continue;
+        }
+
+        // Sync Header
+        await this.syncToInvoiceTable(invoiceDto, batch.id, order.customer);
+
+        // Sync Items
+        for (const item of order.items) {
+            const itemDto = item.metadata as any;
+            if (itemDto) {
+                await this.syncToInvoiceLineItemTable(itemDto, item.product);
+            }
+        }
+        
+        // Update totals
+        await this.updateInvoiceTotals([order.tireMasterCode]);
+
+        count++;
+        if (count % 100 === 0) this.logger.log(`Rehydrated ${count} invoices...`);
+      } catch (e) {
+        this.logger.error(`Failed to rehydrate order ${order.id}: ${e.message}`);
+      }
+    }
+
+    this.logger.log(`Rehydration complete. Processed ${count} invoices.`);
     return { count };
   }
 
@@ -553,29 +648,127 @@ export class LiveSyncService {
 
   private async syncToInvoiceTable(invoice: TireMasterInvoiceDto, batchId: string, tmCustomer: any) {
     try {
+      // Calculate customerCode again since it's not passed in
+      const customerCode = invoice.CUCD_S ? `${invoice.CUCD}-${invoice.CUCD_S}` : invoice.CUCD.toString();
+      // this.logger.debug(`Syncing invoice ${invoice.INVOICE} to table. CustomerCode: ${customerCode}`);
+
       // 1. Find or Create InvoiceCustomer
       // Use the name from TireMasterCustomer which we just synced with priority logic
       const tmCustomerRecord = await this.prisma.tireMasterCustomer.findUnique({
-          where: { tireMasterCode: invoice.CUCD.toString() }
+          where: { tireMasterCode: customerCode }
       });
-      const customerName = tmCustomerRecord?.companyName || tmCustomer.name || `Customer ${invoice.CUCD}`;
+      const customerName = tmCustomerRecord?.companyName || tmCustomer.companyName || `Customer ${invoice.CUCD}`;
 
+      // Try to find by customerCode first (more reliable)
       let invCustomer = await this.prisma.invoiceCustomer.findFirst({
         where: { 
-          name: customerName
+          customerCode: customerCode
         }
       });
 
-      if (!invCustomer) {
-        invCustomer = await this.prisma.invoiceCustomer.create({
-          data: {
-            name: customerName,
-            customerCode: invoice.CUCD.toString(),
-            phone: tmCustomer.phone,
-            email: tmCustomer.email,
-            address: tmCustomer.address,
-          }
+      if (invCustomer) {
+        // UPDATE EXISTING RECORD
+        if (invCustomer.name !== customerName) {
+           // Check for collision first to avoid P2002 error logs
+           const collision = await this.prisma.invoiceCustomer.findFirst({
+             where: { 
+               name: customerName,
+               id: { not: invCustomer.id }
+             }
+           });
+
+           if (collision) {
+             if (!collision.customerCode) {
+               // Collision is a legacy record (no code). Merge it into our correct record.
+               this.logger.log(`Merging legacy customer "${customerName}" into ${invoice.CUCD}`);
+               
+               // Move invoices
+               await this.prisma.invoice.updateMany({
+                 where: { customerId: collision.id },
+                 data: { customerId: invCustomer.id }
+               });
+               
+               // Delete legacy
+               await this.prisma.invoiceCustomer.delete({ where: { id: collision.id } });
+               
+               // Retry update
+               await this.prisma.invoiceCustomer.update({
+                 where: { id: invCustomer.id },
+                 data: { name: customerName }
+               });
+             } else {
+               // Collision is another real customer. Append ID to make unique.
+               const uniqueName = `${customerName} (${invoice.CUCD})`;
+               this.logger.warn(`Name collision for "${customerName}". Renaming ${invoice.CUCD} to "${uniqueName}"`);
+               
+               // Check if uniqueName also exists (rare edge case)
+               const doubleCollision = await this.prisma.invoiceCustomer.findFirst({
+                   where: { name: uniqueName, id: { not: invCustomer.id } }
+               });
+               
+               if (!doubleCollision) {
+                   await this.prisma.invoiceCustomer.update({
+                     where: { id: invCustomer.id },
+                     data: { name: uniqueName }
+                   });
+               }
+             }
+           } else {
+             // No collision, safe to update
+             await this.prisma.invoiceCustomer.update({
+               where: { id: invCustomer.id },
+               data: { name: customerName }
+             });
+             this.logger.debug(`Updated customer name for ${invoice.CUCD}: ${invCustomer.name} -> ${customerName}`);
+           }
+        }
+      } else {
+        // CREATE NEW RECORD (or claim legacy one)
+        
+        // Check if name exists
+        const existingByName = await this.prisma.invoiceCustomer.findFirst({
+          where: { name: customerName }
         });
+
+        if (existingByName) {
+          if (!existingByName.customerCode) {
+            // Claim legacy record
+            this.logger.log(`Claiming legacy customer "${customerName}" for code ${customerCode}`);
+            invCustomer = await this.prisma.invoiceCustomer.update({
+              where: { id: existingByName.id },
+              data: { 
+                customerCode: customerCode,
+                phone: tmCustomer.phone,
+                email: tmCustomer.email,
+                address: tmCustomer.address,
+              }
+            });
+          } else {
+            // Name taken by another real customer. Create with unique name.
+            const uniqueName = `${customerName} (${customerCode})`;
+            this.logger.warn(`Name collision for "${customerName}". Creating ${customerCode} as "${uniqueName}"`);
+            invCustomer = await this.prisma.invoiceCustomer.create({
+              data: {
+                name: uniqueName,
+                customerCode: customerCode,
+                phone: tmCustomer.phone,
+                email: tmCustomer.email,
+                address: tmCustomer.address,
+              }
+            });
+          }
+        } else {
+          // Create new clean record
+          invCustomer = await this.prisma.invoiceCustomer.create({
+            data: {
+              name: customerName,
+              customerCode: customerCode,
+              phone: tmCustomer.phone,
+              email: tmCustomer.email,
+              address: tmCustomer.address,
+            }
+          });
+        }
       }
 
       // 2. Find or Create Store
@@ -612,6 +805,8 @@ export class LiveSyncService {
           totalAmount: totalAmount,
           storeId: storeId,
           status: InvoiceStatus.ACTIVE,
+          keymod: invoice.KEYMOD,
+          metadata: invoice.raw_data || {},
           updatedAt: new Date(),
         },
         create: {
@@ -624,6 +819,8 @@ export class LiveSyncService {
           totalAmount: totalAmount,
           storeId: storeId,
           status: InvoiceStatus.ACTIVE,
+          keymod: invoice.KEYMOD,
+          metadata: invoice.raw_data || {},
           importBatchId: batchId,
         }
       });
@@ -667,7 +864,19 @@ export class LiveSyncService {
       const totalAmount = unitPrice * quantity;
       
       // TireMaster TRANS table COST appears to be Total Cost (Extended Cost) based on data analysis
-      const totalCost = Number(item.COST) || 0;
+      let totalCost = Number(item.COST) || 0;
+      
+      // Fallback to Product Cost if missing in Transaction
+      if (totalCost === 0 && product && product.metadata) {
+          // Try to find cost in product metadata (LASTCOST, NEXTCOST, etc.)
+          // Note: These are Unit Costs, so multiply by Quantity
+          const productMeta = product.metadata as any;
+          const unitCost = Number(productMeta.LASTCOST) || Number(productMeta.NEXTCOST) || Number(productMeta.EDL) || 0;
+          if (unitCost > 0) {
+              totalCost = unitCost * quantity;
+          }
+      }
+
       const unitCost = quantity !== 0 ? totalCost / quantity : 0;
       
       const grossProfit = totalAmount - totalCost;
@@ -712,7 +921,8 @@ export class LiveSyncService {
         grossProfit: grossProfit,
         grossProfitMargin: grossProfitMargin,
         category: category,
-        tireMasterProductId: product.id
+        tireMasterProductId: product.id,
+        metadata: item.raw_data || {}
       };
 
       if (existingItem) {
