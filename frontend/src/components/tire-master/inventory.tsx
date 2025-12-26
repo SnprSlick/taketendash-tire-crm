@@ -54,39 +54,31 @@ export default function TireMasterInventory({ onBackToOverview }: TireMasterInve
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Mock locations data
+  // Fetch locations from API
   useEffect(() => {
-    setLocations([
-      {
-        id: 'loc-001',
-        name: 'Main Warehouse',
-        tireMasterCode: 'MW001',
-        address: '123 Industrial Dr',
-        city: 'Dallas',
-        state: 'TX',
-        isActive: true
-      },
-      {
-        id: 'loc-002',
-        name: 'Downtown Store',
-        tireMasterCode: 'DS002',
-        address: '456 Main St',
-        city: 'Dallas',
-        state: 'TX',
-        isActive: true
-      },
-      {
-        id: 'loc-003',
-        name: 'North Branch',
-        tireMasterCode: 'NB003',
-        address: '789 North Ave',
-        city: 'Plano',
-        state: 'TX',
-        isActive: true
+    const fetchLocations = async () => {
+      try {
+        const response = await fetch('/api/v1/inventory/locations', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setLocations(data);
+          if (data.length > 0) {
+            setSelectedLocationId(data[0].id);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch locations', err);
       }
-    ]);
-    setSelectedLocationId('loc-001');
-  }, []);
+    };
+
+    if (token) {
+      fetchLocations();
+    }
+  }, [token]);
 
   const fetchInventory = useCallback(async (locationId: string) => {
     if (!locationId) return;

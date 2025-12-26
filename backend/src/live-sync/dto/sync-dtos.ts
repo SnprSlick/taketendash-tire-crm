@@ -60,9 +60,16 @@ export class TireMasterCustomerDto {
   @IsOptional()
   ACTIVE: number;
 
+  @IsNumber()
+  @IsOptional()
+  SITENO: number;
+
   @IsString()
   @IsOptional()
   lastsync: string;
+
+  @IsOptional()
+  raw_data: any;
 }
 
 export class TireMasterProductDto {
@@ -124,6 +131,9 @@ export class TireMasterProductDto {
   @IsNumber()
   @IsOptional()
   SALE_PRICE: number;
+
+  @IsOptional()
+  raw_data: any;
 }
 
 export class TireMasterVehicleDto {
@@ -197,7 +207,18 @@ export class TireMasterInvoiceDto {
 
   @IsString()
   @IsOptional()
+  KEYMOD: string;
+
+  @IsNumber()
+  @IsOptional()
+  CUCD_S: number;
+
+  @IsString()
+  @IsOptional()
   lastsync: string;
+
+  @IsOptional()
+  raw_data: any;
 }
 
 export class TireMasterInvoiceItemDto {
@@ -242,6 +263,9 @@ export class TireMasterInvoiceItemDto {
   @IsString()
   @IsOptional()
   lastsync: string;
+
+  @IsOptional()
+  raw_data: any;
 }
 
 export class SyncCustomersDto {
@@ -305,6 +329,9 @@ export class TireMasterInventoryDataDto {
   @IsString()
   @IsOptional()
   lastsync: string;
+
+  @IsOptional()
+  raw_data: any;
 }
 
 export class SyncInventoryDataDto {

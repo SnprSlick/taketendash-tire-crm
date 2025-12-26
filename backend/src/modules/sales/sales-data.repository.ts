@@ -72,11 +72,24 @@ export class SalesDataRepository extends BaseRepository<SalesDataEntity> {
       };
     }
 
+    const keymodFilter = {
+      OR: [
+        { keymod: null },
+        { keymod: { in: ['', '  ', 'NA', 'GS', 'FC', 'ST'] } }
+      ]
+    };
+
     if (storeId) {
-      whereClause.invoice = { storeId };
+      whereClause.invoice = { 
+        storeId,
+        ...keymodFilter
+      };
     } else if (allowedStoreIds) {
       if (allowedStoreIds.length > 0) {
-        whereClause.invoice = { storeId: { in: allowedStoreIds } };
+        whereClause.invoice = { 
+          storeId: { in: allowedStoreIds },
+          ...keymodFilter
+        };
       } else {
         // No access
         return {
@@ -89,6 +102,8 @@ export class SalesDataRepository extends BaseRepository<SalesDataEntity> {
           recentSales: [],
         };
       }
+    } else {
+      whereClause.invoice = keymodFilter;
     }
 
     // Get all sales data for the period

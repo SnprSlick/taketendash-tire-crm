@@ -246,6 +246,7 @@ export class TireMasterService {
     limit?: number;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
+    keymod?: string;
   }) {
     const where: any = {};
     const page = filters.page || 1;
@@ -260,6 +261,18 @@ export class TireMasterService {
     }
 
     if (filters.status) where.status = filters.status;
+    if (filters.keymod) {
+      if (filters.keymod === '_SALES_ONLY_') {
+        where.OR = [
+          { keymod: null },
+          { keymod: '' },
+          { keymod: '  ' }, // Handle whitespace keymod
+          { keymod: { in: ['CC', 'NA', 'GS', 'FC', 'ST'] } }
+        ];
+      } else {
+        where.keymod = filters.keymod;
+      }
+    }
 
     const orderBy: any = {};
     if (sortBy === 'customer') {

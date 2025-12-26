@@ -124,6 +124,8 @@ export class MechanicService {
       }
     }
 
+    whereClause = Prisma.sql`${whereClause} AND (i.keymod IS NULL OR i.keymod IN ('', '  ', 'NA', 'GS', 'FC', 'ST'))`;
+
     const summary = await this.prisma.$queryRaw<any[]>`
       SELECT 
         ml.mechanic_name as "mechanicName",
@@ -177,6 +179,8 @@ export class MechanicService {
         whereClause = Prisma.sql`AND 1=0`;
       }
     }
+
+    whereClause = Prisma.sql`${whereClause} AND (i.keymod IS NULL OR i.keymod IN ('', '  ', 'NA', 'GS', 'FC', 'ST'))`;
 
     const data = await this.prisma.$queryRaw<any[]>`
       SELECT 
@@ -250,6 +254,8 @@ export class MechanicService {
     if (endDate) {
       whereClause = Prisma.sql`${whereClause} AND ml.created_at <= ${new Date(endDate)}`;
     }
+
+    whereClause = Prisma.sql`${whereClause} AND (i.keymod IS NULL OR i.keymod IN ('', '  ', 'NA', 'GS', 'FC', 'ST'))`;
 
     // Check if exact match exists
     const exactCount = await this.prisma.mechanicLabor.count({

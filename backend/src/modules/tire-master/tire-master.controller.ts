@@ -119,6 +119,7 @@ export class TireMasterController {
     @Query('limit') limit = 20,
     @Query('sortBy') sortBy?: string,
     @Query('sortOrder') sortOrder?: 'asc' | 'desc',
+    @Query('keymod') keymod?: string,
   ) {
     return this.tireMasterService.getSalesOrders({
       startDate: startDate ? new Date(startDate) : undefined,
@@ -128,6 +129,7 @@ export class TireMasterController {
       limit: Number(limit),
       sortBy,
       sortOrder,
+      keymod,
     });
   }
 

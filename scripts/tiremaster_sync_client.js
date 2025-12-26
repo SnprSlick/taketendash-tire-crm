@@ -384,6 +384,60 @@ async function main() {
       remoteLog('WARN', '⚠️ Failed to fetch employees, salesperson mapping will be skipped:', err.message);
     }
 
+    // 0.1. Fetch Categories
+    remoteLog('INFO', '\n📂 Fetching Categories...');
+    try {
+      const categories = await connection.query('SELECT CODE, NAME, TYPE FROM CAT');
+      remoteLog('INFO', `✅ Found ${categories.length} categories. Syncing...`);
+      
+      const catPayload = {
+          categories: categories.map(c => ({
+              CAT: c.CODE,
+              NAME: c.NAME,
+              CatType: c.TYPE // Assuming TYPE column exists and maps to 0/1
+          }))
+      };
+      
+      await axios.post(`${config.backendUrl}/categories`, catPayload);
+      remoteLog('INFO', '✅ Categories Synced.');
+    } catch (err) {
+      remoteLog('WARN', '⚠️ Failed to sync categories (CAT table might be missing or different columns):', err.message);
+      // Try fallback query if TYPE is missing
+      try {
+          const categories = await connection.query('SELECT CODE, NAME FROM CAT');
+          const catPayload = {
+              categories: categories.map(c => ({
+                  CAT: c.CODE,
+                  NAME: c.NAME,
+                  CatType: 0 // Default to 0 if unknown
+              }))
+          };
+          await axios.post(`${config.backendUrl}/categories`, catPayload);
+          remoteLog('INFO', '✅ Categories Synced (without TYPE).');
+      } catch (err2) {
+          remoteLog('ERROR', '❌ Failed to sync categories fallback:', err2.message);
+      }
+    }
+
+    // 0.2. Fetch Brands
+    remoteLog('INFO', '\n🏷️ Fetching Brands...');
+    try {
+      const brands = await connection.query('SELECT CODE, NAME FROM MFG');
+      remoteLog('INFO', `✅ Found ${brands.length} brands. Syncing...`);
+      
+      const brandPayload = {
+          brands: brands.map(b => ({
+              CODE: b.CODE,
+              NAME: b.NAME
+          }))
+      };
+      
+      await axios.post(`${config.backendUrl}/brands`, brandPayload);
+      remoteLog('INFO', '✅ Brands Synced.');
+    } catch (err) {
+      remoteLog('WARN', '⚠️ Failed to sync brands (MFG table might be missing):', err.message);
+    }
+
     // 0.5. Fetch ALL Customers
     remoteLog('INFO', '\n👥 Fetching ALL Customers...');
     const zzCustomerIds = new Set();

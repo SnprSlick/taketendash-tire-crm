@@ -123,6 +123,55 @@ export default function SalesCharts({
   // Calculate total revenue for percentages
   const totalRevenue = categoryChartData.reduce((sum, item) => sum + item.value, 0);
 
+  // Calculate dynamic trend percentage
+  let trendPercentage = 0;
+  let trendDirection = 'neutral';
+  
+  let invoiceTrend = { formatted: '0.0%', direction: 'neutral' as const };
+  let revenueTrend = { formatted: '0.0%', direction: 'neutral' as const };
+  let avgOrderTrend = { formatted: '0.0%', direction: 'neutral' as const };
+  let marginTrend = { formatted: '0.0%', direction: 'neutral' as const };
+
+  const calculateGrowth = (current: number, previous: number) => {
+    if (previous === 0) return { percent: 0, direction: 'neutral' as const, formatted: '0.0%' };
+    const change = ((current - previous) / previous) * 100;
+    return {
+      percent: Math.abs(change),
+      direction: change > 0 ? 'increase' : change < 0 ? 'decrease' : 'neutral' as const,
+      formatted: `${change > 0 ? '+' : ''}${change.toFixed(1)}%`
+    };
+  };
+
+  if (chartData.length >= 2) {
+    const lastPoint = chartData[chartData.length - 1];
+    const firstPoint = chartData[0];
+    
+    // Calculate growth over the period
+    const startValue = Number(firstPoint.revenue || 0);
+    const endValue = Number(lastPoint.revenue || 0);
+    
+    if (startValue > 0) {
+      trendPercentage = ((endValue - startValue) / startValue) * 100;
+      trendDirection = trendPercentage > 0 ? 'increase' : trendPercentage < 0 ? 'decrease' : 'neutral';
+    }
+
+    // Invoices (orders)
+    invoiceTrend = calculateGrowth(Number(lastPoint.orders || 0), Number(firstPoint.orders || 0));
+
+    // Revenue
+    revenueTrend = calculateGrowth(Number(lastPoint.revenue || 0), Number(firstPoint.revenue || 0));
+
+    // Avg Order
+    const lastAvg = Number(lastPoint.orders) > 0 ? Number(lastPoint.revenue) / Number(lastPoint.orders) : 0;
+    const firstAvg = Number(firstPoint.orders) > 0 ? Number(firstPoint.revenue) / Number(firstPoint.orders) : 0;
+    avgOrderTrend = calculateGrowth(lastAvg, firstAvg);
+
+    // Margin (sales is profit)
+    const lastMargin = Number(lastPoint.revenue) > 0 ? (Number(lastPoint.sales) / Number(lastPoint.revenue)) * 100 : 0;
+    const firstMargin = Number(firstPoint.revenue) > 0 ? (Number(firstPoint.sales) / Number(firstPoint.revenue)) * 100 : 0;
+    marginTrend = calculateGrowth(lastMargin, firstMargin);
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -143,8 +192,8 @@ export default function SalesCharts({
           icon={<ShoppingCart className="w-6 h-6" />}
           title="Total Invoices"
           value={salesData.totalSales.toString()}
-          change="+12.5%"
-          changeType="increase"
+          change={invoiceTrend.formatted}
+          changeType={invoiceTrend.direction}
           gradient="from-red-500 to-red-600"
           delay="0s"
         />
@@ -152,17 +201,17 @@ export default function SalesCharts({
           icon={<DollarSign className="w-6 h-6" />}
           title="Total Revenue"
           value={`$${salesData.totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}`}
-          change="+8.3%"
-          changeType="increase"
+          change={revenueTrend.formatted}
+          changeType={revenueTrend.direction}
           gradient="from-green-500 to-emerald-600"
           delay="0.1s"
         />
         <MetricCard
           icon={<Target className="w-6 h-6" />}
           title="Average Order"
-          value={`$${salesData.averageOrderValue.toFixed(0)}`}
-          change="+15.2%"
-          changeType="increase"
+          value={`$${salesData.averageOrderValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`}
+          change={avgOrderTrend.formatted}
+          changeType={avgOrderTrend.direction}
           gradient="from-purple-500 to-purple-600"
           delay="0.2s"
         />
@@ -170,8 +219,8 @@ export default function SalesCharts({
           icon={<TrendingUp className="w-6 h-6" />}
           title="Profit Margin"
           value={`${(salesData.profitMargin || 0).toFixed(1)}%`}
-          change={salesData.profitMargin && salesData.profitMargin > 20 ? "Healthy" : "Low"}
-          changeType={salesData.profitMargin && salesData.profitMargin > 20 ? "increase" : "decrease"}
+          change={marginTrend.formatted}
+          changeType={marginTrend.direction}
           gradient="from-amber-500 to-orange-600"
           delay="0.3s"
         />
@@ -187,9 +236,15 @@ export default function SalesCharts({
               Sales Trend
             </h3>
             <div className="flex items-center space-x-2">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                <ArrowUp className="w-3 h-3 mr-1" />
-                12.5%
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                trendDirection === 'increase' ? 'bg-green-100 text-green-800' : 
+                trendDirection === 'decrease' ? 'bg-red-100 text-red-800' : 
+                'bg-slate-100 text-slate-800'
+              }`}>
+                {trendDirection === 'increase' ? <ArrowUp className="w-3 h-3 mr-1" /> : 
+                 trendDirection === 'decrease' ? <ArrowDown className="w-3 h-3 mr-1" /> : 
+                 <ArrowRight className="w-3 h-3 mr-1" />}
+                {Math.abs(trendPercentage).toFixed(1)}%
               </span>
             </div>
           </div>
@@ -208,7 +263,13 @@ export default function SalesCharts({
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                 <XAxis dataKey="month" stroke="#64748B" fontSize={12} />
-                <YAxis stroke="#64748B" fontSize={12} />
+                <YAxis 
+                  stroke="#64748B" 
+                  fontSize={12} 
+                  tickFormatter={(value) => `$${value.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}`}
+                  domain={[0, 'auto']}
+                  padding={{ top: 20 }}
+                />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -216,7 +277,7 @@ export default function SalesCharts({
                     borderRadius: '8px',
                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                   }}
-                  formatter={(value: number, name: string) => [`$${value.toLocaleString()}`, name === 'revenue' ? 'Revenue' : 'Profit']}
+                  formatter={(value: number, name: string) => [`$${Number(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, name === 'revenue' ? 'Revenue' : 'Profit']}
                 />
                 <Area
                   type="monotone"
@@ -262,7 +323,7 @@ export default function SalesCharts({
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                  <Tooltip formatter={(value: number) => `$${value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="grid grid-cols-2 gap-2 mt-4">
@@ -309,7 +370,7 @@ export default function SalesCharts({
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-slate-800">${Number(customer.total_spent || 0).toLocaleString()}</p>
+                  <p className="font-bold text-slate-800">${Number(customer.total_spent || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                 </div>
               </Link>
             ))}
@@ -342,7 +403,7 @@ export default function SalesCharts({
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-slate-800">${Number(person._sum?.totalAmount || 0).toLocaleString()}</p>
+                  <p className="font-bold text-slate-800">${Number(person._sum?.totalAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                 </div>
               </Link>
             ))}

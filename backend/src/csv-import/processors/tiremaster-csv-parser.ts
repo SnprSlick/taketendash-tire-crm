@@ -347,8 +347,18 @@ export class TireMasterCsvParser {
   ): void {
     const customerData = mappedRow.data as { customerName: string };
 
-    // Store current customer name in state for next invoice header
-    state.currentCustomerName = customerData.customerName;
+    // Only update customer name if we don't have one pending for the current invoice block
+    // OR if the previous one was likely a contact name and this one looks like a company
+    // But simpler: if we already have a name, and we haven't started an invoice, maybe we should keep the first one?
+    // TireMaster usually puts the Billing Name first, then Contact/ShipTo.
+    // So if we already have a name, ignore subsequent names until we process an invoice.
+    
+    if (!state.currentCustomerName) {
+      state.currentCustomerName = customerData.customerName;
+      this.logger.debug(`Set customer name: ${state.currentCustomerName}`);
+    } else {
+      this.logger.debug(`Ignoring potential secondary name (contact?): ${customerData.customerName} - keeping ${state.currentCustomerName}`);
+    }
   }
 
   /**
@@ -390,6 +400,10 @@ export class TireMasterCsvParser {
     };
 
     state.invoices.push(state.currentInvoice);
+    
+    // Reset customer name after using it for an invoice
+    // This ensures we look for a new customer name for the next invoice
+    state.currentCustomerName = '';
   }
 
   /**

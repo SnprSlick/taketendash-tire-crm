@@ -60,4 +60,12 @@ export class LiveSyncController {
   async syncInvoiceItems(@Body() dto: SyncInvoiceItemsDto) {
     return this.liveSyncService.syncInvoiceItems(dto.details);
   }
+
+  @Post('rehydrate')
+  async rehydrate(@Body() body: { startDate: string; endDate: string }) {
+    return this.liveSyncService.rehydrateInvoices(
+      new Date(body.startDate),
+      new Date(body.endDate),
+    );
+  }
 }

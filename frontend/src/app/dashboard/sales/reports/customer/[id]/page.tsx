@@ -36,19 +36,21 @@ export default function CustomerDetailPage() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [year, setYear] = useState(new Date().getFullYear().toString());
+  const [page, setPage] = useState(1);
+  const [limit] = useState(20);
 
   useEffect(() => {
     if (params?.id && token) {
       fetchCustomerDetails();
     }
-  }, [params?.id, year, selectedStoreId, token]);
+  }, [params?.id, year, selectedStoreId, token, page, limit]);
 
   const fetchCustomerDetails = async () => {
     if (!params?.id || !token) return;
     setLoading(true);
     try {
       const storeParam = selectedStoreId ? `&storeId=${selectedStoreId}` : '';
-      const res = await fetch(`/api/v1/invoices/reports/customers/${params.id}?year=${year}${storeParam}`, {
+      const res = await fetch(`/api/v1/invoices/reports/customers/${params.id}?year=${year}${storeParam}&page=${page}&limit=${limit}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -98,7 +100,7 @@ export default function CustomerDetailPage() {
     );
   }
 
-  const { customer, monthlyStats, recentInvoices, topCategories } = data;
+  const { customer, monthlyStats, recentInvoices, topCategories, pagination } = data;
 
   // Calculate totals from monthly stats
   const totalRevenue = monthlyStats.reduce((sum: number, m: any) => sum + Number(m.total_revenue), 0);
@@ -216,8 +218,21 @@ export default function CustomerDetailPage() {
                 <BarChart data={monthlyStats}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                   <XAxis dataKey="month_name" stroke="#64748B" fontSize={12} tickFormatter={(val) => val.trim().substring(0, 3)} />
-                  <YAxis yAxisId="left" stroke="#64748B" fontSize={12} />
-                  <YAxis yAxisId="right" orientation="right" stroke="#64748B" fontSize={12} />
+                  <YAxis 
+                    yAxisId="left" 
+                    stroke="#64748B" 
+                    fontSize={12} 
+                    domain={[0, 'auto']}
+                    padding={{ top: 20 }}
+                  />
+                  <YAxis 
+                    yAxisId="right" 
+                    orientation="right" 
+                    stroke="#64748B" 
+                    fontSize={12} 
+                    domain={[0, 'auto']}
+                    padding={{ top: 20 }}
+                  />
                   <Tooltip 
                     formatter={(value: number, name: string) => [
                       name === 'profit_margin' ? formatPercent(value) : formatCurrency(value),
@@ -315,6 +330,34 @@ export default function CustomerDetailPage() {
               </tbody>
             </table>
           </div>
+          
+          {/* Pagination Controls */}
+          {pagination && (
+            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-slate-50">
+              <div className="text-sm text-slate-500">
+                Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} results
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={pagination.page === 1}
+                  className="px-3 py-1 border border-slate-200 rounded bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-slate-600"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-slate-600 font-medium px-2">
+                  Page {pagination.page} of {pagination.totalPages}
+                </span>
+                <button
+                  onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+                  disabled={pagination.page === pagination.totalPages}
+                  className="px-3 py-1 border border-slate-200 rounded bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-slate-600"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </DashboardLayout>

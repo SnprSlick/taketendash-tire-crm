@@ -997,6 +997,8 @@ export class InvoiceController {
     @Query('year') yearStr?: string,
     @Query('storeId') storeId?: string,
     @Query('filterKeymods') filterKeymodsStr?: string,
+    @Query('page') pageStr?: string,
+    @Query('limit') limitStr?: string,
     @User() user?: any
   ) {
     try {
@@ -1004,6 +1006,9 @@ export class InvoiceController {
       const startDate = new Date(year, 0, 1);
       const endDate = new Date(year, 11, 31, 23, 59, 59);
       const filterKeymods = filterKeymodsStr !== 'false'; // Default to true
+      const page = parseInt(pageStr) || 1;
+      const limit = parseInt(limitStr) || 20;
+      const offset = (page - 1) * limit;
 
       let storeCondition = Prisma.sql``;
       let salespersonCondition = Prisma.sql``;
@@ -1095,8 +1100,20 @@ export class InvoiceController {
           ${salesKeymodCondition}
         GROUP BY i.id
         ORDER BY i.invoice_date DESC
-        LIMIT 20
+        LIMIT ${limit} OFFSET ${offset}
       `;
+
+      // Get total count for pagination
+      const totalInvoicesResult: any[] = await this.prisma.$queryRaw`
+        SELECT COUNT(DISTINCT i.id)::int as count
+        FROM invoices i
+        WHERE i.customer_id = ${id} 
+          AND i.status = 'ACTIVE'::"InvoiceStatus"
+          ${storeCondition}
+          ${salespersonCondition}
+          ${salesKeymodCondition}
+      `;
+      const totalInvoices = totalInvoicesResult[0]?.count || 0;
 
       // 4. Top Categories
       const topCategories = await this.prisma.$queryRaw`
@@ -1122,7 +1139,13 @@ export class InvoiceController {
           customer: customerInfo,
           monthlyStats,
           recentInvoices,
-          topCategories
+          topCategories,
+          pagination: {
+            page,
+            limit,
+            total: totalInvoices,
+            totalPages: Math.ceil(totalInvoices / limit)
+          }
         }
       };
     } catch (error) {
@@ -1140,12 +1163,17 @@ export class InvoiceController {
     @Query('year') yearStr?: string,
     @Query('storeId') storeId?: string,
     @Query('filterKeymods') filterKeymodsStr?: string,
+    @Query('page') pageStr?: string,
+    @Query('limit') limitStr?: string,
     @User() user?: any
   ) {
     try {
       const decodedName = decodeURIComponent(name);
       let salespersonName = decodedName;
       const filterKeymods = filterKeymodsStr !== 'false'; // Default to true
+      const page = parseInt(pageStr) || 1;
+      const limit = parseInt(limitStr) || 20;
+      const offset = (page - 1) * limit;
 
       // Check if name is an ID (simple heuristic: length 25 and alphanumeric)
       if (decodedName.length === 25 && !decodedName.includes(' ')) {
@@ -1254,13 +1282,24 @@ export class InvoiceController {
           ${salesKeymodCondition}
         GROUP BY i.id, c.name
         ORDER BY i.invoice_date DESC
-        LIMIT 20
+        LIMIT ${limit} OFFSET ${offset}
       `;
 
       const recentInvoices = recentInvoicesRaw.map(inv => ({
         ...inv,
         customer: { name: inv.customerName }
       }));
+
+      // Get total count for pagination
+      const totalInvoicesResult: any[] = await this.prisma.$queryRaw`
+        SELECT COUNT(DISTINCT i.id)::int as count
+        FROM invoices i
+        WHERE i.salesperson = ${salespersonName} 
+          AND i.status = 'ACTIVE'::"InvoiceStatus"
+          ${storeCondition}
+          ${salesKeymodCondition}
+      `;
+      const totalInvoices = totalInvoicesResult[0]?.count || 0;
 
       // 3. Top Customers for this salesperson
       const topCustomers = await this.prisma.$queryRaw`
@@ -1320,7 +1359,13 @@ export class InvoiceController {
         topCustomers,
         totalCommission,
         totalLabor,
-        totalParts
+        totalParts,
+        pagination: {
+          page,
+          limit,
+          total: totalInvoices,
+          totalPages: Math.ceil(totalInvoices / limit)
+        }
       };
     } catch (error) {
       this.logger.error(`Failed to get details for salesperson ${name}`, error);

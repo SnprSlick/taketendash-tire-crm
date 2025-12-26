@@ -107,19 +107,29 @@ export class InsightsService {
       LEFT JOIN Sales180 s180 ON p.id = s180.product_id AND inv.store_id = s180.store_id
       LEFT JOIN SalesPrior sp ON p.id = sp.product_id AND inv.store_id = sp.store_id
       WHERE p."isTire" = true
-      AND p.quality IN ('PREMIUM', 'STANDARD', 'ECONOMY')
     `;
 
     // Fetch avg quantities for min stock calculation
     const productIds = inventoryData.map(i => i.productId);
-    const avgQuantities = productIds.length > 0 ? await this.prisma.$queryRaw<Array<{ productId: string; avgQty: number }>>`
-      SELECT 
-        ili."tire_master_product_id" as "productId",
-        AVG(ili.quantity) as "avgQty"
-      FROM "invoice_line_items" ili
-      WHERE ili."tire_master_product_id" IN (${Prisma.join(productIds)})
-      GROUP BY ili."tire_master_product_id"
-    ` : [];
+    
+    // Chunk productIds to avoid bind variable limit (Postgres limit ~32767)
+    const chunkSize = 5000;
+    const avgQuantities: Array<{ productId: string; avgQty: number }> = [];
+    
+    if (productIds.length > 0) {
+      for (let i = 0; i < productIds.length; i += chunkSize) {
+        const chunk = productIds.slice(i, i + chunkSize);
+        const chunkResults = await this.prisma.$queryRaw<Array<{ productId: string; avgQty: number }>>`
+          SELECT 
+            ili."tire_master_product_id" as "productId",
+            AVG(ili.quantity) as "avgQty"
+          FROM "invoice_line_items" ili
+          WHERE ili."tire_master_product_id" IN (${Prisma.join(chunk)})
+          GROUP BY ili."tire_master_product_id"
+        `;
+        avgQuantities.push(...chunkResults);
+      }
+    }
     
     const avgQtyMap = new Map<string, number>();
     avgQuantities.forEach(q => avgQtyMap.set(q.productId, Number(q.avgQty)));
@@ -229,14 +239,23 @@ export class InsightsService {
     
     // Fetch average install quantity
     // We use a raw query to aggregate across all invoices
-    const avgQuantities = productIds.length > 0 ? await this.prisma.$queryRaw<Array<{ productId: string; avgQty: number }>>`
-      SELECT 
-        ili."tire_master_product_id" as "productId",
-        AVG(ili.quantity) as "avgQty"
-      FROM "invoice_line_items" ili
-      WHERE ili."tire_master_product_id" IN (${Prisma.join(productIds)})
-      GROUP BY ili."tire_master_product_id"
-    ` : [];
+    const avgQuantities: Array<{ productId: string; avgQty: number }> = [];
+    const chunkSize = 5000;
+
+    if (productIds.length > 0) {
+      for (let i = 0; i < productIds.length; i += chunkSize) {
+        const chunk = productIds.slice(i, i + chunkSize);
+        const chunkResults = await this.prisma.$queryRaw<Array<{ productId: string; avgQty: number }>>`
+          SELECT 
+            ili."tire_master_product_id" as "productId",
+            AVG(ili.quantity) as "avgQty"
+          FROM "invoice_line_items" ili
+          WHERE ili."tire_master_product_id" IN (${Prisma.join(chunk)})
+          GROUP BY ili."tire_master_product_id"
+        `;
+        avgQuantities.push(...chunkResults);
+      }
+    }
     
     const avgQtyMap = new Map<string, number>();
     avgQuantities.forEach(q => avgQtyMap.set(q.productId, Number(q.avgQty)));
@@ -489,8 +508,7 @@ export class InsightsService {
       where: {
         quantity: { gt: 4 },
         product: {
-          isTire: true,
-          quality: { not: 'UNKNOWN' }
+          isTire: true
         },
         ...(locationId ? { locationId } : {})
       },
@@ -510,17 +528,24 @@ export class InsightsService {
       storeFilter = Prisma.sql`AND i.store_id = ${storeId}`;
     }
 
-    const sales = await this.prisma.$queryRaw<Array<{ productId: string }>>`
-      SELECT DISTINCT ili."tire_master_product_id" as "productId"
-      FROM "invoice_line_items" ili
-      JOIN "invoices" i ON ili."invoice_id" = i.id
-      WHERE i."invoice_date" >= ${startDate}
-      AND i."status" = 'ACTIVE'
-      AND ili."tire_master_product_id" IN (${Prisma.join(productIds)})
-      ${storeFilter}
-    `;
+    const soldProductIds = new Set<string>();
+    const chunkSize = 5000;
 
-    const soldProductIds = new Set(sales.map(s => s.productId));
+    if (productIds.length > 0) {
+      for (let i = 0; i < productIds.length; i += chunkSize) {
+        const chunk = productIds.slice(i, i + chunkSize);
+        const chunkSales = await this.prisma.$queryRaw<Array<{ productId: string }>>`
+          SELECT DISTINCT ili."tire_master_product_id" as "productId"
+          FROM "invoice_line_items" ili
+          JOIN "invoices" i ON ili."invoice_id" = i.id
+          WHERE i."invoice_date" >= ${startDate}
+          AND i."status" = 'ACTIVE'
+          AND ili."tire_master_product_id" IN (${Prisma.join(chunk)})
+          ${storeFilter}
+        `;
+        chunkSales.forEach(s => soldProductIds.add(s.productId));
+      }
+    }
 
     // 3. Filter inventory that has NO sales
     const deadStock = inventory
@@ -732,18 +757,25 @@ export class InsightsService {
     if (totalTireInvoices === 0) return { rate: 0, message: 'No tire invoices found in last 30 days.' };
 
     const invoiceIds = tireInvoices.map(inv => inv.id);
+    const chunkSize = 5000;
+    let alignmentCount = 0;
 
-    const alignmentCountResult = await this.prisma.$queryRaw<Array<{ count: bigint }>>`
-      SELECT COUNT(DISTINCT ili."invoice_id") as "count"
-      FROM "invoice_line_items" ili
-      WHERE ili."invoice_id" IN (${Prisma.join(invoiceIds)})
-      AND (
-        ili."description" ILIKE '%Alignment%' 
-        OR ili."product_code" ILIKE '%ALIGN%'
-      )
-    `;
+    if (invoiceIds.length > 0) {
+      for (let i = 0; i < invoiceIds.length; i += chunkSize) {
+        const chunk = invoiceIds.slice(i, i + chunkSize);
+        const chunkResult = await this.prisma.$queryRaw<Array<{ count: bigint }>>`
+          SELECT COUNT(DISTINCT ili."invoice_id") as "count"
+          FROM "invoice_line_items" ili
+          WHERE ili."invoice_id" IN (${Prisma.join(chunk)})
+          AND (
+            ili."description" ILIKE '%Alignment%' 
+            OR ili."product_code" ILIKE '%ALIGN%'
+          )
+        `;
+        alignmentCount += Number(chunkResult[0].count);
+      }
+    }
 
-    const alignmentCount = Number(alignmentCountResult[0].count);
     const rate = (alignmentCount / totalTireInvoices) * 100;
 
     return {

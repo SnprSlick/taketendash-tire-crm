@@ -40,8 +40,8 @@ const pLimit = (concurrency) => {
 // Configuration
 const config = {
   connectionString: 'DSN=TireMaster;UID=dba;PWD=sql', // Update if needed
-  apiUrl: 'http://10.10.11.204:3001/api/v1/live-sync',
-  batchSize: 500,
+  apiUrl: 'http://10.10.13.188:3001/api/v1/live-sync',
+  batchSize: 2000,
   concurrency: 5
 };
 
@@ -122,6 +122,16 @@ async function fetchAndSync(connection, endpoint, queryOrData, batchName, transf
     throw error; // Rethrow to allow fallback logic in main
   }
 }
+
+// --- GLOBAL ERROR HANDLERS ---
+process.on('unhandledRejection', (reason, promise) => {
+  remoteLog('ERROR', '❌ Unhandled Rejection:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  remoteLog('ERROR', '❌ Uncaught Exception:', error);
+  process.exit(1);
+});
 
 async function main() {
   let connection;
@@ -263,7 +273,8 @@ async function main() {
           
           // Fetch details for this batch
           // Added TYPE to selection if available, but sticking to standard columns for safety
-          const query = `SELECT PARTNO, INVNO, MFG, SIZE, CAT, NAME, WEIGHT, ACTIVE, VENDPARTNO FROM INV WHERE PARTNO IN (${ids})`;
+          // UPDATE: Fetch ALL columns to support hot-swapping data via metadata
+          const query = `SELECT * FROM INV WHERE PARTNO IN (${ids})`;
           
           // Verify count
           const items = await connection.query(query);
@@ -272,7 +283,18 @@ async function main() {
              remoteLog('DEBUG', `Sample IDs: ${ids.substring(0, 100)}...`);
           }
 
-          await fetchAndSync(connection, 'inventory', items, `Inventory Batch ${i+1}/${inventoryBatches.length}`, null, 'inventory');
+          // Transform to capture raw_data
+          const transformFn = (item) => {
+              const allowed = ['PARTNO', 'INVNO', 'MFG', 'SIZE', 'CAT', 'NAME', 'WEIGHT', 'ACTIVE', 'lastsync', 'VENDPARTNO', 'NEXTCOST', 'LASTCOST', 'EDL', 'DBILL', 'SALE_PRICE'];
+              const cleanItem = {};
+              allowed.forEach(key => {
+                  if (item[key] !== undefined) cleanItem[key] = item[key];
+              });
+              cleanItem.raw_data = { ...item };
+              return cleanItem;
+          };
+
+          await fetchAndSync(connection, 'inventory', items, `Inventory Batch ${i+1}/${inventoryBatches.length}`, transformFn, 'inventory');
           process.stdout.write(`   ✨ Synced Inventory Batch ${i+1}/${inventoryBatches.length}\r`);
         });
       });
@@ -296,8 +318,19 @@ async function main() {
       const qtyPromises = inventoryBatches.map((batch, i) => {
         return limit(async () => {
           const ids = batch.map(p => p.PARTNO ? `'${String(p.PARTNO).replace(/'/g, "''")}'` : "''").join(',');
-          const query = `SELECT PARTNO, EFFSITENO, QTYONHAND, RESERVE, MAXQTY, MINQTY FROM INVPRICE WHERE PARTNO IN (${ids})`;
-          await fetchAndSync(connection, 'inventory-quantities', query, `Inventory Qty Batch ${i+1}/${inventoryBatches.length}`, null, 'inventoryData');
+          const query = `SELECT * FROM INVPRICE WHERE PARTNO IN (${ids})`;
+          
+          const transformFn = (item) => {
+              const allowed = ['PARTNO', 'EFFSITENO', 'QTYONHAND', 'RESERVE', 'MAXQTY', 'MINQTY', 'lastsync'];
+              const cleanItem = {};
+              allowed.forEach(key => {
+                  if (item[key] !== undefined) cleanItem[key] = item[key];
+              });
+              cleanItem.raw_data = { ...item };
+              return cleanItem;
+          };
+
+          await fetchAndSync(connection, 'inventory-quantities', query, `Inventory Qty Batch ${i+1}/${inventoryBatches.length}`, transformFn, 'inventoryData');
           process.stdout.write(`   ✨ Synced Inventory Qty Batch ${i+1}/${inventoryBatches.length}\r`);
         });
       });
@@ -317,8 +350,20 @@ async function main() {
           const qtyPromises = inventoryBatches.map((batch, i) => {
             return limit(async () => {
               const ids = batch.map(p => p.PARTNO ? `'${String(p.PARTNO).replace(/'/g, "''")}'` : "''").join(',');
-              const query = `SELECT PARTNO, SITENO as EFFSITENO, QTYONHAND, RESERVE, MAXQTY, MINQTY FROM INVLOC WHERE PARTNO IN (${ids})`;
-              await fetchAndSync(connection, 'inventory-quantities', query, `Inventory Qty Batch (INVLOC) ${i+1}/${inventoryBatches.length}`, null, 'inventoryData');
+              // Use * to get all columns, but ensure we have EFFSITENO alias if needed (INVLOC usually has SITENO)
+              const query = `SELECT *, SITENO as EFFSITENO FROM INVLOC WHERE PARTNO IN (${ids})`;
+              
+              const transformFn = (item) => {
+                  const allowed = ['PARTNO', 'EFFSITENO', 'QTYONHAND', 'RESERVE', 'MAXQTY', 'MINQTY', 'lastsync'];
+                  const cleanItem = {};
+                  allowed.forEach(key => {
+                      if (item[key] !== undefined) cleanItem[key] = item[key];
+                  });
+                  cleanItem.raw_data = { ...item };
+                  return cleanItem;
+              };
+
+              await fetchAndSync(connection, 'inventory-quantities', query, `Inventory Qty Batch (INVLOC) ${i+1}/${inventoryBatches.length}`, transformFn, 'inventoryData');
               process.stdout.write(`   ✨ Synced Inventory Qty Batch (INVLOC) ${i+1}/${inventoryBatches.length}\r`);
             });
           });

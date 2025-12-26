@@ -165,10 +165,10 @@ export default function MechanicAnalytics() {
                 margin={{ left: 40, right: 40 }}
               >
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" tickFormatter={(value) => `$${value}`} />
+                <XAxis type="number" tickFormatter={(value) => `$${value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
                 <YAxis dataKey="mechanicName" type="category" width={140} tick={{fontSize: 11}} />
                 <Tooltip 
-                  formatter={(value: number) => [`$${value.toFixed(2)}`, 'Profit/Hr']}
+                  formatter={(value: number) => [`$${value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, 'Profit/Hr']}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 />
                 <Bar dataKey="profitPerHour" fill="#4f46e5" radius={[0, 4, 4, 0]} barSize={20} />
@@ -190,10 +190,10 @@ export default function MechanicAnalytics() {
                 margin={{ left: 40, right: 40 }}
               >
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" tickFormatter={(value) => `$${value}`} />
+                <XAxis type="number" tickFormatter={(value) => `$${value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
                 <YAxis dataKey="mechanicName" type="category" width={140} tick={{fontSize: 11}} />
                 <Tooltip 
-                  formatter={(value: number) => [`$${value.toFixed(2)}`, 'Labor/Hr']}
+                  formatter={(value: number) => [`$${value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, 'Labor/Hr']}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 />
                 <Bar dataKey="laborPerHour" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} />
@@ -297,8 +297,8 @@ export default function MechanicAnalytics() {
                       {item.efficiency.toFixed(1)}%
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${item.laborPerHour.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium text-right">${item.profitPerHour.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${item.laborPerHour.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium text-right">${item.profitPerHour.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                 </tr>
               ))}
             </tbody>

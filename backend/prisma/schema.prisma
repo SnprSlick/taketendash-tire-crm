@@ -2,8 +2,8 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "../node_modules/.prisma/client"
+  provider      = "prisma-client-js"
+  output        = "../node_modules/.prisma/client"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
@@ -92,28 +92,28 @@ enum ServiceLevel {
 }
 
 model Customer {
-  id                    String            @id @default(cuid())
-  firstName             String            @db.VarChar(50)
-  lastName              String            @db.VarChar(50)
-  email                 String?           @unique @db.VarChar(255)
-  phone                 String            @db.VarChar(20)
-  address               String?           @db.VarChar(200)
-  city                  String?           @db.VarChar(50)
-  state                 String?           @db.VarChar(20)
-  zipCode               String?           @db.VarChar(10)
-  accountType           AccountType       @default(INDIVIDUAL)
-  status                CustomerStatus    @default(ACTIVE)
+  id                     String              @id @default(cuid())
+  firstName              String              @db.VarChar(50)
+  lastName               String              @db.VarChar(50)
+  email                  String?             @unique @db.VarChar(255)
+  phone                  String              @db.VarChar(20)
+  address                String?             @db.VarChar(200)
+  city                   String?             @db.VarChar(50)
+  state                  String?             @db.VarChar(20)
+  zipCode                String?             @db.VarChar(10)
+  accountType            AccountType         @default(INDIVIDUAL)
+  status                 CustomerStatus      @default(ACTIVE)
   preferredCommunication CommunicationMethod @default(EMAIL)
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
 
   // Relationships
-  vehicles              Vehicle[]
-  appointments          Appointment[]
-  serviceRecords        ServiceRecord[]
-  serviceReminders      ServiceReminder[]
-  largeAccount          LargeAccount?
-  salesData             SalesData[]
+  vehicles         Vehicle[]
+  appointments     Appointment[]
+  serviceRecords   ServiceRecord[]
+  serviceReminders ServiceReminder[]
+  largeAccount     LargeAccount?
+  salesData        SalesData[]
 
   @@index([lastName, firstName])
   @@index([phone])
@@ -121,18 +121,18 @@ model Customer {
 }
 
 model Vehicle {
-  id            String    @id @default(cuid())
-  customerId    String
-  make          String    @db.VarChar(30)
-  model         String    @db.VarChar(30)
-  year          Int
-  vin           String?   @unique @db.VarChar(17)
-  licensePlate  String?   @db.VarChar(10)
-  mileage       Int?
-  tireSize      String?   @db.VarChar(20)
-  notes         String?   @db.Text
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String   @id @default(cuid())
+  customerId   String
+  make         String   @db.VarChar(30)
+  model        String   @db.VarChar(30)
+  year         Int
+  vin          String?  @unique @db.VarChar(17)
+  licensePlate String?  @db.VarChar(10)
+  mileage      Int?
+  tireSize     String?  @db.VarChar(20)
+  notes        String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relationships
   customer         Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -146,25 +146,25 @@ model Vehicle {
 }
 
 model Employee {
-  id           String        @id @default(cuid())
-  firstName    String        @db.VarChar(50)
-  lastName     String        @db.VarChar(50)
-  email        String        @unique @db.VarChar(255)
-  role         EmployeeRole
-  employeeId   String        @unique @db.VarChar(20)
-  isMechanic   Boolean       @default(false)
-  hourlyRate   Decimal?      @db.Decimal(10, 2)
-  hireDate     DateTime      @db.Date
-  status       CustomerStatus @default(ACTIVE)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id         String         @id @default(cuid())
+  firstName  String         @db.VarChar(50)
+  lastName   String         @db.VarChar(50)
+  email      String         @unique @db.VarChar(255)
+  role       EmployeeRole
+  employeeId String         @unique @db.VarChar(20)
+  isMechanic Boolean        @default(false)
+  hourlyRate Decimal?       @db.Decimal(10, 2)
+  hireDate   DateTime       @db.Date
+  status     CustomerStatus @default(ACTIVE)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
 
   // Relationships
-  serviceRecords   ServiceRecord[]
-  appointments     Appointment[]
-  salesData        SalesData[]
-  stores           Store[]
-  user             User?
+  serviceRecords ServiceRecord[]
+  appointments   Appointment[]
+  salesData      SalesData[]
+  stores         Store[]
+  user           User?
 
   @@index([role])
   @@map("employees")
@@ -261,27 +261,27 @@ model ServiceReminder {
 }
 
 model LargeAccount {
-  id                String              @id @default(cuid())
-  customerId        String              @unique
+  id                String             @id @default(cuid())
+  customerId        String             @unique
   accountType       LargeAccountType
   tier              LargeAccountTier
-  annualRevenue     Decimal?            @db.Decimal(12, 2)
-  contractStartDate DateTime?           @db.Date
-  contractEndDate   DateTime?           @db.Date
-  status            LargeAccountStatus  @default(ACTIVE)
-  accountManager    String              @db.VarChar(100)
-  specialTerms      String?             @db.Text
+  annualRevenue     Decimal?           @db.Decimal(12, 2)
+  contractStartDate DateTime?          @db.Date
+  contractEndDate   DateTime?          @db.Date
+  status            LargeAccountStatus @default(ACTIVE)
+  accountManager    String             @db.VarChar(100)
+  specialTerms      String?            @db.Text
   discountTier      Int?
-  serviceLevel      ServiceLevel        @default(STANDARD)
+  serviceLevel      ServiceLevel       @default(STANDARD)
   priorityRanking   Int?
-  contractNumber    String?             @unique @db.VarChar(50)
-  creditLimit       Decimal?            @db.Decimal(12, 2)
-  paymentTerms      String?             @db.VarChar(50)
-  billingContact    String?             @db.VarChar(100)
-  billingEmail      String?             @db.VarChar(255)
-  notes             String?             @db.Text
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  contractNumber    String?            @unique @db.VarChar(50)
+  creditLimit       Decimal?           @db.Decimal(12, 2)
+  paymentTerms      String?            @db.VarChar(50)
+  billingContact    String?            @db.VarChar(100)
+  billingEmail      String?            @db.VarChar(255)
+  notes             String?            @db.Text
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
   // Relationships
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -293,24 +293,24 @@ model LargeAccount {
 }
 
 model SalesData {
-  id               String          @id @default(cuid())
-  tireMasterId     String?         @db.VarChar(50)
-  serviceRecordId  String?
-  customerId       String?
-  employeeId       String?
-  invoiceId        String?
-  sourceType       DataSourceType  @default(TIRE_MASTER_SYNC)
-  transactionDate  DateTime        @db.Date
-  transactionType  TransactionType @default(SALE)
-  category         String          @db.VarChar(50)
-  itemDescription  String          @db.VarChar(200)
-  quantity         Decimal         @db.Decimal(10, 3)
-  unitPrice        Decimal         @db.Decimal(10, 2)
-  taxAmount        Decimal?        @db.Decimal(10, 2)
-  grossProfitMargin Decimal?       @db.Decimal(5, 2)
-  costBasis        Decimal?        @db.Decimal(10, 2)
-  syncedAt         DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  id                String          @id @default(cuid())
+  tireMasterId      String?         @db.VarChar(50)
+  serviceRecordId   String?
+  customerId        String?
+  employeeId        String?
+  invoiceId         String?
+  sourceType        DataSourceType  @default(TIRE_MASTER_SYNC)
+  transactionDate   DateTime        @db.Date
+  transactionType   TransactionType @default(SALE)
+  category          String          @db.VarChar(50)
+  itemDescription   String          @db.VarChar(200)
+  quantity          Decimal         @db.Decimal(10, 3)
+  unitPrice         Decimal         @db.Decimal(10, 2)
+  taxAmount         Decimal?        @db.Decimal(10, 2)
+  grossProfitMargin Decimal?        @db.Decimal(5, 2)
+  costBasis         Decimal?        @db.Decimal(10, 2)
+  syncedAt          DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
   // Relationships
   serviceRecord ServiceRecord? @relation(fields: [serviceRecordId], references: [id])
@@ -342,41 +342,43 @@ model InvoiceCustomer {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   // Relationships
-  invoices    Invoice[]
+  invoices Invoice[]
 
   @@unique([name], name: "unique_invoice_customer_name")
   @@map("invoice_customers")
 }
 
 model Invoice {
-  id              String        @id @default(cuid())
-  invoiceNumber   String        @unique @map("invoice_number") @db.VarChar(50)
-  customerId      String        @map("customer_id")
-  invoiceDate     DateTime      @map("invoice_date")
-  salesperson     String        @db.VarChar(255)
-  vehicleInfo     String?       @map("vehicle_info") @db.VarChar(255)
-  mileage         String?       @db.VarChar(50)
-  subtotal        Decimal       @db.Decimal(10, 2)
-  taxAmount       Decimal       @map("tax_amount") @db.Decimal(10, 2)
-  totalAmount     Decimal       @map("total_amount") @db.Decimal(10, 2)
-  laborCost       Decimal?      @map("labor_cost") @db.Decimal(10, 2)
-  partsCost       Decimal?      @map("parts_cost") @db.Decimal(10, 2)
-  fetTotal        Decimal?      @map("fet_total") @db.Decimal(10, 2)
-  environmentalFee Decimal?     @map("environmental_fee") @db.Decimal(10, 2)
-  totalCost       Decimal?      @map("total_cost") @db.Decimal(10, 2)
-  grossProfit     Decimal?      @map("gross_profit") @db.Decimal(10, 2)
-  status          InvoiceStatus @default(ACTIVE)
-  importBatchId   String        @map("import_batch_id")
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
-  storeId         String?       @map("store_id")
-  store           Store?        @relation(fields: [storeId], references: [id])
+  id               String        @id @default(cuid())
+  invoiceNumber    String        @unique @map("invoice_number") @db.VarChar(50)
+  customerId       String        @map("customer_id")
+  invoiceDate      DateTime      @map("invoice_date")
+  salesperson      String        @db.VarChar(255)
+  vehicleInfo      String?       @map("vehicle_info") @db.VarChar(255)
+  mileage          String?       @db.VarChar(50)
+  subtotal         Decimal       @db.Decimal(10, 2)
+  taxAmount        Decimal       @map("tax_amount") @db.Decimal(10, 2)
+  totalAmount      Decimal       @map("total_amount") @db.Decimal(10, 2)
+  laborCost        Decimal?      @map("labor_cost") @db.Decimal(10, 2)
+  partsCost        Decimal?      @map("parts_cost") @db.Decimal(10, 2)
+  fetTotal         Decimal?      @map("fet_total") @db.Decimal(10, 2)
+  environmentalFee Decimal?      @map("environmental_fee") @db.Decimal(10, 2)
+  totalCost        Decimal?      @map("total_cost") @db.Decimal(10, 2)
+  grossProfit      Decimal?      @map("gross_profit") @db.Decimal(10, 2)
+  status           InvoiceStatus @default(ACTIVE)
+  keymod           String?       @db.VarChar(10)
+  metadata         Json?
+  importBatchId    String        @map("import_batch_id")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+  storeId          String?       @map("store_id")
+  store            Store?        @relation(fields: [storeId], references: [id])
 
   // Relationships
-  customer     InvoiceCustomer   @relation(fields: [customerId], references: [id])
-  lineItems    InvoiceLineItem[]
-  importBatch  ImportBatch       @relation(fields: [importBatchId], references: [id])
-  salesData    SalesData[]
+  customer              InvoiceCustomer        @relation(fields: [customerId], references: [id])
+  lineItems             InvoiceLineItem[]
+  importBatch           ImportBatch            @relation(fields: [importBatchId], references: [id])
+  salesData             SalesData[]
   reconciliationRecords ReconciliationRecord[]
 
   @@index([invoiceDate])
@@ -388,15 +390,15 @@ model Invoice {
 }
 
 model Store {
-  id          String    @id @default(cuid())
-  code        String    @unique @db.VarChar(10)
-  name        String    @db.VarChar(100)
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id        String   @id @default(cuid())
+  code      String   @unique @db.VarChar(10)
+  name      String   @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  invoices    Invoice[]
-  employees   Employee[]
-  users       User[]
+  invoices  Invoice[]
+  employees Employee[]
+  users     User[]
 
   @@map("stores")
 }
@@ -418,6 +420,7 @@ model InvoiceLineItem {
   grossProfit         Decimal         @map("gross_profit") @db.Decimal(10, 2)
   category            ProductCategory
   tireMasterProductId String?         @map("tire_master_product_id")
+  metadata            Json?
   createdAt           DateTime        @default(now()) @map("created_at")
 
   // Relationships
@@ -456,14 +459,14 @@ model ImportBatch {
 }
 
 model ImportError {
-  id             String    @id @default(cuid())
-  importBatchId  String    @map("import_batch_id")
-  rowNumber      Int       @map("row_number")
-  errorType      ErrorType @map("error_type")
-  errorMessage   String    @map("error_message") @db.Text
-  originalData   String    @map("original_data") @db.Text
-  fieldName      String?   @map("field_name") @db.VarChar(100)
-  createdAt      DateTime  @default(now()) @map("created_at")
+  id            String    @id @default(cuid())
+  importBatchId String    @map("import_batch_id")
+  rowNumber     Int       @map("row_number")
+  errorType     ErrorType @map("error_type")
+  errorMessage  String    @map("error_message") @db.Text
+  originalData  String    @map("original_data") @db.Text
+  fieldName     String?   @map("field_name") @db.VarChar(100)
+  createdAt     DateTime  @default(now()) @map("created_at")
 
   // Relationships
   importBatch ImportBatch @relation(fields: [importBatchId], references: [id])
@@ -474,15 +477,15 @@ model ImportError {
 }
 
 model ImportRollbackOperation {
-  id              String   @id @default(cuid())
-  importBatchId   String   @map("import_batch_id")
-  operationType   String   @map("operation_type") @db.VarChar(50)
-  recordId        String   @map("record_id") @db.VarChar(100)
-  tableName       String   @map("table_name") @db.VarChar(100)
-  operation       String   @db.VarChar(20)
-  originalData    String?  @map("original_data") @db.Text
-  newData         String?  @map("new_data") @db.Text
-  timestamp       DateTime @default(now())
+  id            String   @id @default(cuid())
+  importBatchId String   @map("import_batch_id")
+  operationType String   @map("operation_type") @db.VarChar(50)
+  recordId      String   @map("record_id") @db.VarChar(100)
+  tableName     String   @map("table_name") @db.VarChar(100)
+  operation     String   @db.VarChar(20)
+  originalData  String?  @map("original_data") @db.Text
+  newData       String?  @map("new_data") @db.Text
+  timestamp     DateTime @default(now())
 
   // Relationships
   importBatch ImportBatch @relation(fields: [importBatchId], references: [id])
@@ -576,28 +579,29 @@ enum MappingType {
 }
 
 model TireMasterProduct {
-  id               String                       @id @default(cuid())
-  tireMasterId     Int?                         @unique @map("tire_master_id")
-  tireMasterSku    String                       @unique @db.VarChar(50)
-  brand            String                       @db.VarChar(100)
-  pattern          String                       @db.VarChar(100)
-  size             String                       @db.VarChar(50)
+  id               String      @id @default(cuid())
+  tireMasterId     Int?        @unique @map("tire_master_id")
+  tireMasterSku    String      @unique @db.VarChar(50)
+  brand            String      @db.VarChar(100)
+  pattern          String      @db.VarChar(100)
+  size             String      @db.VarChar(50)
   type             TireType
   season           TireSeason
-  quality          TireQuality                  @default(UNKNOWN)
-  description      String?                      @db.Text
-  weight           Decimal?                     @db.Decimal(8, 2)
-  laborPrice       Decimal?                     @map("labor_price") @db.Decimal(10, 2)
-  fetAmount        Decimal?                     @map("fet_amount") @db.Decimal(10, 2)
+  quality          TireQuality @default(UNKNOWN)
+  description      String?     @db.Text
+  weight           Decimal?    @db.Decimal(8, 2)
+  laborPrice       Decimal?    @map("labor_price") @db.Decimal(10, 2)
+  fetAmount        Decimal?    @map("fet_amount") @db.Decimal(10, 2)
   specifications   Json?
-  warrantyInfo     String?                      @db.Text
+  warrantyInfo     String?     @db.Text
   features         String[]
-  manufacturerCode String?                      @map("manufacturer_code") @db.VarChar(50)
-  isTire           Boolean                      @default(false)
-  isActive         Boolean                      @default(true)
+  manufacturerCode String?     @map("manufacturer_code") @db.VarChar(50)
+  isTire           Boolean     @default(false)
+  isActive         Boolean     @default(true)
+  metadata         Json?
   lastSyncedAt     DateTime?
-  createdAt        DateTime                     @default(now())
-  updatedAt        DateTime                     @updatedAt
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
   // Relationships
   inventory        TireMasterInventory[]
@@ -616,20 +620,20 @@ model TireMasterProduct {
 }
 
 model TireMasterLocation {
-  id              String                  @id @default(cuid())
-  tireMasterCode  String                  @unique @db.VarChar(20)
-  name            String                  @db.VarChar(100)
-  address         String?                 @db.VarChar(200)
-  city            String?                 @db.VarChar(50)
-  state           String?                 @db.VarChar(20)
-  zipCode         String?                 @db.VarChar(10)
-  phone           String?                 @db.VarChar(20)
-  isActive        Boolean                 @default(true)
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
+  id             String   @id @default(cuid())
+  tireMasterCode String   @unique @db.VarChar(20)
+  name           String   @db.VarChar(100)
+  address        String?  @db.VarChar(200)
+  city           String?  @db.VarChar(50)
+  state          String?  @db.VarChar(20)
+  zipCode        String?  @db.VarChar(10)
+  phone          String?  @db.VarChar(20)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Relationships
-  inventory       TireMasterInventory[]
+  inventory TireMasterInventory[]
 
   @@index([tireMasterCode])
   @@index([isActive])
@@ -637,19 +641,20 @@ model TireMasterLocation {
 }
 
 model TireMasterInventory {
-  id             String               @id @default(cuid())
-  productId      String
-  locationId     String
-  quantity       Int                  @default(0)
-  reservedQty    Int                  @default(0)
-  availableQty   Int                  @default(0)
-  lastUpdated    DateTime             @default(now())
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
+  id           String   @id @default(cuid())
+  productId    String
+  locationId   String
+  quantity     Int      @default(0)
+  reservedQty  Int      @default(0)
+  availableQty Int      @default(0)
+  metadata     Json?
+  lastUpdated  DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relationships
-  product        TireMasterProduct    @relation(fields: [productId], references: [id], onDelete: Cascade)
-  location       TireMasterLocation   @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  product  TireMasterProduct  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  location TireMasterLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
   @@unique([productId, locationId])
   @@index([productId])
@@ -660,19 +665,19 @@ model TireMasterInventory {
 }
 
 model TireMasterPriceList {
-  id              String              @id @default(cuid())
-  tireMasterCode  String              @unique @db.VarChar(20)
-  name            String              @db.VarChar(100)
-  description     String?             @db.Text
-  currency        String              @default("USD") @db.VarChar(3)
-  effectiveDate   DateTime?           @db.Date
-  expirationDate  DateTime?           @db.Date
-  isActive        Boolean             @default(true)
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  id             String    @id @default(cuid())
+  tireMasterCode String    @unique @db.VarChar(20)
+  name           String    @db.VarChar(100)
+  description    String?   @db.Text
+  currency       String    @default("USD") @db.VarChar(3)
+  effectiveDate  DateTime? @db.Date
+  expirationDate DateTime? @db.Date
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   // Relationships
-  prices          TireMasterPrice[]
+  prices TireMasterPrice[]
 
   @@index([tireMasterCode])
   @@index([isActive])
@@ -681,20 +686,20 @@ model TireMasterPriceList {
 }
 
 model TireMasterPrice {
-  id              String                @id @default(cuid())
-  productId       String
-  priceListId     String
-  listPrice       Decimal               @db.Decimal(10, 2)
-  cost            Decimal?              @db.Decimal(10, 2)
-  msrp            Decimal?              @db.Decimal(10, 2)
-  effectiveDate   DateTime?             @db.Date
-  expirationDate  DateTime?             @db.Date
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
+  id             String    @id @default(cuid())
+  productId      String
+  priceListId    String
+  listPrice      Decimal   @db.Decimal(10, 2)
+  cost           Decimal?  @db.Decimal(10, 2)
+  msrp           Decimal?  @db.Decimal(10, 2)
+  effectiveDate  DateTime? @db.Date
+  expirationDate DateTime? @db.Date
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   // Relationships
-  product         TireMasterProduct     @relation(fields: [productId], references: [id], onDelete: Cascade)
-  priceList       TireMasterPriceList   @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+  product   TireMasterProduct   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  priceList TireMasterPriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
 
   @@unique([productId, priceListId])
   @@index([productId])
@@ -704,26 +709,27 @@ model TireMasterPrice {
 }
 
 model TireMasterCustomer {
-  id                String                     @id @default(cuid())
-  tireMasterCode    String                     @unique @db.VarChar(50)
-  companyName       String?                    @db.VarChar(100)
-  firstName         String?                    @db.VarChar(50)
-  lastName          String?                    @db.VarChar(50)
-  email             String?                    @db.VarChar(255)
-  phone             String?                    @db.VarChar(20)
-  address           String?                    @db.VarChar(200)
-  city              String?                    @db.VarChar(50)
-  state             String?                    @db.VarChar(20)
-  zipCode           String?                    @db.VarChar(10)
-  creditLimit       Decimal?                   @db.Decimal(12, 2)
-  paymentTerms      String?                    @db.VarChar(50)
-  isActive          Boolean                    @default(true)
-  lastSyncedAt      DateTime?
-  createdAt         DateTime                   @default(now())
-  updatedAt         DateTime                   @updatedAt
+  id             String    @id @default(cuid())
+  tireMasterCode String    @unique @db.VarChar(50)
+  companyName    String?   @db.VarChar(100)
+  firstName      String?   @db.VarChar(50)
+  lastName       String?   @db.VarChar(50)
+  email          String?   @db.VarChar(255)
+  phone          String?   @db.VarChar(20)
+  address        String?   @db.VarChar(200)
+  city           String?   @db.VarChar(50)
+  state          String?   @db.VarChar(20)
+  zipCode        String?   @db.VarChar(10)
+  creditLimit    Decimal?  @db.Decimal(12, 2)
+  paymentTerms   String?   @db.VarChar(50)
+  isActive       Boolean   @default(true)
+  metadata       Json?
+  lastSyncedAt   DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   // Relationships
-  salesOrders       TireMasterSalesOrder[]
+  salesOrders TireMasterSalesOrder[]
 
   @@index([tireMasterCode])
   @@index([companyName])
@@ -733,28 +739,30 @@ model TireMasterCustomer {
 }
 
 model TireMasterSalesOrder {
-  id              String                        @id @default(cuid())
-  tireMasterCode  String                        @unique @db.VarChar(50)
-  customerId      String
-  orderNumber     String                        @db.VarChar(50)
-  orderDate       DateTime                      @db.Date
-  requiredDate    DateTime?                     @db.Date
-  shippedDate     DateTime?                     @db.Date
-  status          String                        @db.VarChar(50)
-  subtotal        Decimal                       @db.Decimal(12, 2)
-  taxAmount       Decimal?                      @db.Decimal(10, 2)
-  shippingAmount  Decimal?                      @db.Decimal(10, 2)
-  totalAmount     Decimal                       @db.Decimal(12, 2)
-  siteNo          Int?                          @map("site_no")
-  salesperson     String?                       @db.VarChar(50)
-  notes           String?                       @db.Text
-  lastSyncedAt    DateTime?
-  createdAt       DateTime                      @default(now())
-  updatedAt       DateTime                      @updatedAt
+  id             String    @id @default(cuid())
+  tireMasterCode String    @unique @db.VarChar(50)
+  customerId     String
+  orderNumber    String    @db.VarChar(50)
+  orderDate      DateTime  @db.Date
+  requiredDate   DateTime? @db.Date
+  shippedDate    DateTime? @db.Date
+  status         String    @db.VarChar(50)
+  subtotal       Decimal   @db.Decimal(12, 2)
+  taxAmount      Decimal?  @db.Decimal(10, 2)
+  shippingAmount Decimal?  @db.Decimal(10, 2)
+  totalAmount    Decimal   @db.Decimal(12, 2)
+  siteNo         Int?      @map("site_no")
+  salesperson    String?   @db.VarChar(50)
+  notes          String?   @db.Text
+  keymod         String?   @db.VarChar(10)
+  metadata       Json?
+  lastSyncedAt   DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   // Relationships
-  customer        TireMasterCustomer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  items           TireMasterSalesOrderItem[]
+  customer TireMasterCustomer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items    TireMasterSalesOrderItem[]
 
   @@index([tireMasterCode])
   @@index([customerId])
@@ -767,20 +775,21 @@ model TireMasterSalesOrder {
 }
 
 model TireMasterSalesOrderItem {
-  id              String                @id @default(cuid())
-  salesOrderId    String
-  productId       String
-  lineNumber      Int
-  quantity        Int
-  unitPrice       Decimal               @db.Decimal(10, 2)
-  discount        Decimal?              @db.Decimal(10, 2)
-  totalAmount     Decimal               @db.Decimal(12, 2)
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
+  id           String   @id @default(cuid())
+  salesOrderId String
+  productId    String
+  lineNumber   Int
+  quantity     Int
+  unitPrice    Decimal  @db.Decimal(10, 2)
+  discount     Decimal? @db.Decimal(10, 2)
+  totalAmount  Decimal  @db.Decimal(12, 2)
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relationships
-  salesOrder      TireMasterSalesOrder  @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
-  product         TireMasterProduct     @relation(fields: [productId], references: [id])
+  salesOrder TireMasterSalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  product    TireMasterProduct    @relation(fields: [productId], references: [id])
 
   @@unique([salesOrderId, lineNumber])
   @@index([salesOrderId])
@@ -789,17 +798,17 @@ model TireMasterSalesOrderItem {
 }
 
 model TireMasterProductMapping {
-  id                   String              @id @default(cuid())
-  tireMasterProductId  String
-  crmProductId         String?
-  mappingType          MappingType
-  autoSync             Boolean             @default(true)
-  notes                String?             @db.Text
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
+  id                  String      @id @default(cuid())
+  tireMasterProductId String
+  crmProductId        String?
+  mappingType         MappingType
+  autoSync            Boolean     @default(true)
+  notes               String?     @db.Text
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 
   // Relationships
-  tireMasterProduct    TireMasterProduct   @relation(fields: [tireMasterProductId], references: [id], onDelete: Cascade)
+  tireMasterProduct TireMasterProduct @relation(fields: [tireMasterProductId], references: [id], onDelete: Cascade)
   // Note: crmProductId references external CRM system product ID
   // Actual relationship would be established when CRM product model is available
 
@@ -812,19 +821,19 @@ model TireMasterProductMapping {
 }
 
 model TireMasterSyncHistory {
-  id                String        @id @default(cuid())
-  syncId            String        @unique @db.VarChar(100)
-  syncType          String        @db.VarChar(50)
-  status            SyncStatus
-  startTime         DateTime
-  endTime           DateTime?
-  recordsProcessed  Int           @default(0)
-  recordsCreated    Int           @default(0)
-  recordsUpdated    Int           @default(0)
-  recordsFailed     Int           @default(0)
-  errors            String[]
-  metadata          Json?
-  createdAt         DateTime      @default(now())
+  id               String     @id @default(cuid())
+  syncId           String     @unique @db.VarChar(100)
+  syncType         String     @db.VarChar(50)
+  status           SyncStatus
+  startTime        DateTime
+  endTime          DateTime?
+  recordsProcessed Int        @default(0)
+  recordsCreated   Int        @default(0)
+  recordsUpdated   Int        @default(0)
+  recordsFailed    Int        @default(0)
+  errors           String[]
+  metadata         Json?
+  createdAt        DateTime   @default(now())
 
   @@index([syncId])
   @@index([syncType])
@@ -834,24 +843,24 @@ model TireMasterSyncHistory {
 }
 
 model TireMasterCategory {
-  id          String   @id @default(cuid())
-  code        String   @unique @db.VarChar(10) // CAT
-  name        String?  @db.VarChar(100)
-  catType     Int?     // 0 or 1
+  id           String    @id @default(cuid())
+  code         String    @unique @db.VarChar(10) // CAT
+  name         String?   @db.VarChar(100)
+  catType      Int? // 0 or 1
   lastSyncedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@map("tire_master_categories")
 }
 
 model TireMasterBrand {
-  id          String   @id @default(cuid())
-  code        String   @unique @db.VarChar(10) // MFG or CODE
-  name        String?  @db.VarChar(100)
+  id           String    @id @default(cuid())
+  code         String    @unique @db.VarChar(10) // MFG or CODE
+  name         String?   @db.VarChar(100)
   lastSyncedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@map("tire_master_brands")
 }
@@ -859,47 +868,47 @@ model TireMasterBrand {
 // National Account Reconciliation Models
 
 model ReconciliationBatch {
-  id          String   @id @default(cuid())
-  filename    String
-  uploadDate  DateTime @default(now())
-  status      String   // PENDING, PROCESSED, COMPLETED
-  totalRecords Int     @default(0)
-  matchedCount Int     @default(0)
-  unmatchedCount Int   @default(0)
-  
-  records     ReconciliationRecord[]
-  
+  id             String   @id @default(cuid())
+  filename       String
+  uploadDate     DateTime @default(now())
+  status         String // PENDING, PROCESSED, COMPLETED
+  totalRecords   Int      @default(0)
+  matchedCount   Int      @default(0)
+  unmatchedCount Int      @default(0)
+
+  records ReconciliationRecord[]
+
   @@map("reconciliation_batches")
 }
 
 model ReconciliationRecord {
-  id              String   @id @default(cuid())
-  batchId         String
-  
+  id      String @id @default(cuid())
+  batchId String
+
   // Fields from CSV
-  invoiceNumber   String   // The raw invoice number from CSV
-  accountName     String?  // "Account Name"
-  invoiceDate     DateTime?
-  invoiceAmount   Decimal  @db.Decimal(10, 2) // "Invoice Amt"
-  creditAmount    Decimal  @db.Decimal(10, 2) // "CR Amount"
-  commission      Decimal  @db.Decimal(10, 2) // "CR Comm"
-  difference      Decimal  @db.Decimal(10, 2) // "Difference"
-  
+  invoiceNumber String // The raw invoice number from CSV
+  accountName   String? // "Account Name"
+  invoiceDate   DateTime?
+  invoiceAmount Decimal   @db.Decimal(10, 2) // "Invoice Amt"
+  creditAmount  Decimal   @db.Decimal(10, 2) // "CR Amount"
+  commission    Decimal   @db.Decimal(10, 2) // "CR Comm"
+  difference    Decimal   @db.Decimal(10, 2) // "Difference"
+
   // Categorization
-  category        String?  // "Government Support", "Other Adjustments", etc.
-  subCategory     String?  // "Bridgestone", "Firestone", etc.
-  
+  category    String? // "Government Support", "Other Adjustments", etc.
+  subCategory String? // "Bridgestone", "Firestone", etc.
+
   // Matching
-  status          String   // MATCHED, UNMATCHED, PARTIAL, OVERPAID
-  matchedInvoiceId String?
+  status            String // MATCHED, UNMATCHED, PARTIAL, OVERPAID
+  matchedInvoiceId  String?
   discrepancyReason String? // Reason for discrepancy or unmatched status
-  
+
   // Relationships
-  batch           ReconciliationBatch @relation(fields: [batchId], references: [id])
-  matchedInvoice  Invoice?            @relation(fields: [matchedInvoiceId], references: [id])
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  batch          ReconciliationBatch @relation(fields: [batchId], references: [id])
+  matchedInvoice Invoice?            @relation(fields: [matchedInvoiceId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([batchId])
   @@index([invoiceNumber])
@@ -926,27 +935,26 @@ model MechanicLabor {
 }
 
 model User {
-  id                 String    @id @default(cuid())
-  username           String    @unique
-  password           String
-  email              String?   @unique
-  firstName          String?
-  lastName           String?
-  
-  role               String    @default("USER") // ADMIN, CORPORATE, STORE_MANAGER, etc.
-  scopes             String[]  // Granular permissions
-  
-  isApproved         Boolean   @default(false)
-  mustChangePassword Boolean   @default(true)
-  
-  employeeId         String?   @unique
-  employee           Employee? @relation(fields: [employeeId], references: [id])
-  
-  stores             Store[]
-  
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  id        String  @id @default(cuid())
+  username  String  @unique
+  password  String
+  email     String? @unique
+  firstName String?
+  lastName  String?
+
+  role   String   @default("USER") // ADMIN, CORPORATE, STORE_MANAGER, etc.
+  scopes String[] // Granular permissions
+
+  isApproved         Boolean @default(false)
+  mustChangePassword Boolean @default(true)
+
+  employeeId String?   @unique
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+
+  stores Store[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("users")
 }
-

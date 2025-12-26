@@ -66,6 +66,7 @@ export default function SalesReportsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sortField, setSortField] = useState('total_revenue');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [keymodFilter, setKeymodFilter] = useState('_SALES_ONLY_');
 
   // Pagination for customers
   const [page, setPage] = useState(1);
@@ -85,7 +86,7 @@ export default function SalesReportsPage() {
     if (token) {
       fetchReport();
     }
-  }, [activeTab, period, page, debouncedSearch, sortField, sortDirection, selectedStoreId, token]);
+  }, [activeTab, period, page, debouncedSearch, sortField, sortDirection, selectedStoreId, token, keymodFilter]);
 
   const fetchReport = async () => {
     if (!token) return;
@@ -100,6 +101,7 @@ export default function SalesReportsPage() {
       const sortParams = `sortBy=${sortField}&sortOrder=${sortDirection}`;
       const searchParams = debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}` : '';
       const storeParam = selectedStoreId ? `&storeId=${selectedStoreId}` : '';
+      const keymodParam = keymodFilter ? `&keymod=${keymodFilter}` : '';
 
       if (activeTab === 'salespeople') {
         url = `/api/v1/invoices/reports/salespeople?${dateParams}&${sortParams}${searchParams}${storeParam}`;
@@ -107,7 +109,7 @@ export default function SalesReportsPage() {
         const offset = (page - 1) * limit;
         url = `/api/v1/invoices/reports/customers?${dateParams}&limit=${limit}&offset=${offset}&${sortParams}${searchParams}${storeParam}`;
       } else if (activeTab === 'invoices') {
-        url = `/api/v1/invoices?${dateParams}&limit=${limit}&page=${page}&${sortParams}${searchParams}${storeParam}`;
+        url = `/api/v1/invoices?${dateParams}&limit=${limit}&page=${page}&${sortParams}${searchParams}${storeParam}${keymodParam}`;
       } else if (activeTab === 'monthly') {
         url = `/api/v1/invoices/reports/monthly?year=${new Date().getFullYear()}${storeParam}`;
       }
@@ -206,6 +208,20 @@ export default function SalesReportsPage() {
                 <option value="180">Last 6 Months</option>
                 <option value="365">Last Year</option>
               </select>
+
+              {activeTab === 'invoices' && (
+                <select
+                  value={keymodFilter}
+                  onChange={(e) => { setKeymodFilter(e.target.value); setPage(1); }}
+                  className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="_SALES_ONLY_">Sales Only</option>
+                  <option value="ALL">All Invoices</option>
+                  <option value="TR">Transfers (TR)</option>
+                  <option value="IC">Inventory Corrections (IC)</option>
+                  <option value="PO">Purchase Orders (PO)</option>
+                </select>
+              )}
               
               <button className="flex items-center px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">
                 <Download className="w-4 h-4 mr-2" />
@@ -309,6 +325,8 @@ export default function SalesReportsPage() {
                       <>
                         <SortableHeader field="invoiceDate" label="Date" />
                         <SortableHeader field="invoiceNumber" label="Invoice #" />
+                        <SortableHeader field="siteNo" label="Site #" />
+                        <SortableHeader field="keymod" label="Type" />
                         <SortableHeader field="customerName" label="Customer" />
                         <SortableHeader field="salesperson" label="Salesperson" />
                         <SortableHeader field="totalAmount" label="Amount" align="right" />
@@ -387,6 +405,15 @@ export default function SalesReportsPage() {
                         <>
                           <td className="px-6 py-4 text-slate-600">{new Date(row.invoiceDate).toLocaleDateString()}</td>
                           <td className="px-6 py-4 font-medium text-blue-600">{row.invoiceNumber}</td>
+                          <td className="px-6 py-4 text-slate-600">{row.siteNo || '-'}</td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              row.keymod === 'TR' ? 'bg-yellow-100 text-yellow-800' : 
+                              !row.keymod ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {row.keymod || 'SALE'}
+                            </span>
+                          </td>
                           <td className="px-6 py-4 text-slate-900">{row.customerName}</td>
                           <td className="px-6 py-4 text-slate-600">{row.salesperson}</td>
                           <td className="px-6 py-4 text-right font-medium text-slate-900">{formatCurrency(row.totalAmount)}</td>

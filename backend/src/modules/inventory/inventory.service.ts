@@ -45,6 +45,7 @@ export class InventoryService {
     sortOrder?: 'asc' | 'desc';
   }) {
     const { page = 1, limit = 50, search, locationId, type, size, inStock, isTire, sortBy, sortOrder = 'asc' } = params;
+    console.log('getInventory params:', params);
     const skip = (page - 1) * limit;
 
     const where: Prisma.TireMasterProductWhereInput = {
@@ -87,6 +88,8 @@ export class InventoryService {
     } else {
       orderBy.tireMasterSku = 'asc';
     }
+
+    console.log('getInventory where:', JSON.stringify(where, null, 2));
 
     const [items, total] = await Promise.all([
       this.prisma.tireMasterProduct.findMany({
@@ -204,6 +207,7 @@ export class InventoryService {
         JOIN "invoices" i ON ili."invoice_id" = i.id
         WHERE i."invoice_date" >= ${startDate}
         AND i."store_id" = ${targetStoreId}
+        AND (i.keymod IS NULL OR i.keymod IN ('', '  ', 'NA', 'GS', 'FC', 'ST'))
         AND ili."tire_master_product_id" IS NOT NULL
         GROUP BY ili."tire_master_product_id"
         HAVING SUM(ili.quantity) > 0
@@ -218,6 +222,7 @@ export class InventoryService {
           JOIN "invoices" i ON ili."invoice_id" = i.id
           WHERE i."invoice_date" >= ${startDate}
           AND i."store_id" IN (${Prisma.join(allowedStoreIds)})
+          AND (i.keymod IS NULL OR i.keymod IN ('', '  ', 'NA', 'GS', 'FC', 'ST'))
           AND ili."tire_master_product_id" IS NOT NULL
           GROUP BY ili."tire_master_product_id"
           HAVING SUM(ili.quantity) > 0
@@ -233,6 +238,7 @@ export class InventoryService {
         FROM "invoice_line_items" ili
         JOIN "invoices" i ON ili."invoice_id" = i.id
         WHERE i."invoice_date" >= ${startDate}
+        AND (i.keymod IS NULL OR i.keymod IN ('', '  ', 'NA', 'GS', 'FC', 'ST'))
         AND ili."tire_master_product_id" IS NOT NULL
         GROUP BY ili."tire_master_product_id"
         HAVING SUM(ili.quantity) > 0
@@ -246,26 +252,36 @@ export class InventoryService {
     }
 
     // Fetch detailed sales per store for these products
-    let detailedSalesQuery = Prisma.sql`
-      SELECT 
-        ili."tire_master_product_id" as "productId", 
-        i."store_id" as "storeId",
-        SUM(ili.quantity) as "totalSold"
-      FROM "invoice_line_items" ili
-      JOIN "invoices" i ON ili."invoice_id" = i.id
-      WHERE i."invoice_date" >= ${startDate}
-      AND ili."tire_master_product_id" IN (${Prisma.join(productIds)})
-    `;
+    // Chunk to avoid bind variable limit
+    const chunkSize = 2000;
+    const detailedSales: Array<{ productId: string; storeId: string; totalSold: number }> = [];
 
-    if (storeId) {
-      detailedSalesQuery = Prisma.sql`${detailedSalesQuery} AND i."store_id" = ${targetStoreId}`;
-    } else if (allowedStoreIds && allowedStoreIds.length > 0) {
-      detailedSalesQuery = Prisma.sql`${detailedSalesQuery} AND i."store_id" IN (${Prisma.join(allowedStoreIds)})`;
+    for (let i = 0; i < productIds.length; i += chunkSize) {
+      const chunk = productIds.slice(i, i + chunkSize);
+      
+      let detailedSalesQuery = Prisma.sql`
+        SELECT 
+          ili."tire_master_product_id" as "productId", 
+          i."store_id" as "storeId",
+          SUM(ili.quantity) as "totalSold"
+        FROM "invoice_line_items" ili
+        JOIN "invoices" i ON ili."invoice_id" = i.id
+        WHERE i."invoice_date" >= ${startDate}
+        AND (i.keymod IS NULL OR i.keymod IN ('', '  ', 'NA', 'GS', 'FC', 'ST'))
+        AND ili."tire_master_product_id" IN (${Prisma.join(chunk)})
+      `;
+
+      if (storeId) {
+        detailedSalesQuery = Prisma.sql`${detailedSalesQuery} AND i."store_id" = ${targetStoreId}`;
+      } else if (allowedStoreIds && allowedStoreIds.length > 0) {
+        detailedSalesQuery = Prisma.sql`${detailedSalesQuery} AND i."store_id" IN (${Prisma.join(allowedStoreIds)})`;
+      }
+
+      detailedSalesQuery = Prisma.sql`${detailedSalesQuery} GROUP BY ili."tire_master_product_id", i."store_id"`;
+
+      const chunkResults = await this.prisma.$queryRaw<Array<{ productId: string; storeId: string; totalSold: number }>>(detailedSalesQuery);
+      detailedSales.push(...chunkResults);
     }
-
-    detailedSalesQuery = Prisma.sql`${detailedSalesQuery} GROUP BY ili."tire_master_product_id", i."store_id"`;
-
-    const detailedSales: Array<{ productId: string; storeId: string; totalSold: number }> = await this.prisma.$queryRaw(detailedSalesQuery);
 
     // Fetch daily sales history only if requested (or we can move this to a separate method)
     // For now, we will remove it from the main list query to improve performance
@@ -294,26 +310,31 @@ export class InventoryService {
       }
     }
 
-    const products = await this.prisma.tireMasterProduct.findMany({
-      where: {
-        id: { in: productIds },
-        ...(search ? {
-          OR: [
-            { tireMasterSku: { contains: search, mode: 'insensitive' } },
-            { description: { contains: search, mode: 'insensitive' } },
-            { brand: { contains: search, mode: 'insensitive' } },
-          ]
-        } : {}),
-        ...(size ? { size: { contains: size, mode: 'insensitive' } } : {})
-      },
-      include: {
-        inventory: {
-          include: {
-            location: true
+    const products = [];
+    for (let i = 0; i < productIds.length; i += chunkSize) {
+      const chunk = productIds.slice(i, i + chunkSize);
+      const chunkProducts = await this.prisma.tireMasterProduct.findMany({
+        where: {
+          id: { in: chunk },
+          ...(search ? {
+            OR: [
+              { tireMasterSku: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+              { brand: { contains: search, mode: 'insensitive' } },
+            ]
+          } : {}),
+          ...(size ? { size: { contains: size, mode: 'insensitive' } } : {})
+        },
+        include: {
+          inventory: {
+            include: {
+              location: true
+            }
           }
         }
-      }
-    });
+      });
+      products.push(...chunkProducts);
+    }
 
     const results = products.map(product => {
       const saleRecord = salesData.find(s => s.productId === product.id);
@@ -415,6 +436,7 @@ export class InventoryService {
       FROM "invoice_line_items" ili
       JOIN "invoices" i ON ili."invoice_id" = i.id
       WHERE i."invoice_date" >= ${startDate}
+      AND (i.keymod IS NULL OR i.keymod IN ('', '  ', 'NA', 'GS', 'FC', 'ST'))
       AND ili."tire_master_product_id" = ${productId}
       GROUP BY i."store_id", DATE(i."invoice_date")
       ORDER BY DATE(i."invoice_date") ASC

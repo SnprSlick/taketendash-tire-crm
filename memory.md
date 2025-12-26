@@ -485,3 +485,287 @@
   - **Action**: User needs to run `node scripts/find-brand-table.js` on the external computer and report the output.
   - **Success**: User confirmed `MFGCODE` table contains brand info (Code='BRI', Descr='bridgestone'). Updated `tiremaster_inventory_sync_client.js` to use this table.
 
+
+### Rollback (2025-12-23)
+- **Action**: Rolled back to commit `930dfaa` ("updated inventory and brands working correctly"), discarding uncommitted changes.
+- **Reason**: User request to return to the last commit state.
+
+### Fixes (2025-12-23)
+- **Prisma Client Sync**: Regenerated Prisma Client (`npx prisma generate`) to resolve TypeScript errors after rollback. The rollback restored the schema but the generated client in `node_modules` was out of sync.
+
+### Debugging & Fixes (2025-12-23)
+- **Issue**: User reported invoice #7-275629 showing up as a "TR invoice" (Transfer) and suspected "Unknown Customer" invoices are also TRs.
+- **Investigation**:
+  - "Unknown Customer" is created when the sync client filters out a customer (or fails to find them) but the invoice is still synced.
+  - The invoice sync logic filters invoices based on excluded customers.
+  - If a customer is excluded, their invoices *should* be excluded.
+  - However, if the customer name didn't match the exclusion list previously, it was synced.
+- **Fix**: Updated `scripts/tiremaster_sync_client.js` to add 'TRANSFER', 'TR', 'INTER-STORE', 'INTERCOMPANY' to the exclusion list for both Customers and Salespeople.
+- **Debug Tool**: Created `scripts/debug-invoice.js` to allow the user to inspect specific invoices and their customer data directly from the ODBC connection.
+
+### Fixes (2025-12-23) - Part 2
+- **Issue**: Invoice #7-275629 (and likely others) appearing as "Unknown Customer" because they are Transfer (TR) invoices, which should be excluded.
+- **Fix**: Updated `scripts/tiremaster_sync_client.js` to:
+  - Fetch `KEYMOD` column in the initial invoice query.
+  - Filter out invoices where `KEYMOD === 'TR'`.
+- **Debug**: Updated `scripts/debug-invoice.js` to print full invoice object to debug missing "Total" field.
+
+### Fixes (2025-12-23) - Part 3
+- **Issue**: Inventory sync failed with `[odbc] Error executing the sql statement` when fetching quantities.
+- **Cause**: `PARTNO` values were being passed to SQL `IN (...)` clause without quotes (e.g., `IN (123-456)` instead of `IN ('123-456')`).
+- **Fix**: Updated `scripts/tiremaster_sync_client.js` to properly quote and escape `PARTNO` values in all inventory queries (`INV`, `INVLOC`, and `INVPRICE` fallback).
+
+## TireMaster Keymods Reference
+| Code | Description | Notes |
+|------|-------------|-------|
+| **(Blank)** | Normal sale invoice | |
+| **CC** | Credit card invoice | Posts to AR account for credit card company (e.g., ZZ-Visa). Treated as cash sale. |
+| **DC** | Disbursement of cash | "Paidout" - money taken from till for expense. |
+| **DE** | Deposits | Partial payments or prepayments (layaway/special orders). |
+| **EC** | Easy check | Check written in check register. |
+| **FC** | Finance charge | Applied to outstanding balance. |
+| **GS** | Government support sale | |
+| **IC** | Inventory correction | Quantity adjustment. |
+| **IR** | Inventory return | |
+| **JE** | Journal entry | Day end closing (Inventory Adj Vendor) or Manual entry. |
+| **NA** | National account sale | |
+| **PO** | Vendor charge | Created by completing/pricing a purchase order. |
+| **PY** | Payment to vendor | For PO or manual vendor charge. |
+| **RO** | Received on Account (ROA) | Payment from charge customer or early pay discount. |
+| **SA** | Scheduled appointments | |
+| **ST** | Sales tax adjustment | |
+| **TR** | Transfer sale invoice | **Excluded from Sync** |
+| **VC** | Vendor charge | Return to vendor or manual charge. |
+| **VR** | Vendor return | Discontinued in 6.0.2. |
+| **XX** | Balance Adjustment | Beginning balance or AR journal entry. |
+
+### Improvements (2025-12-23)
+- **Invoice Import**: Updated `scripts/tiremaster_sync_client.js` to import **ALL** invoices (removed filters for ZZ-customers and TR invoices).
+- **Schema Update**: Added `keymod` field to `Invoice` and `TireMasterSalesOrder` models to track transaction types.
+- **Backend Logic**:
+  - Updated `LiveSyncService` to save `KEYMOD` from sync payload.
+  - Updated `TireMasterService` and `TireMasterController` to support filtering sales orders by `keymod`.
+  - Updated `InvoiceController` (Salesperson Reports) to **exclude non-sales keymods** (TR, IC, etc.) by default, ensuring analytics only reflect actual sales.
+- **Next Steps**:
+  - Frontend needs to be updated to show the `KEYMOD` column and allow filtering.
+  - Run the sync client to populate the new data (including previously skipped invoices).
+
+### Frontend Updates (2025-12-23)
+- **Invoices List (Integration)**:
+  - Added `Type` (KEYMOD) column to the table.
+  - Added a filter dropdown with options: "Sales Only" (Default), "All Invoices", "Transfers (TR)", "Inventory Corrections (IC)", "Purchase Orders (PO)".
+  - "Sales Only" filters for invoices with empty KEYMOD or specific sales types (CC, NA, GS, FC, ST).
+- **Salesperson Report**:
+  - Added "Sales Only" toggle switch to the header.
+  - Default is ON (filtering out non-sales transactions like transfers).
+  - Toggling OFF shows all transactions including transfers, allowing for full data visibility when needed.
+
+### Fixes (2025-12-23) - Part 4
+- **Issue**: Backend error `The column 'tire_master_sales_orders.keymod' does not exist in the current database`.
+- **Cause**: Added `keymod` to `schema.prisma` but forgot to apply changes to the database.
+- **Fix**: Ran `npx prisma db push` to synchronize the database schema with the Prisma schema.
+
+### Fixes (2025-12-23) - Part 5
+- **Issue**: Reports and analytics were showing empty data (except for graphs) after enabling "Sales Only" filter.
+- **Cause**: The database contains `keymod` values with whitespace (e.g., `'  '`) for normal sales, which were not included in the filter list `('', 'CC', 'NA', ...)`.
+- **Fix**: Updated `InvoiceController` and `TireMasterService` to include `'  '` (two spaces) in the "Sales Only" filter condition.
+
+### Analytics Update (2025-12-23)
+- **Requirement**: Filter out irrelevant keymods (like Transfers 'TR', Inventory Corrections 'IC') from ALL analytics pages to show "Sales Only".
+- **Implementation**:
+  - Updated `InvoiceController.getAnalyticsSummary` (Sales Dashboard) to filter by `keymod IN ('', '  ', 'NA', 'GS', 'FC', 'ST')` or `NULL`.
+  - Updated `TireAnalyticsService` (Tire Analytics) to apply the same keymod filter.
+  - Updated `SalesDataRepository` (General Sales Analytics) to apply the same keymod filter.
+  - Updated `InventoryService` (Inventory Velocity) to apply the same keymod filter.
+  - Updated `MechanicService` (Mechanic Performance) to apply the same keymod filter.
+  - Updated `InvoiceController` report endpoints (`getSalespersonReport`, `getCustomerReport`, `getMonthlyReport`, `getCustomerDetails`) to apply the "Sales Only" filter by default, with an optional `filterKeymods=false` query param to disable it.
+  - **Update (2025-12-23)**: Removed `CC` (Credit Card) from the allowed keymods list, treating it as a non-sales transaction per user request.
+  - **Update (2025-12-23)**: Updated frontend components (`SalesCharts`, `MechanicAnalytics`, `TireAnalyticsDashboard`) to force 2 decimal places for all currency values, ensuring consistency (e.g., `$10.50` instead of `$10.5`).
+  - **Update (2025-12-23)**: Added comma separators to large numbers and currency values in charts and tables (e.g., `$1,234.56` instead of `$1234.56`) for better readability, specifically in `SalesCharts` (Average Order, Y-Axis) and `MechanicAnalytics` (Charts, Table).
+  - **Update (2025-12-23)**: Adjusted "Total Revenue" in `SalesCharts` to show 0 decimal places (e.g., `$1,234`) as requested. Ensured tooltips on sales trend graph explicitly use `Number(value).toLocaleString` to guarantee comma formatting.
+  - **Update (2025-12-23)**: Made the "Sales Trend" percentage dynamic in `SalesCharts`. It now calculates the growth percentage based on the first and last data points of the displayed period, instead of showing a static "12.5%".
+  - **Update (2025-12-23)**: Updated all metric cards in `SalesCharts` (Total Invoices, Total Revenue, Average Order, Profit Margin) to display dynamic trend percentages calculated from the chart data (comparing the last data point to the first data point of the selected period), replacing static placeholder values.
+  - **Update (2025-12-23)**: Fixed an issue in `TireMasterCsvParser` where contact names (e.g., "Joseph Garrison") were overwriting company names (e.g., "Generations Transport") during import. Modified the parser to lock the customer name once found for an invoice block and ignore subsequent name-like rows until the invoice is processed.
+  - **Update (2025-12-23)**: Updated `scripts/tiremaster_sync_client.js` to include `COMPANY` and `CONTACT` fields in the customer sync query. This ensures that the backend `LiveSyncService` can correctly prioritize the Company Name over the Contact Name (e.g., "Generations Transport" vs "Joseph Garrison") when syncing from the external TireMaster database.
+  - **Verification (2025-12-23)**: Confirmed that the `CUSTOMER` table in TireMaster contains `COMPANY` and `CONTACT` columns (referenced from `TireMaster DatabaseTables.pdf` and previous schema checks). The sync logic now correctly prioritizes `COMPANY` > `NAME` > `CONTACT` to resolve the issue where individual names were appearing instead of company names.
+  - **Update (2025-12-23)**: Updated `LiveSyncService` to prioritize looking up `InvoiceCustomer` by `customerCode` (TireMaster ID) instead of just `name`. This prevents "double writing" (creating duplicate customers) when a customer's name changes (e.g., from "Joseph" to "Generations Transport"). It now updates the existing customer record's name instead of creating a new one.
+  - **Fix (2025-12-23)**: Resolved Prisma unique constraint errors (`P2002`) in `LiveSyncService` caused by customer name collisions. Implemented robust logic to handle name updates:
+    - If a name collision occurs with a legacy record (no `customerCode`), the legacy record is merged into the correct one.
+    - If a name collision occurs with another valid customer (different `customerCode`), the ID is appended to the name (e.g., "John Smith (101)") to ensure uniqueness.
+    - If creating a new customer and the name is taken by a legacy record, the legacy record is claimed and updated with the correct code.
+  - **Fix (2025-12-23)**: Fixed `Invalid this.prisma.invoiceCustomer.findUnique() invocation` error in `LiveSyncService`. The `InvoiceCustomer` model uses a named unique constraint (`unique_invoice_customer_name`), so `findUnique` requires the compound selector syntax (`where: { unique_invoice_customer_name: { name: ... } }`) instead of the direct field selector.
+  - **Fix (2025-12-23)**: Switched from `findUnique` to `findFirst` for customer name collision checks in `LiveSyncService`. This bypasses the strict type requirements of `findUnique` with named constraints (which was causing TypeScript errors) while still correctly identifying existing records by name.
+  - **Refactor (2025-12-23)**: Updated `LiveSyncService` customer update logic to use a "check-then-act" pattern instead of "act-then-catch". This prevents `P2002` (Unique Constraint) errors from being logged to the console, as collisions are now detected and handled gracefully before the update is attempted.
+  - **Update (2025-12-23)**: Changed customer name priority in `LiveSyncService` to `NAME > COMPANY > CONTACT` based on user feedback that `NAME` is the correct field to use (verified via inspection of invoice 3-331381).
+  - **Update (2025-12-23)**: Updated `LiveSyncService` and `tiremaster_sync_client.js` to use a composite key (`CUCD-SITENO`) for customers. This resolves issues where different store locations for the same customer (same `CUCD` but different `SITENO`) were being merged or overwriting each other.
+    - Added `SITENO` to `TireMasterCustomerDto` and `CUCD_S` to `TireMasterInvoiceDto`.
+    - Updated sync client to fetch `SITENO` from `CUSTOMER` and `CUCD_S` from `HINVOICE`.
+    - Updated backend to construct unique `tireMasterCode` as `${CUCD}-${SITENO}`.
+    - Updated invoice sync to look up customers using `${CUCD}-${CUCD_S}`.
+  - **Fix (2025-12-23)**: Fixed `ReferenceError: customerCode is not defined` in `LiveSyncService.syncToInvoiceTable`. The `customerCode` variable was being used but not defined in that method scope. Added logic to recalculate `customerCode` from the invoice object.
+  - **Fix (2025-12-23)**: Added `SITENO` to `TireMasterCustomerDto` in `backend/src/live-sync/dto/sync-dtos.ts` to resolve TypeScript error `Property 'SITENO' does not exist on type 'TireMasterCustomerDto'`.
+  - **Fix (2025-12-23)**: Fixed incorrect property access in `LiveSyncService.syncToInvoiceTable`. Changed `tmCustomer.name` to `tmCustomer.companyName` to correctly retrieve the customer name from the passed Prisma object. This resolves the issue where customers were being saved as "Customer 12345" instead of their actual name.
+  - **Update (2025-12-23)**: Adjusted customer name priority in `LiveSyncService` to `COMPANY > NAME > CONTACT`. This ensures that for National Accounts (like UHAUL), the business name in `COMPANY` is used instead of the individual contact name in `NAME`. For customers where `COMPANY` is empty (like Generations Transport), it correctly falls back to `NAME`.
+  - **Correction (2025-12-23)**: Reverted customer name priority to `NAME > COMPANY > CONTACT` after user verification showed that the `NAME` field correctly contains the business name (e.g., "UHAUL EMERGENCY ROAD SERVICE") and `COMPANY` is often undefined. The previous issue with incorrect names was likely due to sync failures preventing the update.
+  - **Update (2025-12-24)**: Implemented "Import All Data" strategy.
+    - Added `metadata` JSON field to `TireMasterSalesOrder`, `TireMasterSalesOrderItem`, `Invoice`, and `InvoiceLineItem` in Prisma schema.
+    - Updated `scripts/tiremaster_sync_client.js` to fetch all columns (`SELECT *`) from `HINVOICE` and `TRANS` tables and store the full row object in a `raw_data` field.
+    - Updated `LiveSyncService` to save this `raw_data` into the `metadata` column.
+    - This allows for future display adjustments using any available source data without requiring a re-import.
+  - **Update (2025-12-24)**: Implemented "Import All Data" strategy for Inventory.
+    - Added `metadata` JSON field to `TireMasterProduct` and `TireMasterInventory` in Prisma schema.
+    - Updated `scripts/tiremaster_inventory_sync_client.js` to fetch all columns (`SELECT *`) from `INV` and `INVLOC`/`INVPRICE` tables and store the full row object in a `raw_data` field.
+    - Updated `LiveSyncService` to save this `raw_data` into the `metadata` column.
+    - This enables "hot swapping" of inventory data fields (e.g. adding new columns to display) without re-syncing.
+  - **Update (2025-12-24)**: Implemented "Import All Data" strategy for Customers.
+    - Added `metadata` JSON field to `TireMasterCustomer` in Prisma schema.
+    - Updated `scripts/tiremaster_sync_client.js` to fetch all columns (`SELECT *`) from `CUSTOMER` table and store the full row object in a `raw_data` field.
+    - Updated `LiveSyncService` to save this `raw_data` into the `metadata` column.
+    - This ensures that Invoices, Inventory, and Customers now all support the "hot swap" strategy.
+  - **Fix (2025-12-24)**: Addressed "quiet failure" of sync client.
+    - Reduced `batchSize` from 2000 to 500 in `tiremaster_sync_client.js` to prevent payload size issues with `SELECT *`.
+    - Added `maxBodyLength: Infinity` and `maxContentLength: Infinity` to Axios configuration in `tiremaster_sync_client.js`.
+    - Added global `unhandledRejection` and `uncaughtException` handlers to both sync clients to log crashes.
+  - **Fix (2025-12-24)**: Fixed `BadRequestException` (Validation Error) in sync clients.
+    - The backend's `ValidationPipe` with `forbidNonWhitelisted: true` was rejecting payloads because `SELECT *` included columns not defined in the DTOs.
+    - Updated `tiremaster_sync_client.js` and `tiremaster_inventory_sync_client.js` to filter the root object to only include allowed DTO fields.
+    - The full raw data is still preserved in the `raw_data` field (which is allowed in the DTO), ensuring the "hot swap" capability works without validation errors.
+  - **Fix (2025-12-24)**: Fixed missing data in Sales Dashboard.
+    - The dashboard filters invoices by `keymod`. Invoices with `keymod = 'CC'` (Credit Card?) were being excluded.
+    - Updated `backend/src/controllers/invoice.controller.ts` to include `'CC'` in all keymod filters (analytics, reports, etc.).
+  - **Performance (2025-12-24)**: Restored sync client performance.
+    - Increased `batchSize` back to 2000 and `concurrency` to 5 in both `tiremaster_sync_client.js` and `tiremaster_inventory_sync_client.js`.
+  - **Enhancement (2025-12-26)**: Mirrored Tire Master data on Sales Dashboard.
+    - Updated `backend/src/controllers/invoice.controller.ts` to return `siteNo` and `keymod` in `getInvoices`.
+    - Added `keymod` filtering support to `getInvoices` endpoint.
+    - Updated `frontend/src/app/dashboard/sales/reports/page.tsx` to display `Site #` and `Type` columns.
+    - Added Keymod filter dropdown (Sales Only, All, TR, IC, PO) to Sales Reports page to match Tire Master functionality.
+672.     - **Update**: Excluded 'CC' (Credit Card) keymod from "Sales Only" filter in `InvoiceController` to prevent internal accounts like 'ZZ-VISA/MASTERCARD' from appearing in sales analytics and top customer lists.
+  - **Fix (2025-12-26)**: Fixed missing data on Sales Dashboard.
+    - Identified that historical `TireMasterSalesOrder` records were not synced to the `Invoice` table and lacked `metadata` (raw DTO).
+    - Created `backend/rehydrate-invoices.js` to rehydrate `Invoice` and `InvoiceLineItem` tables from `TireMasterSalesOrder` entities, mapping fields directly and handling customer name collisions.
+    - Rehydrated ~1900 recent invoices (Dec 2025) to populate the dashboard immediately.
+    - **Update (2025-12-26)**: Started full-year rehydration (approx. 69,000 records) in background.
+      - Optimized script to skip already processed records (offset 7600) to resume progress.
+      - Increased batch size to 1000 (from 200) to speed up processing.
+      - **Fix**: Handled `Unique constraint failed on the fields: ('name')` error by finding the existing customer if creation fails.
+      - **Retry**: Restarted script to scan all records (skipping existing ones) to catch any missed invoices due to previous errors.
+      - **Fix (Profit Calculation)**: Identified that `COST` was missing from `TireMasterSalesOrderItem` metadata, causing 100% profit.
+        - Updated `scripts/tiremaster_sync_client.js` to fetch cost fields (`NEXTCOST`, `LASTCOST`, `EDL`, `DBILL`) from Inventory and handle case-insensitive `TRANS` columns.
+        - Updated `LiveSyncService.ts` and `rehydrate-invoices.js` to fallback to Product Cost (from metadata) if Transaction Cost is missing.
+        - Updated `rehydrate-invoices.js` to re-process invoices with suspicious profit (100% profit).
+        - Restarted rehydration script to fix existing invoices.
+      - Log file: `backend/rehydrate.log`.
+  - **Fix (2025-12-23)**: Fixed `[odbc] Error executing the sql statement` in `scripts/tiremaster_sync_client.js` by quoting `CUCD` values in the SQL `IN` clause. This handles cases where customer codes might be treated as strings or contain non-numeric characters.
+  - **Fix (2025-12-23)**: Fixed `p.PARTNO.replace is not a function` error in `scripts/tiremaster_sync_client.js` by explicitly casting `PARTNO` to a string before calling `.replace()`. This resolves the crash during inventory quantity sync.
+  - **Update (2025-12-23)**: Successfully updated `scripts/tiremaster_sync_client.js` to include `CUCD_S` in all invoice queries (`invoiceSyncQuery` and initial fetch). This ensures the backend receives the necessary data to link invoices to the correct customer store location.
+  - **Update (2025-12-26)**: Updated `scripts/tiremaster_sync_client.js` to limit sync to December 2025 (`startDate: '2025-12-01'`) for faster testing as requested.
+- **Result**: All dashboards and reports now consistently reflect only actual sales transactions, excluding internal transfers and adjustments.
+
+### Sync Client Optimization (2025-12-26)
+- **Issue**: `tiremaster_sync_client.js` was silently freezing during "Syncing ALL Customers" step.
+- **Cause**: The script was attempting to fetch all columns (`SELECT *`) for 2000 customers in parallel batches of 5, overwhelming the ODBC driver or database connection.
+- **Fix**: 
+  - Reduced `batchSize` from 2000 to 500.
+  - Reduced `concurrency` from 5 to 1.
+  - Added a 60-second timeout to the ODBC query execution to prevent indefinite hanging.
+  - Added explicit logging ("Starting fetch for...") before the query to identify exactly where it hangs.
+  - **Fix (2025-12-26)**: Fixed missing data on Sales Dashboard after sync.
+    - Identified that `tiremaster_sync_client.js` populates `TireMasterSalesOrder` but not `Invoice` table directly (rehydration required).
+    - Ran `backend/rehydrate-invoices.js` for December 2025 (approx. 4800 records).
+    - Verified `Invoice` count increased from 0 to ~4800.
+    - Verified data is now available for the Sales Dashboard.
+
+- **Master Sync Script**: Created `scripts/master-sync.js` to orchestrate Inventory Sync, Invoice/Customer Sync, and Data Rehydration in a single process.
+  - Runs `scripts/tiremaster_inventory_sync_client.js` (Inventory)
+  - Runs `scripts/tiremaster_sync_client.js` (Invoices/Customers - with caching and 2025-01-01 start date)
+  - Runs `backend/rehydrate-invoices.js` (Hydration - with batching and skipping existing)
+  - Ensures logical order and error handling.
+- **Sync CLI**: Moved to `scripts/sync-cli.js` to orchestrate the sync process.
+  - Supports Full Sync, Inventory Only, Invoice Only, and Rehydrate Only.
+  - Allows specifying a start date for Invoice Sync and Rehydration.
+  - Usage: `node scripts/sync-cli.js`
+
+### Performance Tuning (2025-12-26)
+- **Requirement**: "Process multiple batches at one time" and "process as quick as possible".
+- **Sync Client**:
+  - Increased `batchSize` to 1000 (from 500).
+  - Increased `concurrency` to 5 (from 1).
+  - This restores parallel processing for faster data fetching.
+- **Rehydration Script**:
+  - Implemented parallel processing within each batch using `p-limit` (concurrency: 20).
+  - Previously processed 1000 items sequentially, which was slow.
+  - Now processes 20 items concurrently, significantly speeding up the hydration phase.
+
+
+- **Frontend Enhancements**:
+  - Added pagination to "Recent Invoices" list on Salesperson Report page (`frontend/src/app/dashboard/sales/reports/salesperson/[name]/page.tsx`).
+  - Added pagination to "Recent Invoices" list on Customer Report page (`frontend/src/app/dashboard/sales/reports/customer/[id]/page.tsx`).
+  - Updated `backend/src/controllers/invoice.controller.ts` to support pagination in `getSalespersonDetails` and `getCustomerDetails`.
+
+### Frontend Fixes (2025-12-26)
+- **Graph Scaling**:
+  - Fixed Y-axis scaling issue on Sales Dashboard (`SalesCharts`), Salesperson Report, and Customer Report charts.
+  - Set `domain={[0, 'auto']}` and `padding={{ top: 20 }}` to prevent lines from exceeding the graph area.
+- **Pagination**:
+  - Verified and ensured pagination controls are present and working on:
+    - Salesperson Report Page (`Recent Invoices` table).
+    - Customer Report Page (`Recent Invoices` table).
+    - Salesperson Commissions Page (`Reconciliation` table).
+- **Build Fix**:
+  - Cleared Next.js cache (`rm -rf .next`) to resolve `Cannot find module` build error.
+
+- **Insights Page Fix**:
+  - Identified that `InsightsService` was filtering tires by `quality IN ('PREMIUM', 'STANDARD', 'ECONOMY')`.
+  - Since all imported tires have `quality: 'UNKNOWN'`, this filter was excluding all data.
+  - Removed the strict quality filter in `getInventoryRiskAnalysis` and `getDeadStock` to allow all tires to be analyzed.
+  - Verified that `invoice_line_items` are correctly linked to `tire_master_products`.
+
+## Final Status (2025-12-26)
+- **Insights Page**: Fixed. Now correctly displays tire data, brands, and types.
+  - Issue was related to `isTire` inference and bind variable limits in `InsightsService`.
+  - Fixed by chunking queries in `InsightsService` to avoid PostgreSQL bind variable limits (32767).
+  - Fixed `isTire` logic to correctly identify tires based on `TireMasterProduct` fields.
+- **Sync Process**: Unified and optimized.
+  - Created `scripts/master-sync.js` to orchestrate Inventory Sync, Invoice/Customer Sync, and Data Rehydration.
+  - Created `scripts/sync-cli.js` for easy command-line execution with date parameters.
+  - Optimized `tiremaster_sync_client.js` and `tiremaster_inventory_sync_client.js` for performance and correct data fetching.
+  - `rehydrate-invoices.js` updated to handle profit calculations and customer creation collisions.
+- **Sales Dashboard**:
+  - Fixed graph Y-axis scaling.
+  - Added pagination to Salesperson and Customer report pages.
+  - Fixed "Recent Invoices" display.
+- **Frontend**:
+  - Fixed build errors related to caching.
+
+## Key Scripts
+- `scripts/master-sync.js`: Runs the full sync pipeline.
+- `scripts/sync-cli.js`: CLI tool for running syncs (e.g., `node scripts/sync-cli.js --date 2025-01-01`).
+- `backend/rehydrate-invoices.js`: Rehydrates invoice data from raw JSON to relational tables.
+
+## Recent Fixes
+- **InsightsService**: Implemented `chunkArray` helper to split large arrays of IDs when querying the database, preventing "bind message has too many parameters" errors.
+- **InvoiceController**: Added pagination and keymod filtering (excluding 'CC' for top customers).
+- **TireMaster Sync**: Updated to fetch necessary cost fields and handle case-sensitivity for column names.
+
+- **Inventory Analytics Page Fix**:
+  - Fixed `InventoryService.getSalesAnalytics` bind variable limit issue by chunking queries.
+  - This resolves the issue where the "Tires" page (Inventory Analytics) was not showing data or failing for large datasets.
+  - Verified `InventoryService.getInventory` works correctly with simulation script.
+
+## Next Steps
+- Monitor the automated sync to ensure stability over time.
+
+### Tire Inventory & Analytics Fixes (2025-12-26)
+- **Issue**: "Tires" page (Inventory) and "Tire Analytics" page were showing no data.
+- **Cause 1 (Inventory)**: `TireMasterInventory` component was using mock location IDs (`loc-001`) which didn't match real database UUIDs.
+- **Cause 2 (Analytics)**: `TireAnalyticsService` was strictly filtering by `quality IN ('PREMIUM', 'STANDARD', 'ECONOMY')`, excluding all imported tires which defaulted to `UNKNOWN`.
+- **Fixes**:
+  - **Frontend**: Updated `TireMasterInventory` component to fetch real locations from `/api/v1/inventory/locations` instead of using mock data.
+  - **Classification**: Ran `backend/run-classification.js` to classify 14,296 products, identifying 11,317 tires and assigning qualities.
+  - **Backend**: Updated `TireAnalyticsService` to remove the hardcoded quality filter, allowing `UNKNOWN` quality tires to be displayed in analytics.
+- **Verification**:
+  - Verified `InventoryService.getInventory` returns tires correctly with `isTire=true`.
+  - Verified `TireMasterInventory` component now fetches real locations.
+  - Verified classification script updated database records.
+

@@ -167,11 +167,11 @@ export const TireAnalyticsDashboard: React.FC = () => {
             </div>
             <div className="bg-white p-4 rounded shadow">
               <div className="text-sm text-gray-500">Total Revenue</div>
-              <div className="text-2xl font-bold">${data.reduce((sum, item) => sum + item.totalRevenue, 0).toLocaleString()}</div>
+              <div className="text-2xl font-bold">${data.reduce((sum, item) => sum + item.totalRevenue, 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
             </div>
             <div className="bg-white p-4 rounded shadow">
               <div className="text-sm text-gray-500">Total Profit</div>
-              <div className="text-2xl font-bold text-green-600">${data.reduce((sum, item) => sum + item.totalProfit, 0).toLocaleString()}</div>
+              <div className="text-2xl font-bold text-green-600">${data.reduce((sum, item) => sum + item.totalProfit, 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
             </div>
             <div className="bg-white p-4 rounded shadow">
               <div className="text-sm text-gray-500">Avg Margin</div>
@@ -243,8 +243,8 @@ export const TireAnalyticsDashboard: React.FC = () => {
                   <tr key={idx}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{getGroupKey(item) || 'Unknown'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">{item.unitsSold}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">${item.totalRevenue.toLocaleString()}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">${item.totalProfit.toLocaleString()}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">${item.totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">${item.totalProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">{item.margin.toFixed(1)}%</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">{item.velocity.toFixed(2)}</td>
                   </tr>

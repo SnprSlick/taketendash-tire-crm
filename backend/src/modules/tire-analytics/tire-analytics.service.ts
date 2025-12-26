@@ -145,9 +145,9 @@ export class TireAnalyticsService {
         i.invoice_date >= $1 
         AND i.invoice_date <= $2
         AND i.status = 'ACTIVE'
+        AND (i.keymod IS NULL OR i.keymod IN ('', '  ', 'NA', 'GS', 'FC', 'ST'))
         AND p."isTire" = true
         AND p."brand" != 'Unknown'
-        AND p."quality" IN ('PREMIUM', 'STANDARD', 'ECONOMY')
         ${brandFilter}
         ${qualityFilter}
         ${typeFilter}
@@ -183,8 +183,7 @@ export class TireAnalyticsService {
     const [brands, types, sizes, stores] = await Promise.all([
       this.prisma.tireMasterProduct.findMany({
         where: { 
-          isTire: true,
-          quality: { in: ['PREMIUM', 'STANDARD', 'ECONOMY'] }
+          isTire: true
         },
         select: { brand: true },
         distinct: ['brand'],
@@ -213,7 +212,7 @@ export class TireAnalyticsService {
       brands: brands.map(b => b.brand).filter(b => b !== 'Unknown' && b !== ''),
       types: types.map(t => t.type),
       sizes: sizes.map(s => s.size),
-      qualities: Object.values(TireQuality).filter(q => q !== 'UNKNOWN'),
+      qualities: Object.values(TireQuality),
       stores
     };
   }
@@ -294,9 +293,9 @@ export class TireAnalyticsService {
         i.invoice_date >= $1 
         AND i.invoice_date <= $2
         AND i.status = 'ACTIVE'
+        AND (i.keymod IS NULL OR i.keymod IN ('', '  ', 'NA', 'GS', 'FC', 'ST'))
         AND p."isTire" = true
         AND p."brand" != 'Unknown'
-        AND p."quality" IN ('PREMIUM', 'STANDARD', 'ECONOMY')
         ${brandFilter}
         ${qualityFilter}
         ${typeFilter}

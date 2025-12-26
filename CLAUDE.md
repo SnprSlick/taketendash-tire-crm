@@ -23,7 +23,7 @@ TypeScript 5.1.3 with Node.js 20 LTS: Follow standard conventions
 
 ## Recent Changes
 
-- 002-invoice-csv-import: Added TypeScript 5.1.3 with Node.js 20 LTS + NestJS 10, Prisma 5.6.0, PostgreSQL, Redis, @nestjs/schedule (for cron jobs)
+- 003-sync-client-update: Updated tiremaster_sync_client.js to start sync from 2025-12-01 for testing.
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

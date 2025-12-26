@@ -38,6 +38,9 @@ export default function SalespersonDetailPage() {
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [year, setYear] = useState(new Date().getFullYear().toString());
+  const [filterKeymods, setFilterKeymods] = useState(true);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(20);
 
   const fetchSalespersonDetails = useCallback(async () => {
     if (!params?.name || !token) return;
@@ -49,7 +52,7 @@ export default function SalespersonDetailPage() {
       const storeParam = selectedStoreId ? `&storeId=${selectedStoreId}` : '';
       // Add timestamp to prevent caching
       const timestamp = new Date().getTime();
-      const res = await fetch(`/api/v1/invoices/reports/salespeople/${encodedName}?year=${year}${storeParam}&_t=${timestamp}`, {
+      const res = await fetch(`/api/v1/invoices/reports/salespeople/${encodedName}?year=${year}${storeParam}&filterKeymods=${filterKeymods}&page=${page}&limit=${limit}&_t=${timestamp}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Cache-Control': 'no-cache',
@@ -73,7 +76,7 @@ export default function SalespersonDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [params?.name, year, selectedStoreId, token]);
+  }, [params?.name, year, selectedStoreId, token, filterKeymods, page, limit]);
 
   useEffect(() => {
     if (params?.name && token) {
@@ -117,7 +120,7 @@ export default function SalespersonDetailPage() {
     );
   }
 
-  const { salesperson, monthlyStats, recentInvoices, topCustomers, totalCommission, totalLabor, totalParts } = data;
+  const { salesperson, monthlyStats, recentInvoices, topCustomers, totalCommission, totalLabor, totalParts, pagination } = data;
 
   // Calculate totals from monthly stats
   const totalRevenue = monthlyStats.reduce((sum: number, m: any) => sum + Number(m.total_revenue || 0), 0);
@@ -154,14 +157,31 @@ export default function SalespersonDetailPage() {
           ) : (
             <div></div>
           )}
-          <select 
-            value={year}
-            onChange={(e) => setYear(e.target.value)}
-            className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="2025">2025</option>
-            <option value="2024">2024</option>
-          </select>
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-slate-600 font-medium">Sales Only</span>
+              <button
+                onClick={() => setFilterKeymods(!filterKeymods)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  filterKeymods ? 'bg-blue-600' : 'bg-slate-200'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    filterKeymods ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+            <select 
+              value={year}
+              onChange={(e) => setYear(e.target.value)}
+              className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="2025">2025</option>
+              <option value="2024">2024</option>
+            </select>
+          </div>
         </div>
 
         {/* Salesperson Info Card */}
@@ -328,7 +348,12 @@ export default function SalespersonDetailPage() {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                   <XAxis dataKey="month_name" stroke="#64748B" fontSize={12} tickFormatter={(val) => val.trim().substring(0, 3)} />
-                  <YAxis stroke="#64748B" fontSize={12} />
+                  <YAxis 
+                    stroke="#64748B" 
+                    fontSize={12} 
+                    domain={[0, 'auto']}
+                    padding={{ top: 20 }}
+                  />
                   <Tooltip 
                     formatter={(value: number, name: string) => [
                       name === 'profit_margin' ? formatPercent(value) : formatCurrency(value),
@@ -424,6 +449,34 @@ export default function SalespersonDetailPage() {
               </tbody>
             </table>
           </div>
+          
+          {/* Pagination Controls */}
+          {pagination && (
+            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-slate-50">
+              <div className="text-sm text-slate-500">
+                Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} results
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={pagination.page === 1}
+                  className="px-3 py-1 border border-slate-200 rounded bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-slate-600"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-slate-600 font-medium px-2">
+                  Page {pagination.page} of {pagination.totalPages}
+                </span>
+                <button
+                  onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+                  disabled={pagination.page === pagination.totalPages}
+                  className="px-3 py-1 border border-slate-200 rounded bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-slate-600"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </DashboardLayout>

@@ -26,6 +26,7 @@ interface Invoice {
   totalAmount: number;
   siteNo?: number;
   salesperson?: string;
+  keymod?: string;
   customer: {
     companyName: string;
     tireMasterCode: string;
@@ -49,6 +50,7 @@ export default function InvoicesList({ onBackToOverview }: { onBackToOverview: (
   const [expandedInvoice, setExpandedInvoice] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<string>('orderDate');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [keymodFilter, setKeymodFilter] = useState<string>('_SALES_ONLY_');
 
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
@@ -58,6 +60,7 @@ export default function InvoicesList({ onBackToOverview }: { onBackToOverview: (
         limit: '20',
         sortBy,
         sortOrder,
+        ...(keymodFilter !== 'ALL' && { keymod: keymodFilter }),
       });
 
       const response = await fetch(`/api/v1/tire-master/sales-orders?${params}`, {
@@ -74,7 +77,7 @@ export default function InvoicesList({ onBackToOverview }: { onBackToOverview: (
     } finally {
       setLoading(false);
     }
-  }, [token, page, sortBy, sortOrder]);
+  }, [token, page, sortBy, sortOrder, keymodFilter]);
 
   useEffect(() => {
     fetchInvoices();
@@ -119,6 +122,23 @@ export default function InvoicesList({ onBackToOverview }: { onBackToOverview: (
           </button>
           <h2 className="text-xl font-semibold text-gray-900">Invoices</h2>
         </div>
+        <div className="flex items-center space-x-2">
+          <span className="text-sm text-gray-500">Filter:</span>
+          <select
+            value={keymodFilter}
+            onChange={(e) => {
+              setKeymodFilter(e.target.value);
+              setPage(1);
+            }}
+            className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+          >
+            <option value="_SALES_ONLY_">Sales Only</option>
+            <option value="ALL">All Invoices</option>
+            <option value="TR">Transfers (TR)</option>
+            <option value="IC">Inventory Corrections (IC)</option>
+            <option value="PO">Purchase Orders (PO)</option>
+          </select>
+        </div>
       </div>
 
       <div className="bg-white shadow overflow-hidden sm:rounded-lg">
@@ -150,6 +170,15 @@ export default function InvoicesList({ onBackToOverview }: { onBackToOverview: (
                 <div className="flex items-center">
                   Site #
                   <SortIcon column="siteNo" />
+                </div>
+              </th>
+              <th 
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('keymod')}
+              >
+                <div className="flex items-center">
+                  Type
+                  <SortIcon column="keymod" />
                 </div>
               </th>
               <th 
@@ -231,6 +260,14 @@ export default function InvoicesList({ onBackToOverview }: { onBackToOverview: (
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{invoice.siteNo || '-'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        invoice.keymod === 'TR' ? 'bg-yellow-100 text-yellow-800' : 
+                        !invoice.keymod ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {invoice.keymod || 'SALE'}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{invoice.salesperson || '-'}</div>
